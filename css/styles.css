@@ -1,0 +1,327 @@
+/* ===== Base ===== */
+:root {
+  --bg: #0b0715;
+  --panel: #140c24;
+  --panel-alt: #1a1030;
+  --ink: #e6def9;
+  --ink-dim: #a89ac2;
+  --magenta: #d726ff;
+  --magenta-dim: #7d1c96;
+  --cyan: #29f5ea;
+  --border: #3a2560;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Rajdhani", "Trebuchet MS", sans-serif;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(rgba(215, 38, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(41, 245, 234, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+  color: var(--ink);
+  line-height: 1.6;
+  font-size: 1.05rem;
+}
+
+img, video, audio {
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: var(--cyan);
+}
+
+/* ===== Header & Nav ===== */
+header {
+  background-color: var(--panel);
+  color: var(--ink);
+  padding: 2.5rem 1.5rem 1.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--magenta-dim);
+}
+
+header h1 {
+  margin: 0;
+  font-family: "Orbitron", "Trebuchet MS", sans-serif;
+  font-size: 2.1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  text-shadow: 0 0 12px rgba(215, 38, 255, 0.55), 0 0 28px rgba(215, 38, 255, 0.25);
+}
+
+header .tagline {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  letter-spacing: 0.03em;
+  color: var(--cyan);
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  background-color: #0f0a1c;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.95rem;
+  border-bottom: 1px solid var(--border);
+}
+
+nav a {
+  color: var(--ink-dim);
+  text-decoration: none;
+  padding: 0.25rem 0.1rem;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+nav a:hover,
+nav a:focus {
+  color: var(--cyan);
+  border-bottom-color: var(--cyan);
+  outline: none;
+}
+
+/* ===== Main layout ===== */
+main {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+h2 {
+  font-family: "Orbitron", "Trebuchet MS", sans-serif;
+  font-weight: 600;
+  font-size: 1.3rem;
+  letter-spacing: 0.02em;
+  color: var(--magenta);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+  margin-top: 0;
+}
+
+h3 {
+  font-family: "Orbitron", "Trebuchet MS", sans-serif;
+  font-size: 1.05rem;
+  color: var(--cyan);
+}
+
+.content-section {
+  background-color: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  box-shadow: 0 0 0 1px rgba(215, 38, 255, 0.05);
+}
+
+#about {
+  background-color: var(--panel-alt);
+  border-color: var(--magenta-dim);
+}
+
+.about-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.about-photo {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--magenta);
+  box-shadow: 0 0 18px rgba(215, 38, 255, 0.45);
+  flex-shrink: 0;
+}
+
+.about-text {
+  flex: 1;
+}
+
+@media (max-width: 480px) {
+  .about-layout {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .about-photo {
+    width: 110px;
+    height: 110px;
+  }
+}
+
+/* ===== Table ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+  font-size: 0.95rem;
+}
+
+caption {
+  text-align: left;
+  font-weight: bold;
+  color: var(--cyan);
+  margin-bottom: 0.5rem;
+}
+
+th, td {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+}
+
+th {
+  background-color: var(--magenta-dim);
+  color: #fff;
+  font-family: "Orbitron", "Trebuchet MS", sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+}
+
+tr:nth-child(even) {
+  background-color: #170e29;
+}
+
+/* ===== Gallery ===== */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.gallery figure {
+  margin: 0;
+  border: 1px solid var(--border);
+  padding: 0.5rem;
+  background-color: var(--panel-alt);
+  border-radius: 4px;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.gallery figure:hover {
+  border-color: var(--cyan);
+  box-shadow: 0 0 14px rgba(41, 245, 234, 0.35);
+}
+
+.gallery figcaption {
+  font-size: 0.85rem;
+  margin-top: 0.4rem;
+  color: var(--ink-dim);
+}
+
+/* ===== Media ===== */
+.media-note {
+  font-size: 0.9rem;
+  color: var(--ink-dim);
+}
+
+video, audio {
+  display: block;
+  margin: 0.5rem 0;
+  width: 100%;
+}
+
+video {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+audio{
+  width: 100%;
+  max-width: 500px;
+  height: 54px;
+  display: block;
+  margin: 15px auto;
+  border-radius: 30px;
+  outline: none;
+  background-color: #1a1a2e;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+}
+/* ===== Form ===== */
+form {
+  max-width: 480px;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+}
+
+label {
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+  font-size: 0.9rem;
+  color: var(--ink-dim);
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 0.5rem;
+  background-color: #0f0a1c;
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--cyan);
+  outline-offset: 1px;
+  border-color: var(--cyan);
+}
+
+button[type="submit"] {
+  background-color: var(--magenta);
+  color: #0b0715;
+  font-weight: 600;
+  border: none;
+  padding: 0.65rem 1.25rem;
+  font-size: 1rem;
+  border-radius: 3px;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(215, 38, 255, 0.4);
+  transition: box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+button[type="submit"]:hover,
+button[type="submit"]:focus {
+  background-color: var(--cyan);
+  box-shadow: 0 0 16px rgba(41, 245, 234, 0.55);
+  outline: none;
+}
+
+/* ===== Footer ===== */
+footer {
+  text-align: center;
+  padding: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+  border-top: 1px solid var(--border);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 480px) {
+  header {
+    padding: 1.75rem 1rem 1.25rem;
+  }
+  nav {
+    padding: 0.6rem 1rem;
+  }
+  main {
+    padding: 1rem;
+  }
+  .content-section {
+    padding: 1rem;
+  }
+}
