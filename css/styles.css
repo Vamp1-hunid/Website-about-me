@@ -361,3 +361,71 @@ footer {
     padding: 1rem;
   }
 }
+/* ===== Activity 3 additions, part 1: intro, cards, table wrapper ===== */
+
+/* Hides anything with the hidden attribute (used by the form preview). */
+[hidden] {
+  display: none !important;
+}
+
+/* Skip link: invisible until a keyboard user tabs to it. */
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  z-index: 10;
+  padding: 0.5rem 1rem;
+  background-color: var(--magenta);
+  color: var(--on-magenta);
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+/* ID selector: styles only the introduction area (id="intro"). */
+#intro {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  border-color: var(--magenta);
+}
+
+#intro h1 {
+  margin: 0;
+  font-family: "Orbitron", "Trebuchet MS", sans-serif;
+  font-size: clamp(1.7rem, 6vw, 2.6rem);
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  text-shadow: var(--glow);
+}
+
+.programme {
+  margin: 0.5rem 0 1rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--cyan);
+}
+
+/* Project cards: same look as the photo cards so repeated items are consistent. */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.card {
+  border: 1px solid var(--border);
+  padding: 1rem;
+  background-color: var(--panel-alt);
+  border-radius: 4px;
+}
+
+.card h3 {
+  margin-top: 0;
+}
+
+/* A wide table scrolls inside its own box instead of stretching the page. */
+.table-wrap {
+  overflow-x: auto;
+}
