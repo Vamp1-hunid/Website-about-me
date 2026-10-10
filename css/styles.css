@@ -311,10 +311,15 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--cyan);
 }
 
+.button,
 button[type="submit"] {
+  display: inline-block;
   background-color: var(--magenta);
-  color: #0b0715;
+  color: var(--on-magenta);
+  font-family: inherit;
   font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
   border: none;
   padding: 0.65rem 1.25rem;
   font-size: 1rem;
@@ -324,11 +329,12 @@ button[type="submit"] {
   transition: box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
+.button:hover,
+.button:focus-visible,
 button[type="submit"]:hover,
-button[type="submit"]:focus {
+button[type="submit"]:focus-visible {
   background-color: var(--cyan);
   box-shadow: 0 0 16px rgba(41, 245, 234, 0.55);
-  outline: none;
 }
 
 /* ===== Footer ===== */
