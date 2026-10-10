@@ -185,11 +185,11 @@
       <h2>My Media</h2>
 
       <h3>Self-introduction video</h3>
-      <video controls>
+      <video controls preload="metadata">
         <source src="videos/intro.mp4" type="video/mp4">
         Your browser does not support the video tag.
       </video>
-      <p class="media-note">
+      <p class="notice">Browser demonstration only — no message is sent.</p>
         Transcript: "Hi, my name is Mulenga Mwamba. I'm a second-year Data Science student at
         Mulungushi University, and one web skill I hope to learn is JavaScript, so I can add
         animations and make my pages interactive — things that respond to clicks, scrolling,
@@ -209,10 +209,12 @@
     <section id="contact" class="content-section">
       <h2>Contact</h2>
       <p class="media-note">This form is a browser demonstration only; it does not send data anywhere.</p>
-      <form action="#">
+      <form id="contact-form" novalidate>
         <div class="form-row">
           <label for="name">Name</label>
-          <input type="text" id="name" name="name" required>
+          <input type="email" id="email" name="email" autocomplete="email"
+                 required aria-describedby="email-error">
+          <p class="error" id="email-error"></p>
         </div>
 
         <div class="form-row">
@@ -231,11 +233,30 @@
 
         <div class="form-row">
           <label for="message">Message</label>
-          <textarea id="message" name="message" rows="5" required></textarea>
+          <textarea id="message" name="message" rows="5"
+                    required aria-describedby="message-error"></textarea>
+          <p class="error" id="message-error"></p>
         </div>
 
-        <button type="submit">Send message</button>
+        <button type="submit">Check my message</button>
       </form>
+
+      <p class="feedback" id="form-feedback" aria-live="polite"></p>
+
+      <div id="preview" class="preview" hidden>
+        <h3>Validated preview</h3>
+        <p>The data below passed validation in this browser. No message was delivered.</p>
+        <dl>
+          <dt>Name</dt>
+          <dd id="preview-name"></dd>
+          <dt>Email</dt>
+          <dd id="preview-email"></dd>
+          <dt>Topic</dt>
+          <dd id="preview-topic"></dd>
+          <dt>Message</dt>
+          <dd id="preview-message"></dd>
+        </dl>
+      </div>
     </section>
 
   </main>
