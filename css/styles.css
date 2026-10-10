@@ -1,5 +1,6 @@
 /* ===== Base ===== */
 :root {
+  color-scheme: dark;            /* tells the browser to draw its own controls (audio player, scrollbars) dark */
   --bg: #0b0715;
   --panel: #140c24;
   --panel-alt: #1a1030;
@@ -9,6 +10,36 @@
   --magenta-dim: #7d1c96;
   --cyan: #29f5ea;
   --border: #3a2560;
+  --nav-bg: #0f0a1c;
+  --stripe: #170e29;
+  --field-bg: #0f0a1c;
+  --on-magenta: #0b0715;          /* text colour that sits ON magenta or cyan buttons */
+  --focus: #ffd84d;
+  --error: #ff8f9a;
+  --success: #5ef0a6;
+  --glow: 0 0 12px rgba(215, 38, 255, 0.55), 0 0 28px rgba(215, 38, 255, 0.25);
+}
+
+/* Light theme: the theme button (JavaScript) sets data-theme="light" on the <html> element. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f5f0fb;
+  --panel: #ffffff;
+  --panel-alt: #f0e7fa;
+  --ink: #241638;
+  --ink-dim: #4a3a66;
+  --magenta: #9b12c4;
+  --magenta-dim: #7d1c96;
+  --cyan: #0a6b66;
+  --border: #c9b6e4;
+  --nav-bg: #eadcf7;
+  --stripe: #f6effc;
+  --field-bg: #ffffff;
+  --on-magenta: #ffffff;
+  --focus: #a14700;
+  --error: #b3261e;
+  --success: #16692f;
+  --glow: none;
 }
 
 * {
