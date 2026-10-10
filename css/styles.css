@@ -348,8 +348,8 @@ footer {
 
 /* ===== Responsive ===== */
 @media (max-width: 480px) {
-  header {
-    padding: 1.75rem 1rem 1.25rem;
+  .site-header {
+    padding: 0.75rem 1rem;
   }
   nav {
     padding: 0.6rem 1rem;
