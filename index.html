@@ -189,7 +189,7 @@
         <source src="videos/intro.mp4" type="video/mp4">
         Your browser does not support the video tag.
       </video>
-      <p class="notice">Browser demonstration only — no message is sent.</p>
+       <p class="media-note">
         Transcript: "Hi, my name is Mulenga Mwamba. I'm a second-year Data Science student at
         Mulungushi University, and one web skill I hope to learn is JavaScript, so I can add
         animations and make my pages interactive — things that respond to clicks, scrolling,
@@ -208,18 +208,20 @@
 
     <section id="contact" class="content-section">
       <h2>Contact</h2>
-      <p class="media-note">This form is a browser demonstration only; it does not send data anywhere.</p>
+      <p class="notice">Browser demonstration only — no message is sent.</p>
       <form id="contact-form" novalidate>
         <div class="form-row">
           <label for="name">Name</label>
-          <input type="email" id="email" name="email" autocomplete="email"
-                 required aria-describedby="email-error">
-          <p class="error" id="email-error"></p>
+          <input type="text" id="name" name="name" autocomplete="name"
+                 required aria-describedby="name-error">
+          <p class="error" id="name-error"></p>
         </div>
 
         <div class="form-row">
           <label for="email">Email</label>
-          <input type="email" id="email" name="email" required>
+          <input type="email" id="email" name="email" autocomplete="email"
+                 required aria-describedby="email-error">
+          <p class="error" id="email-error"></p>
         </div>
 
         <div class="form-row">
@@ -264,6 +266,8 @@
   <footer>
     <p>&copy; 2026 Mulenga Mwamba. Built for ICT251 Web Technologies, Mulungushi University.</p>
         <p><a href="https://github.com/Vamp1-hunid/Website-about-me.git">View Source on GitHub</a></p>
+            <p>Last updated: 10 October 2026</p>
+
   </footer>
 
 </body>
