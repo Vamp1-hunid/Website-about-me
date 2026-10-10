@@ -11,22 +11,39 @@
 </head>
 <body>
 
-  <header>
-    <h1>Mulenga Mwamba</h1>
-    <p class="tagline">Data Science student · Mulungushi University</p>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <p class="brand">Mulenga Mwamba</p>
+    <div class="header-buttons">
+      <!-- Feature: mobile navigation button (the CSS shows it only on narrow screens) -->
+      <button id="menu-toggle" class="button menu-toggle" type="button"
+              aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <!-- Feature: light and dark theme switch -->
+      <button id="theme-toggle" class="button theme-toggle" type="button">Light mode</button>
+    </div>
   </header>
 
-  <nav>
+  <nav id="site-nav" aria-label="Main navigation">
+    <a href="#intro">Home</a>
     <a href="#about">About Me</a>
     <a href="#hobbies">My Hobbies</a>
     <a href="#plan">My Learning Plan</a>
+    <a href="#projects">Projects</a>
     <a href="#photos">My Photos</a>
     <a href="#media">My Media</a>
     <a href="#contact">Contact</a>
     <a href="https://developer.mozilla.org/en-US/docs/Learn" target="_blank" rel="noopener">MDN Web Docs (external)</a>
   </nav>
 
-  <main>
+ <main id="main">
+
+    <section id="intro" class="content-section">
+      <h1>Mulenga Mwamba</h1>
+      <p class="programme">Bachelor of Science in Data Science · Year 2 · Mulungushi University, Zambia</p>
+      <p>Welcome! I am a second-year Data Science student who also wants real skills in cybersecurity, web development, game development and machine learning. This site shows what I am learning and building along the way.</p>
+      <a class="button" href="#projects">View My Projects</a>
+    </section>
 
     <section id="about" class="content-section about-layout">
       <img src="images/selfie.jpg" alt="Mulenga Mwamba" class="about-photo">
