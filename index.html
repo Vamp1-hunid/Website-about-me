@@ -71,12 +71,7 @@
         <li>Watching anime</li>
       </ul>
 
-      <h3>Steps to improve my web development skills</h3>
-      <ol>
-        <li>Work through <em>Learning Web Design: A Beginner's Guide to HTML, CSS, JavaScript, and Web Graphics</em> by Jennifer Niederst Robbins, chapter by chapter</li>
-        <li>Practise by rebuilding tiny web pages of different formats and content types from scratch, without copying a template</li>
-        <li>Once HTML/CSS feels solid, move on to a short JavaScript primer focused on DOM manipulation and forms</li>
-      </ol>
+
     </section>
 
     <section id="plan" class="content-section">
@@ -86,8 +81,15 @@
         I want to find exactly what I need and skip what isn't relevant, whereas a video might not
         even cover what I'm looking for and I have to sit through it to find out.
       </p>
+            <h3>Steps to improve my web development skills</h3>
+      <ol>
+        <li>Work through <em>Learning Web Design: A Beginner's Guide to HTML, CSS, JavaScript, and Web Graphics</em> by Jennifer Niederst Robbins, chapter by chapter</li>
+        <li>Practise by rebuilding tiny web pages of different formats and content types from scratch, without copying a template</li>
+        <li>Once HTML/CSS feels solid, move on to a short JavaScript primer focused on DOM manipulation and forms</li>
+      </ol>
       <p>A weekly plan I am following while I build my web development skills.</p>
-      <table>
+            <div class="table-wrap">
+              <table>
         <caption>Weekly Web Learning Plan</caption>
         <thead>
           <tr>
@@ -119,6 +121,25 @@
           </tr>
         </tbody>
       </table>
+            </div>
+
+      <h3>Study hours calculator</h3>
+      <form id="hours-form" novalidate>
+        <div class="form-row">
+          <label for="hours-per-day">Planned study hours per day</label>
+          <input type="text" id="hours-per-day" inputmode="decimal" autocomplete="off"
+                 required aria-describedby="hours-per-day-error">
+          <p class="error" id="hours-per-day-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="days-per-week">Study days per week (1 to 7)</label>
+          <input type="text" id="days-per-week" inputmode="numeric" autocomplete="off"
+                 required aria-describedby="days-per-week-error">
+          <p class="error" id="days-per-week-error"></p>
+        </div>
+        <button type="submit">Calculate weekly hours</button>
+      </form>
+      <p class="feedback feedback-success" id="hours-result" aria-live="polite"></p>
     </section>
 
     <section id="photos" class="content-section">
