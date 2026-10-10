@@ -98,7 +98,7 @@ nav {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem 1.25rem;
-  background-color: #0f0a1c;
+  background-color: var(--nav-bg);
   padding: 0.75rem 1.5rem;
   font-size: 0.95rem;
   border-bottom: 1px solid var(--border);
@@ -218,7 +218,7 @@ th {
 }
 
 tr:nth-child(even) {
-  background-color: #170e29;
+    background-color: var(--stripe);
 }
 
 /* ===== Gallery ===== */
@@ -274,7 +274,7 @@ audio{
   margin: 15px auto;
   border-radius: 30px;
   outline: none;
-  background-color: #1a1a2e;
+  background-color: var(--panel-alt);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 
 }
@@ -300,7 +300,7 @@ input, select, textarea {
   font-family: inherit;
   font-size: 1rem;
   padding: 0.5rem;
-  background-color: #0f0a1c;
+  background-color: var(--field-bg);
   color: var(--ink);
   border: 1px solid var(--border);
   border-radius: 3px;
