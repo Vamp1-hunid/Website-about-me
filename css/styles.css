@@ -429,3 +429,109 @@ footer {
 .table-wrap {
   overflow-x: auto;
 }
+/* ===== Activity 3 additions, part 2: form feedback and keyboard focus ===== */
+
+.notice {
+  padding: 0.6rem 0.9rem;
+  font-weight: 600;
+  background-color: var(--panel-alt);
+  border-left: 4px solid var(--cyan);
+}
+
+.error {
+  margin: 0.3rem 0 0;
+  min-height: 1.4em;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--error);
+}
+
+input[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
+.feedback {
+  margin-top: 1rem;
+  font-weight: 600;
+}
+
+.feedback-error { color: var(--error); }
+.feedback-success { color: var(--success); }
+
+.preview {
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  border: 2px solid var(--success);
+  border-radius: 6px;
+}
+
+.preview dt {
+  font-weight: 600;
+  color: var(--cyan);
+}
+
+.preview dd {
+  margin: 0 0 0.75rem;
+  overflow-wrap: anywhere;     /* long words wrap instead of widening the page */
+  white-space: pre-wrap;       /* keeps line breaks the visitor typed */
+}
+
+/* Visible keyboard focus for links, buttons and the drop-down. */
+a:focus-visible,
+button:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+/* ===== Activity 3 additions, part 3: menu and theme buttons, and the mobile media query ===== */
+
+/* The two small buttons in the header use an outline style. */
+.menu-toggle,
+.theme-toggle {
+  background-color: transparent;
+  color: var(--cyan);
+  border: 1px solid var(--cyan);
+  box-shadow: none;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.95rem;
+}
+
+.menu-toggle:hover,
+.theme-toggle:hover,
+.menu-toggle:focus-visible,
+.theme-toggle:focus-visible {
+  background-color: var(--cyan);
+  color: var(--on-magenta);
+  box-shadow: none;
+}
+
+.menu-toggle {
+  display: none;               /* hidden on wide screens; the media query below shows it */
+}
+
+/* Media query: applies only on screens up to 700px wide. Keep this block LAST in the file. */
+@media (max-width: 700px) {
+  .menu-toggle {
+    display: inline-block;
+  }
+
+  nav {
+    display: none;             /* links stay hidden until the Menu button adds .is-open */
+    flex-direction: column;
+    gap: 0;
+  }
+
+  nav.is-open {
+    display: flex;
+  }
+
+  nav a {
+    padding: 0.75rem 0.25rem;  /* bigger tap area */
+  }
+
+  #intro .button,
+  form button {
+    width: 100%;               /* easy to tap at narrow widths */
+  }
+}
