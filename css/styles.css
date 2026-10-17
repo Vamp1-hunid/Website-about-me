@@ -6,8 +6,8 @@
   --panel-alt: #1a1030;
   --ink: #e6def9;
   --ink-dim: #a89ac2;
-  --magenta: #d726ff;
-  --magenta-dim: #7d1c96;
+  --magenta: #39ff88;
+  --magenta-dim: #14b866;
   --cyan: #29f5ea;
   --border: #3a2560;
   --nav-bg: #0f0a1c;
@@ -20,10 +20,10 @@
   /* Cinematic mode palette (Watch Dogs-inspired, original values only) */
   --green: #39ff88;
   --red: #ff4d5e;
-  --purple: #a05bff;
+  --purple: #27e6ff;
   --mono: "Share Tech Mono", "Courier New", monospace;
   --on-accent: #02060a;        /* text colour that sits ON cinematic accent buttons */
-  --glow: 0 0 12px rgba(215, 38, 255, 0.55), 0 0 28px rgba(215, 38, 255, 0.25);
+  --glow: 0 0 12px rgba(57, 255, 136, 0.5), 0 0 28px rgba(39, 230, 255, 0.22);
 }
 
 /* Light theme: the theme button (JavaScript) sets data-theme="light" on the <html> element. */
@@ -48,7 +48,7 @@
   /* Cinematic mode palette, light-theme overrides */
   --green: #0c8a4d;
   --red: #b3261e;
-  --purple: #6b2fb3;
+  --purple: #00677a;
   --on-accent: #ffffff;
   --glow: none;
 }
@@ -62,7 +62,7 @@ body {
   font-family: "Rajdhani", "Trebuchet MS", sans-serif;
   background-color: var(--bg);
   background-image:
-    linear-gradient(rgba(215, 38, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(rgba(57, 255, 136, 0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(41, 245, 234, 0.04) 1px, transparent 1px);
   background-size: 32px 32px;
   color: var(--ink);
@@ -159,7 +159,7 @@ h3 {
   border-radius: 6px;
   padding: 1.5rem;
   margin: 1.5rem 0;
-  box-shadow: 0 0 0 1px rgba(215, 38, 255, 0.05);
+  box-shadow: 0 0 0 1px rgba(57, 255, 136, 0.05);
 }
 
 #about {
@@ -179,7 +179,7 @@ h3 {
   border-radius: 50%;
   object-fit: cover;
   border: 3px solid var(--magenta);
-  box-shadow: 0 0 18px rgba(215, 38, 255, 0.45);
+  box-shadow: 0 0 18px rgba(57, 255, 136, 0.45);
   flex-shrink: 0;
 }
 
@@ -336,7 +336,7 @@ button[type="submit"] {
   font-size: 1rem;
   border-radius: 3px;
   cursor: pointer;
-  box-shadow: 0 0 10px rgba(215, 38, 255, 0.4);
+  box-shadow: 0 0 10px rgba(57, 255, 136, 0.4);
   transition: box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
@@ -586,12 +586,7 @@ footer {
   height: 2px;
   z-index: 97;
   pointer-events: none;
-  background: linear-gradient(
-    90deg,
-    var(--green),
-    var(--cyan),
-    var(--purple, #a05bff)
-  );
+  background: linear-gradient(90deg, var(--green), var(--cyan));
   box-shadow: 0 0 12px rgba(57, 255, 136, 0.45);
 }
 
