@@ -941,6 +941,7 @@ body.wd-booting {
   background: #020608;
   color: #39ff88;
 }
+
 /* ===== Cursor scanner ===== */
 .wd-cursor {
   position: fixed;
