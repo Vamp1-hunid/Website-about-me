@@ -1,0 +1,39 @@
+/* =========================================================
+   EMERGENCY DE-PURPLE PATCH
+   Load this AFTER styles.css
+   ========================================================= */
+
+:root,
+:root[data-theme="dark"] {
+  --purple: #27e6ff !important;
+}
+
+:root[data-theme="light"] {
+  --purple: #00677a !important;
+}
+
+/* Force the existing effects-plus top progress bar to green/cyan only */
+.hud-progress {
+  background: linear-gradient(90deg, var(--green), var(--cyan)) !important;
+  background-image: linear-gradient(90deg, var(--green), var(--cyan)) !important;
+  box-shadow: 0 0 12px rgba(57, 255, 136, 0.45) !important;
+}
+
+/* Force the cinematic progress bar too, if present */
+.wd-progress {
+  background: linear-gradient(90deg, var(--green), var(--cyan)) !important;
+  background-image: linear-gradient(90deg, var(--green), var(--cyan)) !important;
+  box-shadow: 0 0 12px rgba(57, 255, 136, 0.45) !important;
+}
+
+/* Safety override for any rule still using the old purple fallback */
+.hud-progress,
+.wd-progress,
+.sys-hud,
+.wd-console,
+.wd-console-toggle,
+.card,
+.card-grid,
+.content-section {
+  --purple: #27e6ff !important;
+}
