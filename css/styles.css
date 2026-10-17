@@ -1575,3 +1575,101 @@ body.wd-overdrive .wd-console-toggle {
     transition: none;
   }
 }
+
+/* =========================================================
+   GREEN/CYAN THEME CORRECTION
+   Shifts the original magenta/purple identity toward the
+   Watch Dogs-inspired dark-teal / neon-green / cyan palette.
+   Appended last so these variable overrides win cleanly.
+   ========================================================= */
+
+:root {
+  /* Surfaces: near-black teal instead of purple black */
+  --bg: #04100d;
+  --panel: #081a15;
+  --panel-alt: #0c231c;
+  --nav-bg: #061410;
+  --stripe: #0a1d17;
+  --field-bg: #061410;
+  --border: #1e4a3a;
+
+  /* Ink: pale mint instead of lilac */
+  --ink: #dff5e9;
+  --ink-dim: #8fb3a3;
+
+  /* Accent aliases: magenta slots now point at green/cyan */
+  --magenta: #39ff88;
+  --magenta-dim: #14b866;
+  --purple: #27e6ff;
+
+  /* Text that sits on accent buttons: dark ink on neon */
+  --on-magenta: #02060a;
+
+  /* Status + focus */
+  --focus: #27e6ff;
+  --error: #ff8f9a;
+  --success: #5ef0a6;
+
+  /* Glow: green/cyan only, no purple */
+  --glow: 0 0 12px rgba(57, 255, 136, 0.5), 0 0 28px rgba(39, 230, 255, 0.22);
+}
+
+:root[data-theme="light"] {
+  /* Light theme: paper-white with deep green/teal accents */
+  --bg: #f2f8f4;
+  --panel: #ffffff;
+  --panel-alt: #e7f4ec;
+  --ink: #12281f;
+  --ink-dim: #3d5c4e;
+  --magenta: #0c8a4d;
+  --magenta-dim: #0a6b3c;
+  --cyan: #0a6b66;
+  --purple: #0a6b66;
+  --border: #bcd8c8;
+  --nav-bg: #e2f0e8;
+  --stripe: #f4faf6;
+  --field-bg: #ffffff;
+  --on-magenta: #ffffff;
+  --focus: #0a6b66;
+  --error: #b3261e;
+  --success: #16692f;
+  --green: #0c8a4d;
+  --red: #b3261e;
+  --on-accent: #ffffff;
+  --glow: none;
+}
+
+/* Body grid lines: green/cyan instead of magenta */
+body {
+  background-image:
+    linear-gradient(rgba(57, 255, 136, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(39, 230, 255, 0.04) 1px, transparent 1px);
+}
+
+/* Scroll progress bar: green to cyan only (no purple tail) */
+.wd-progress {
+  background: linear-gradient(90deg, var(--green), var(--cyan));
+}
+
+/* Breach simulation: keep it visible even though JS adds "overdrive" */
+body.overdrive {
+  filter: saturate(1.25) contrast(1.06) hue-rotate(-6deg);
+}
+
+body.overdrive .wd-console {
+  border-color: var(--red);
+  box-shadow:
+    0 0 24px rgba(0, 0, 0, 0.45),
+    0 0 18px rgba(255, 77, 94, 0.16);
+}
+
+body.overdrive #wd-console-status {
+  color: var(--red);
+  text-shadow: 0 0 8px rgba(255, 77, 94, 0.25);
+}
+
+body.overdrive .wd-console-toggle {
+  color: var(--red);
+  border-color: var(--red);
+  box-shadow: 0 0 12px rgba(255, 77, 94, 0.18);
+}
