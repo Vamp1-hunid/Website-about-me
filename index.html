@@ -7,11 +7,97 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
-  <script src="js/script.js" defer></script>
+  <script>
+    document.documentElement.classList.add("wd-cine-js");
+  </script>
 </head>
 <body>
 
 <a class="skip-link" href="#main">Skip to main content</a>
+
+<!-- Watch Dogs cinematic: boot screen -->
+<div id="wd-boot" class="wd-boot" aria-hidden="true">
+  <div class="wd-boot-frame">
+    <div class="wd-boot-title">SECURE SHELL // BOOTSTRAP</div>
+    <pre id="wd-boot-log" class="wd-boot-log"></pre>
+    <div class="wd-boot-progress">
+      <span id="wd-boot-bar"></span>
+    </div>
+    <div class="wd-boot-hint">CLICK OR PRESS ANY KEY TO SKIP</div>
+  </div>
+</div>
+
+<!-- Watch Dogs cinematic: system console -->
+<aside id="wd-console" class="wd-console" aria-label="System console" aria-hidden="true">
+  <header>
+    <span>SYS CONSOLE</span>
+    <div class="wd-console-actions">
+      <button id="wd-audio-toggle" type="button" class="wd-mini-btn" aria-pressed="false">
+        AUDIO OFF
+      </button>
+      <button id="wd-console-close" type="button" class="wd-mini-btn" aria-label="Close console">
+        ×
+      </button>
+    </div>
+  </header>
+
+  <div class="wd-console-body">
+    <ol id="wd-console-log" class="wd-console-log"></ol>
+
+    <form id="wd-console-form" class="wd-console-form" autocomplete="off">
+      <label class="sr-only" for="wd-console-input">Console command</label>
+      <span class="wd-console-prompt">&gt;</span>
+      <input id="wd-console-input" type="text" placeholder="type help" />
+      <button type="submit">RUN</button>
+    </form>
+  </div>
+
+  <footer id="wd-console-status">SESSION // INITIALISING</footer>
+</aside>
+
+<button
+  id="wd-console-toggle"
+  class="wd-console-toggle"
+  type="button"
+  aria-expanded="false"
+  aria-controls="wd-console"
+>
+  SYS CONSOLE
+</button>
+
+<!-- Watch Dogs cinematic: cursor scanner -->
+<div id="wd-cursor" class="wd-cursor" aria-hidden="true">
+  <span class="wd-cursor-ring"></span>
+  <span class="wd-cursor-label"></span>
+</div>
+
+<!-- Watch Dogs cinematic: mission dossier modal -->
+<div
+  id="wd-dossier"
+  class="wd-dossier"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="wd-dossier-title"
+  aria-hidden="true"
+>
+  <div class="wd-dossier-panel">
+    <header>
+      <span id="wd-dossier-kicker">MISSION FILE // DECRYPTED</span>
+      <button id="wd-dossier-close" type="button" aria-label="Close dossier">×</button>
+    </header>
+
+    <h3 id="wd-dossier-title">MISSION FILE</h3>
+    <p id="wd-dossier-body"></p>
+
+    <ul id="wd-dossier-tags" class="tags"></ul>
+
+    <dl id="wd-dossier-meta" class="wd-dossier-meta"></dl>
+
+    <footer>
+      <button id="wd-dossier-access" type="button" class="button">ACKNOWLEDGE</button>
+    </footer>
+  </div>
+</div>
 
   <header class="site-header">
     <p class="brand">Mulenga Mwamba</p>
@@ -40,6 +126,7 @@
 
     <section id="intro" class="content-section">
       <h1>Mulenga Mwamba</h1>
+      <p class="cmd"><span data-typing>whoami --role "data science student" --status building</span></p>
       <p class="programme">Bachelor of Science in Data Science · Year 2 · Mulungushi University, Zambia</p>
       <p>Welcome! I am a second-year Data Science student at Mulungushi University. This site shows what I am learning and building along the way.</p>
       <a class="button" href="#projects">View My Projects</a>
@@ -269,6 +356,10 @@
             <p>Last updated: 10 October 2026</p>
 
   </footer>
+
+<script src="js/script.js" defer></script>
+<script src="js/effects.js" defer></script>
+<script src="js/cinematic.js" defer></script>
 
 </body>
 </html>
