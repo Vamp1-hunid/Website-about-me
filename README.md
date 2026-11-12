@@ -1,6 +1,6 @@
 # Mulenga Mwamba | Student Portfolio (ICT251 Activity 3)
 
-Live website: https://YOUR-SITE-NAME.onrender.com
+Live website: https://mulenga-mwambas-personal-website.onrender.com
 
 ## About this website
 [Two or three sentences in your own words: what the site is and who it is for.]
