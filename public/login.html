@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log in | Mulenga Mwamba</title>
+  <meta name="description" content="Log in to comment on, like and save works.">
+  <meta name="theme-color" content="#0b0a10">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0a10'/%3E%3Cpath d='M0 0h32v22l-10 10H0z' fill='%23ff2e97'/%3E%3Ctext x='5' y='22' font-family='monospace' font-size='15' font-weight='700' fill='%230b0a10'%3E%3E_%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css?v=6">
+  <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
+  <script src="/js/theme-boot.js"></script>
+</head>
+<body data-page="login">
+
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Mulenga Mwamba, home">
+      <span class="brand-mark" aria-hidden="true">&gt;_</span>
+      <span class="brand-text glitch">MWAMBA<span class="brand-dim">//NET</span></span>
+    </a>
+    <div class="header-actions">
+      <!-- Filled in by js/api.js: "Log in / Join", or your name, Profile and Log out -->
+      <div class="auth-area" id="auth-area"></div>
+      <!-- Feature: mobile navigation button (shown only on narrow screens) -->
+      <button id="menu-toggle" class="btn btn-ghost btn-small menu-toggle" type="button"
+              aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <!-- Feature: light and dark theme switch -->
+      <button id="theme-toggle" class="btn btn-ghost btn-small" type="button">Light mode</button>
+    </div>
+  </header>
+
+  <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+    <a href="/" data-nav="home">Home</a>
+    <a href="/gallery" data-nav="works">Works</a>
+    <a href="/#about">About</a>
+    <a href="/#plan">Learning plan</a>
+    <a href="/#projects">Projects</a>
+    <a href="/#photos">Photos</a>
+    <a href="/#media">Media</a>
+    <a href="/#contact">Contact</a>
+    <a href="https://developer.mozilla.org/en-US/docs/Learn" target="_blank" rel="noopener">MDN Web Docs (external)</a>
+  </nav>
+
+  <main id="main">
+    <section class="panel narrow" aria-labelledby="login-title">
+      <p class="node-label">Auth // sign in</p>
+      <h1 id="login-title" class="glitch">Log in</h1>
+      <form id="login-form" novalidate>
+        <div class="form-row">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" autocomplete="username" required
+                 autocapitalize="none" spellcheck="false" aria-describedby="username-error">
+          <p class="error" id="username-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" required
+                 aria-describedby="password-error">
+          <p class="error" id="password-error"></p>
+        </div>
+        <button type="submit">Log in</button>
+        <p class="feedback feedback-error" id="form-feedback" aria-live="polite"></p>
+      </form>
+      <p class="form-foot">New here? <a id="switch-link" href="/register">Create a free account</a>.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; 2026 Mulenga Mwamba. Built for ICT251 Web Technologies, Mulungushi University.</p>
+    <p><a href="https://github.com/Vamp1-hunid/Website-about-me">View source on GitHub</a></p>
+    <p>Last updated: 12 November 2026</p>
+  </footer>
+
+  <script src="/js/api.js" defer></script>
+  <script src="/js/script.js" defer></script>
+  <script src="/js/fx.js" defer></script>
+  <script src="/js/auth-forms.js" defer></script>
+</body>
+</html>

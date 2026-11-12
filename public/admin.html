@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin | Mulenga Mwamba</title>
+  <meta name="description" content="Admin area.">
+  <meta name="theme-color" content="#0b0a10">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0a10'/%3E%3Cpath d='M0 0h32v22l-10 10H0z' fill='%23ff2e97'/%3E%3Ctext x='5' y='22' font-family='monospace' font-size='15' font-weight='700' fill='%230b0a10'%3E%3E_%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css?v=6">
+  <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
+  <script src="/js/theme-boot.js"></script>
+</head>
+<body data-page="admin">
+
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Mulenga Mwamba, home">
+      <span class="brand-mark" aria-hidden="true">&gt;_</span>
+      <span class="brand-text glitch">MWAMBA<span class="brand-dim">//NET</span></span>
+    </a>
+    <div class="header-actions">
+      <!-- Filled in by js/api.js: "Log in / Join", or your name, Profile and Log out -->
+      <div class="auth-area" id="auth-area"></div>
+      <!-- Feature: mobile navigation button (shown only on narrow screens) -->
+      <button id="menu-toggle" class="btn btn-ghost btn-small menu-toggle" type="button"
+              aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <!-- Feature: light and dark theme switch -->
+      <button id="theme-toggle" class="btn btn-ghost btn-small" type="button">Light mode</button>
+    </div>
+  </header>
+
+  <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+    <a href="/" data-nav="home">Home</a>
+    <a href="/gallery" data-nav="works">Works</a>
+    <a href="/#about">About</a>
+    <a href="/#plan">Learning plan</a>
+    <a href="/#projects">Projects</a>
+    <a href="/#photos">Photos</a>
+    <a href="/#media">Media</a>
+    <a href="/#contact">Contact</a>
+    <a href="https://developer.mozilla.org/en-US/docs/Learn" target="_blank" rel="noopener">MDN Web Docs (external)</a>
+  </nav>
+
+  <main id="main">
+    <section class="panel" id="admin-gate">
+      <p class="node-label">Admin // restricted</p>
+      <h1 class="glitch">Admin</h1>
+      <p id="gate-message" class="loading">Checking access&hellip;</p>
+    </section>
+
+    <div class="admin-layout" id="admin-area" hidden>
+      <section class="panel" aria-labelledby="editor-title">
+        <p class="node-label" id="editor-kicker">Upload // new file</p>
+        <h2 id="editor-title">Post a new work</h2>
+        <form id="post-form" novalidate>
+          <input type="hidden" id="post-id" name="id">
+          <div class="form-row">
+            <label for="title">Title</label>
+            <input type="text" id="title" name="title" maxlength="120" required aria-describedby="title-error">
+            <p class="error" id="title-error"></p>
+          </div>
+          <div class="form-row">
+            <label for="category">Category</label>
+            <select id="category" name="category" aria-describedby="category-error">
+              <option value="story-art">Story art</option>
+              <option value="anime">Anime works</option>
+              <option value="writing">Writing</option>
+            </select>
+            <p class="error" id="category-error"></p>
+          </div>
+          <div class="form-row">
+            <label for="image">Image (JPG, PNG, WebP or GIF, up to 8 MB)</label>
+            <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/webp,image/gif"
+                   aria-describedby="image-hint image-error">
+            <p class="muted" id="image-hint">Needed for story art and anime works; optional for writing.</p>
+            <p class="error" id="image-error"></p>
+            <img id="image-preview" class="image-preview" alt="Preview of the chosen image" hidden>
+          </div>
+          <div class="check-row" id="remove-image-row" hidden>
+            <input type="checkbox" id="removeImage" name="removeImage">
+            <label for="removeImage">Remove the current image</label>
+          </div>
+          <div class="form-row">
+            <label for="summary">Short description (shown on the card)</label>
+            <input type="text" id="summary" name="summary" maxlength="300" aria-describedby="summary-error">
+            <p class="error" id="summary-error"></p>
+          </div>
+          <div class="form-row">
+            <label for="body">Text (story, notes about the piece &hellip;)</label>
+            <textarea id="body" name="body" rows="10" aria-describedby="body-error"></textarea>
+            <p class="error" id="body-error"></p>
+          </div>
+          <div class="check-row">
+            <input type="checkbox" id="published" name="published" checked>
+            <label for="published">Published (untick to save as a hidden draft)</label>
+          </div>
+          <div class="hero-actions">
+            <button type="submit" id="save-btn">Publish</button>
+            <button type="button" id="cancel-edit" class="btn btn-ghost" hidden>Cancel editing</button>
+          </div>
+          <p class="feedback" id="form-feedback" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="list-title">
+        <p class="node-label">Archive // all files</p>
+        <h2 id="list-title">Your works</h2>
+        <p class="muted">Drafts are only visible to you.</p>
+        <ul id="admin-list" class="admin-list" aria-live="polite"></ul>
+        <nav class="pager" aria-label="Pages">
+          <button id="admin-prev" class="btn btn-ghost btn-small" type="button" hidden>Previous</button>
+          <span id="admin-page"></span>
+          <button id="admin-next" class="btn btn-ghost btn-small" type="button" hidden>Next</button>
+        </nav>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; 2026 Mulenga Mwamba. Built for ICT251 Web Technologies, Mulungushi University.</p>
+    <p><a href="https://github.com/Vamp1-hunid/Website-about-me">View source on GitHub</a></p>
+    <p>Last updated: 12 November 2026</p>
+  </footer>
+
+  <script src="/js/api.js" defer></script>
+  <script src="/js/script.js" defer></script>
+  <script src="/js/fx.js" defer></script>
+  <script src="/js/admin.js" defer></script>
+</body>
+</html>
