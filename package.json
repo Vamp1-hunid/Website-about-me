@@ -1,0 +1,27 @@
+{
+  "name": "mulenga-mwamba-website",
+  "version": "2.0.0",
+  "description": "Mulenga Mwamba's personal website: profile, story art and anime works, with member accounts (comments, likes, favourites) and an admin area.",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "migrate": "node src/migrate.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
+    "connect-pg-simple": "^10.0.0",
+    "dotenv": "^16.4.7",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.3.0",
+    "express-session": "^1.19.0",
+    "helmet": "^8.1.0",
+    "multer": "^2.0.2",
+    "pg": "^8.23.1"
+  }
+}
