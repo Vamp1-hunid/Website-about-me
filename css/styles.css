@@ -187,11 +187,16 @@ h3 {
   flex: 1;
 }
 
-@media (max-width: 480px) {
+/* Stack the photo above the text on phones and small tablets,
+   so the paragraph is not squeezed into a narrow column. */
+@media (max-width: 640px) {
   .about-layout {
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+@media (max-width: 480px) {
   .about-photo {
     width: 110px;
     height: 110px;
@@ -739,6 +744,33 @@ body.wd-booting {
   background: var(--cyan);
   border-color: var(--cyan);
   box-shadow: 0 0 16px rgba(39, 230, 255, 0.35);
+}
+
+/* On narrow screens the floating button sat on top of the text.
+   Shrink it to a small ">_" square in the corner. The real button text
+   ("SYS CONSOLE") stays in the HTML, so screen readers still announce it. */
+@media (max-width: 700px) {
+  .wd-console-toggle {
+    right: 0.6rem;
+    bottom: 0.6rem;
+    width: 2.6rem;
+    height: 2.6rem;
+    padding: 0;
+    font-size: 0;
+    letter-spacing: 0;
+    opacity: 0.8;
+  }
+
+  .wd-console-toggle::before {
+    content: ">_";
+    font: 700 0.95rem var(--mono);
+  }
+
+  .wd-console-toggle:hover,
+  .wd-console-toggle:focus-visible,
+  .wd-console-toggle[aria-expanded="true"] {
+    opacity: 1;
+  }
 }
 
 /* ===== System console panel ===== */
@@ -1542,11 +1574,8 @@ body.wd-overdrive .wd-console-toggle {
 }
 
 @media (max-width: 520px) {
-  .wd-console-toggle {
-    font-size: 0.66rem;
-    padding: 0.45rem 0.65rem;
-  }
-
+  /* (The console button's small-screen size is set in the
+     "On narrow screens" rule next to .wd-console-toggle.) */
   .wd-console-log,
   .wd-console-form input {
     font-size: 0.68rem;
