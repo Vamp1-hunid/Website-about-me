@@ -3,8 +3,13 @@
 
 const { Pool } = require("pg");
 
+require("./env");
+
 if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL is not set. Copy .env.example to .env and fill it in.");
+  throw new Error(
+    "DATABASE_URL is not set. On Render: open the service -> Environment and paste your Neon " +
+    "connection string (it starts with postgresql://). On a laptop: copy .env.example to .env and fill it in."
+  );
 }
 
 // Neon (and most hosted databases) require an encrypted connection.

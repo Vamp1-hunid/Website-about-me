@@ -2,7 +2,7 @@
 // Creates the database tables (db/schema.sql) and makes sure the admin account exists.
 // Runs automatically when the server starts; you can also run it by hand: npm run migrate
 
-require("dotenv").config();
+require("./env");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcryptjs");
