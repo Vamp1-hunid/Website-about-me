@@ -1,7 +1,7 @@
 // server.js
 // Starts the website: serves the pages in public/ and the JSON API under /api.
 
-require("dotenv").config();
+require("./src/env");
 
 const path = require("path");
 const express = require("express");
