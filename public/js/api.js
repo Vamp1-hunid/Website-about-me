@@ -54,7 +54,10 @@
   MW.me = function (refresh) {
     if (!mePromise || refresh) {
       mePromise = MW.api("/account/me")
-        .then(function (data) { return data.user; })
+        .then(function (data) {
+          MW.googleEnabled = Boolean(data.googleEnabled);
+          return data.user;
+        })
         .catch(function () { return null; });
     }
     return mePromise;

@@ -21,7 +21,7 @@ fonts or artwork are used).
 | `/gallery` | All works, with filters: `?category=story-art`, `anime` or `writing` |
 | `/work/<name>` | One work: image or text, likes, save, comments |
 | `/login`, `/register` | Log in / create a free account |
-| `/profile` | A member's stats and saved favourites; members can delete their account here |
+| `/profile` | A member's stats and saved favourites; change password, link Google, delete account |
 | `/admin` | Site owner only: post, edit (or save as draft) and delete works |
 
 ## Features
@@ -40,6 +40,7 @@ fonts or artwork are used).
 - A short boot screen once per visit on the home page. Visitors who turn on *reduce motion* get no boot screen and a still page.
 
 **Accounts and works (server)**
+- Sign up / log in with a username and password, or with Google.
 - Passwords are stored as bcrypt hashes; logins use secure, http-only session cookies kept in the database.
 - Login and sign-up are rate-limited; requests from other websites are blocked.
 - Only image files (JPG, PNG, WebP, GIF, up to 8 MB) can be uploaded, and only by the admin.
@@ -89,8 +90,43 @@ Your old Render service is a **Static Site**, which can't run a server. Replace 
    | `ADMIN_USERNAME` | the username you'll log in with, e.g. `mwamba` |
    | `ADMIN_PASSWORD` | a strong password, 10+ characters |
 
+   Optional extras (each switches a feature on when it's set):
+
+   | Name | What it does |
+   |---|---|
+   | `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` | turns on "Continue with Google" (see below) |
+   | `GOOGLE_VERIFICATION` | proves to Google Search Console that the site is yours (see below) |
+   | `PUBLIC_URL` | your site's address, e.g. `https://mulenga-mwamba-website.onrender.com` (only needed if you add your own domain) |
+
 5. Deploy. Open `/login`, sign in with your admin username and password, then go to `/admin`
    and post your first work.
+
+**Passwords:** anyone (you included) can change their password on `/profile`. If you forget
+the admin password, change `ADMIN_PASSWORD` on Render and redeploy: a *new* value resets it.
+
+## "Continue with Google" (one-time setup)
+
+1. Go to https://console.cloud.google.com and create a project (any name, e.g. "MWAMBA NET").
+2. **Google Auth Platform → Branding** (or "OAuth consent screen"): app name, your email,
+   audience **External**. Then **Audience → Publish app** so everyone can use it, not only test users.
+3. **Clients → Create client → Web application**.
+   Under **Authorised redirect URIs** add exactly:
+   `https://mulenga-mwamba-website.onrender.com/auth/google/callback`
+4. Copy the **Client ID** and **Client secret** into Render as `GOOGLE_CLIENT_ID` and
+   `GOOGLE_CLIENT_SECRET`, then deploy. The Google buttons appear by themselves.
+5. To log in as admin with Google: log in with your password, open `/profile`, press **Link my Google account**.
+
+## Getting found on Google Search
+
+The site already serves `/sitemap.xml` (every page and work) and `/robots.txt`.
+
+1. Go to https://search.google.com/search-console → **Add property** → **URL prefix** →
+   your site address.
+2. Choose the **HTML file** method. Google offers a file called something like `google1a2b3c4d.html`.
+   Don't download it: copy its name into Render as `GOOGLE_VERIFICATION` (e.g. `google1a2b3c4d`)
+   and deploy, then press **Verify**.
+3. In Search Console open **Sitemaps** and submit `sitemap.xml`.
+4. It usually takes a few days to a couple of weeks before searches like "Mulenga Mwamba" show the site.
 
 Never put these values in the code or on GitHub. On your laptop they go in a `.env` file
 (copy `.env.example`), which `.gitignore` keeps out of the repo.

@@ -84,6 +84,14 @@ api.use(function (req, res) {
 });
 app.use("/api", api);
 
+/* ---------- Google sign-in ---------- */
+
+app.use("/auth/google", require("./src/routes/google").router);
+
+/* ---------- Search engines (robots.txt, sitemap.xml, Google verification) ---------- */
+
+app.use(require("./src/routes/seo"));
+
 /* ---------- Pages ---------- */
 
 const publicDir = path.join(__dirname, "public");
