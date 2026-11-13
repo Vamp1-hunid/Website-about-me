@@ -38,9 +38,21 @@ async function ensureAdmin() {
       [username, process.env.ADMIN_DISPLAY_NAME || "Mulenga Mwamba", hash]
     );
     console.log("Admin account created: " + username);
-  } else if (rows[0].role !== "admin") {
-    await db.query("UPDATE users SET role = 'admin' WHERE id = $1", [rows[0].id]);
-    console.log("Existing account promoted to admin: " + username);
+  } else {
+    if (rows[0].role !== "admin") {
+      await db.query("UPDATE users SET role = 'admin' WHERE id = $1", [rows[0].id]);
+      console.log("Existing account promoted to admin: " + username);
+    }
+    // ADMIN_PASSWORD is the source of truth: change it on Render and the
+    // new password works after the next restart/deploy.
+    const current = await db.query("SELECT password_hash FROM users WHERE id = $1", [rows[0].id]);
+    const same = await bcrypt.compare(password, current.rows[0].password_hash);
+    if (!same) {
+      const hash = await bcrypt.hash(password, 12);
+      await db.query("UPDATE users SET password_hash = $1 WHERE id = $2", [hash, rows[0].id]);
+      await db.query("DELETE FROM user_sessions WHERE (sess -> 'user' ->> 'id')::int = $1", [rows[0].id]);
+      console.log("Admin password updated from ADMIN_PASSWORD.");
+    }
   }
 }
 
