@@ -38,22 +38,39 @@ async function ensureAdmin() {
       [username, process.env.ADMIN_DISPLAY_NAME || "Mulenga Mwamba", hash]
     );
     console.log("Admin account created: " + username);
-  } else {
-    if (rows[0].role !== "admin") {
-      await db.query("UPDATE users SET role = 'admin' WHERE id = $1", [rows[0].id]);
-      console.log("Existing account promoted to admin: " + username);
-    }
-    // ADMIN_PASSWORD is the source of truth: change it on Render and the
-    // new password works after the next restart/deploy.
-    const current = await db.query("SELECT password_hash FROM users WHERE id = $1", [rows[0].id]);
-    const same = await bcrypt.compare(password, current.rows[0].password_hash);
-    if (!same) {
-      const hash = await bcrypt.hash(password, 12);
-      await db.query("UPDATE users SET password_hash = $1 WHERE id = $2", [hash, rows[0].id]);
-      await db.query("DELETE FROM user_sessions WHERE (sess -> 'user' ->> 'id')::int = $1", [rows[0].id]);
-      console.log("Admin password updated from ADMIN_PASSWORD.");
-    }
+  } else if (rows[0].role !== "admin") {
+    await db.query("UPDATE users SET role = 'admin' WHERE id = $1", [rows[0].id]);
+    console.log("Existing account promoted to admin: " + username);
   }
+
+  await applyAdminPasswordReset(username, password);
+}
+
+// Two ways to change the admin password:
+//  1. On the website (Profile -> Change password). This is the normal way.
+//  2. By changing ADMIN_PASSWORD on Render, as a reset if you forget it.
+// The server remembers (as a bcrypt hash) which ADMIN_PASSWORD it last applied.
+// Only a CHANGED value resets the password, so a normal restart (Render's free
+// plan restarts the app often) never undoes a password set on the website.
+async function applyAdminPasswordReset(username, password) {
+  const stored = await db.query("SELECT value FROM app_settings WHERE key = 'admin_env_password'");
+  const known = stored.rows[0] ? await bcrypt.compare(password, stored.rows[0].value) : false;
+  if (known) return;
+
+  const envHash = await bcrypt.hash(password, 12);
+  await db.query(
+    `INSERT INTO app_settings (key, value) VALUES ('admin_env_password', $1)
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+    [envHash]
+  );
+
+  // The very first time, just remember the value (the account already uses it).
+  if (!stored.rows[0]) return;
+
+  const user = await db.query("SELECT id FROM users WHERE username = $1", [username]);
+  await db.query("UPDATE users SET password_hash = $1 WHERE id = $2", [await bcrypt.hash(password, 12), user.rows[0].id]);
+  await db.query("DELETE FROM user_sessions WHERE (sess -> 'user' ->> 'id')::int = $1", [user.rows[0].id]);
+  console.log("Admin password reset from the new ADMIN_PASSWORD value.");
 }
 
 module.exports = { migrate };

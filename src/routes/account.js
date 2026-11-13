@@ -160,6 +160,54 @@ router.get("/stats", requireLogin, async function (req, res) {
   res.json(rows[0]);
 });
 
+const passwordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Too many attempts. Please wait 15 minutes and try again." }
+});
+
+// POST /api/account/password  { currentPassword, newPassword }
+// Works for members and for the admin. Signs out your other devices.
+router.post("/password", requireLogin, passwordLimiter, async function (req, res) {
+  const currentPassword = typeof req.body.currentPassword === "string" ? req.body.currentPassword : "";
+  const newPassword = typeof req.body.newPassword === "string" ? req.body.newPassword : "";
+  const isAdmin = req.session.user.role === "admin";
+  const minLength = isAdmin ? 10 : 8;
+
+  const problems = [];
+  if (!currentPassword) {
+    problems.push({ field: "currentPassword", message: "Enter your current password." });
+  }
+  if (newPassword.length < minLength || newPassword.length > 200) {
+    problems.push({ field: "newPassword", message: "The new password must be at least " + minLength + " characters." });
+  } else if (newPassword === currentPassword) {
+    problems.push({ field: "newPassword", message: "Choose a password different from your current one." });
+  }
+  if (problems.length) {
+    return res.status(400).json({ error: "Please fix the highlighted fields.", problems: problems });
+  }
+
+  const { rows } = await db.query("SELECT password_hash FROM users WHERE id = $1", [req.session.user.id]);
+  const ok = rows[0] ? await bcrypt.compare(currentPassword, rows[0].password_hash) : false;
+  if (!ok) {
+    return res.status(401).json({
+      error: "Your current password is not correct.",
+      problems: [{ field: "currentPassword", message: "That is not your current password." }]
+    });
+  }
+
+  const hash = await bcrypt.hash(newPassword, 12);
+  await db.query("UPDATE users SET password_hash = $1 WHERE id = $2", [hash, req.session.user.id]);
+  // Sign out every other device that was logged in to this account.
+  await db.query(
+    "DELETE FROM user_sessions WHERE sid <> $1 AND (sess -> 'user' ->> 'id')::int = $2",
+    [req.sessionID, req.session.user.id]
+  );
+  res.json({ ok: true });
+});
+
 // DELETE /api/account  { password }  -> members can delete their own account and everything they posted
 router.delete("/", requireLogin, async function (req, res) {
   if (req.session.user.role === "admin") {
