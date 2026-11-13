@@ -98,6 +98,7 @@ const publicDir = path.join(__dirname, "public");
 
 // /work/a-year-to-burn shows the single-work page; its script reads the slug from the address.
 app.get("/work/:slug", function (req, res) {
+  res.setHeader("Cache-Control", "no-cache");
   res.sendFile(path.join(publicDir, "work.html"));
 });
 
@@ -105,11 +106,21 @@ app.get("/work/:slug", function (req, res) {
 app.use(
   express.static(publicDir, {
     extensions: ["html"],
-    maxAge: isProduction ? "1h" : 0
+    // Pages, styles and scripts: the browser checks for a newer version on every visit
+    // (a quick "not modified" reply when nothing changed), so updates show up straight away.
+    // Photos, video and audio rarely change: browsers may keep them for a week.
+    setHeaders: function (res, filePath) {
+      if (/\.(html|css|js)$/i.test(filePath)) {
+        res.setHeader("Cache-Control", "no-cache");
+      } else if (isProduction) {
+        res.setHeader("Cache-Control", "public, max-age=604800");
+      }
+    }
   })
 );
 
 app.use(function (req, res) {
+  res.setHeader("Cache-Control", "no-cache");
   res.status(404).sendFile(path.join(publicDir, "404.html"));
 });
 
