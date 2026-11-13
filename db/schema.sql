@@ -57,6 +57,13 @@ CREATE TABLE IF NOT EXISTS favourites (
   PRIMARY KEY (user_id, post_id)
 );
 
+-- Small key/value store for the server's own bookkeeping
+-- (e.g. which ADMIN_PASSWORD value was last applied).
+CREATE TABLE IF NOT EXISTS app_settings (
+  key   VARCHAR(60) PRIMARY KEY,
+  value TEXT        NOT NULL
+);
+
 -- Login sessions (used by connect-pg-simple, so people stay logged in
 -- even when Render restarts the server).
 CREATE TABLE IF NOT EXISTS user_sessions (

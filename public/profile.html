@@ -66,6 +66,34 @@
       <div id="favourites" class="works-grid"></div>
     </section>
 
+    <section class="panel" aria-labelledby="password-title" id="password-panel" hidden>
+      <p class="node-label">Security // credentials</p>
+      <h2 id="password-title">Change password</h2>
+      <form id="password-form" class="narrow" novalidate>
+        <div class="form-row">
+          <label for="current-password">Current password</label>
+          <input type="password" id="current-password" name="currentPassword" autocomplete="current-password" required
+                 aria-describedby="current-password-error">
+          <p class="error" id="current-password-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="new-password">New password</label>
+          <input type="password" id="new-password" name="newPassword" autocomplete="new-password" required
+                 aria-describedby="new-password-hint new-password-error">
+          <p class="muted" id="new-password-hint">At least 8 characters (10 for the site owner).</p>
+          <p class="error" id="new-password-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="new-password2">Repeat new password</label>
+          <input type="password" id="new-password2" name="newPassword2" autocomplete="new-password" required
+                 aria-describedby="new-password2-error">
+          <p class="error" id="new-password2-error"></p>
+        </div>
+        <button type="submit">Change password</button>
+        <p class="feedback" id="password-feedback" aria-live="polite"></p>
+      </form>
+    </section>
+
     <section class="panel danger-zone" aria-labelledby="delete-title" id="delete-panel" hidden>
       <p class="node-label">Danger zone</p>
       <h2 id="delete-title">Delete my account</h2>
