@@ -73,3 +73,10 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 );
 
 CREATE INDEX IF NOT EXISTS user_sessions_expire_idx ON user_sessions (expire);
+
+-- Google sign-in (added later, so these use ALTER ... IF NOT EXISTS).
+-- google_sub is Google's permanent id for the person; accounts created
+-- with Google have no password until the member sets one.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub VARCHAR(64) UNIQUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(254);
+ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;

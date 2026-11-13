@@ -20,10 +20,32 @@
     switchLink.href += "?next=" + encodeURIComponent(next);
   }
 
-  // Already logged in? Skip the form.
+  // Already logged in? Skip the form. Otherwise show "Continue with Google" if it's set up.
   MW.me().then(function (user) {
-    if (user) window.location.replace(next);
+    if (user) {
+      window.location.replace(next);
+      return;
+    }
+    if (MW.googleEnabled) {
+      document.getElementById("google-block").hidden = false;
+      document.getElementById("google-btn").href = "/auth/google?next=" + encodeURIComponent(next);
+    }
   });
+
+  // Messages when Google sign-in sends someone back here.
+  var googleMessages = {
+    off: "Google sign-in isn't switched on yet. Use a username and password for now.",
+    cancelled: "Google sign-in was cancelled.",
+    expired: "That Google sign-in took too long or was opened twice. Please try again.",
+    failed: "Google sign-in didn't work. Please try again.",
+    taken: "That Google account is already linked to a different member."
+  };
+  var googleCode = params.get("google");
+  var googleBox = document.getElementById("google-message");
+  if (googleCode && googleMessages[googleCode]) {
+    if (googleBox) googleBox.textContent = googleMessages[googleCode];
+    else MW.toast(googleMessages[googleCode], true);
+  }
 
   function value(name) {
     var input = form.querySelector("[name='" + name + "']");

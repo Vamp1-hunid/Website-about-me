@@ -53,4 +53,27 @@ function publicUser(row) {
   };
 }
 
-module.exports = { requireLogin, requireAdmin, sameOriginOnly, publicUser };
+// Logs a user in by saving them in the session.
+// regenerate() gives the visitor a brand-new session id, which stops "session fixation" attacks.
+function startSession(req, user) {
+  return new Promise(function (resolve, reject) {
+    req.session.regenerate(function (error) {
+      if (error) return reject(error);
+      req.session.user = publicUser(user);
+      req.session.save(function (saveError) {
+        if (saveError) return reject(saveError);
+        resolve();
+      });
+    });
+  });
+}
+
+// Only allow redirects to pages on this site (stops "?next=https://evil.example").
+function safeNext(value, fallback) {
+  if (typeof value === "string" && value.charAt(0) === "/" && value.charAt(1) !== "/" && value.indexOf("\\") === -1) {
+    return value;
+  }
+  return fallback || "/";
+}
+
+module.exports = { requireLogin, requireAdmin, sameOriginOnly, publicUser, startSession, safeNext };

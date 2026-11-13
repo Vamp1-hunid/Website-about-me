@@ -61,6 +61,8 @@
 
   function renderPost() {
     document.title = post.title + " | Mulenga Mwamba";
+    var metaDesc = document.querySelector("meta[name='description']");
+    if (metaDesc) metaDesc.setAttribute("content", post.summary || MW.categoryName(post.category) + " by Mulenga Mwamba");
     article.textContent = "";
 
     var layout = el("div", { class: "work-layout" + (post.imageUrl ? "" : " no-image") });

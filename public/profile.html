@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Profile | Mulenga Mwamba</title>
   <meta name="description" content="Your member profile.">
+  <meta name="author" content="Mulenga Mwamba">
+  <meta name="robots" content="noindex">
+  <meta property="og:site_name" content="Mulenga Mwamba">
+  <meta property="og:title" content="Profile | Mulenga Mwamba">
+  <meta property="og:description" content="Your member profile.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/images/selfie.jpg">
   <meta name="theme-color" content="#0b0a10">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0a10'/%3E%3Cpath d='M0 0h32v22l-10 10H0z' fill='%23ff2e97'/%3E%3Ctext x='5' y='22' font-family='monospace' font-size='15' font-weight='700' fill='%230b0a10'%3E%3E_%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -66,11 +73,23 @@
       <div id="favourites" class="works-grid"></div>
     </section>
 
+    <section class="panel" aria-labelledby="google-title" id="google-panel" hidden>
+      <p class="node-label">Security // linked accounts</p>
+      <h2 id="google-title">Google sign-in</h2>
+      <p id="google-status" class="lead"></p>
+      <div class="hero-actions">
+        <a class="btn btn-google" id="google-link" href="/auth/google?link=1&amp;next=%2Fprofile" hidden>
+          <span class="g-mark" aria-hidden="true">G</span> Link my Google account
+        </a>
+        <button class="btn btn-ghost" type="button" id="google-unlink" hidden>Unlink Google</button>
+      </div>
+    </section>
+
     <section class="panel" aria-labelledby="password-title" id="password-panel" hidden>
       <p class="node-label">Security // credentials</p>
       <h2 id="password-title">Change password</h2>
       <form id="password-form" class="narrow" novalidate>
-        <div class="form-row">
+        <div class="form-row" id="current-password-row">
           <label for="current-password">Current password</label>
           <input type="password" id="current-password" name="currentPassword" autocomplete="current-password" required
                  aria-describedby="current-password-error">
@@ -100,7 +119,7 @@
       <p>This removes your account, your comments, likes and favourites for good.</p>
       <form id="delete-form" novalidate>
         <div class="form-row">
-          <label for="delete-password">Type your password to confirm</label>
+          <label for="delete-password" id="delete-label">Type your password to confirm</label>
           <input type="password" id="delete-password" name="password" autocomplete="current-password" required
                  aria-describedby="delete-password-error">
           <p class="error" id="delete-password-error"></p>

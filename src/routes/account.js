@@ -5,7 +5,8 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const rateLimit = require("express-rate-limit");
 const db = require("../db");
-const { requireLogin, publicUser } = require("../auth");
+const { requireLogin, startSession } = require("../auth");
+const { googleEnabled } = require("./google");
 const { thumbnailUrl } = require("../storage");
 
 const router = express.Router();
@@ -34,21 +35,6 @@ const DUMMY_HASH = bcrypt.hashSync(require("crypto").randomBytes(16).toString("h
 
 function cleanText(value) {
   return typeof value === "string" ? value.trim() : "";
-}
-
-// Logs a user in by saving them in the session.
-// regenerate() gives the visitor a brand-new session id, which stops "session fixation" attacks.
-function startSession(req, user) {
-  return new Promise(function (resolve, reject) {
-    req.session.regenerate(function (error) {
-      if (error) return reject(error);
-      req.session.user = publicUser(user);
-      req.session.save(function (saveError) {
-        if (saveError) return reject(saveError);
-        resolve();
-      });
-    });
-  });
 }
 
 // POST /api/account/register  { username, displayName, password }
@@ -99,9 +85,14 @@ router.post("/login", loginLimiter, async function (req, res) {
 
   // Same message (and roughly the same time) whether the username or the password
   // is wrong, so nobody can use the form to find out which usernames exist.
-  const ok = await bcrypt.compare(password, user ? user.password_hash : DUMMY_HASH);
+  const ok = await bcrypt.compare(password, user && user.password_hash ? user.password_hash : DUMMY_HASH);
   if (!ok) {
-    return res.status(401).json({ error: "Wrong username or password." });
+    const googleOnly = user && !user.password_hash && user.google_sub;
+    return res.status(401).json({
+      error: googleOnly
+        ? "This account uses Google sign-in. Press \"Continue with Google\" instead."
+        : "Wrong username or password."
+    });
   }
 
   await startSession(req, user);
@@ -118,7 +109,7 @@ router.post("/logout", function (req, res) {
 
 // GET /api/account/me  -> { user } or { user: null }
 router.get("/me", function (req, res) {
-  res.json({ user: req.session.user || null });
+  res.json({ user: req.session.user || null, googleEnabled: googleEnabled() });
 });
 
 // GET /api/account/favourites  -> the logged-in member's saved works
@@ -154,7 +145,9 @@ router.get("/stats", requireLogin, async function (req, res) {
        (SELECT COUNT(*) FROM comments WHERE user_id = $1)::int   AS comments,
        (SELECT COUNT(*) FROM likes WHERE user_id = $1)::int      AS likes,
        (SELECT COUNT(*) FROM favourites WHERE user_id = $1)::int AS favourites,
-       (SELECT created_at FROM users WHERE id = $1)              AS joined`,
+       (SELECT created_at FROM users WHERE id = $1)              AS joined,
+       (SELECT password_hash IS NOT NULL FROM users WHERE id = $1) AS "hasPassword",
+       (SELECT google_sub IS NOT NULL FROM users WHERE id = $1)    AS "googleLinked"`,
     [id]
   );
   res.json(rows[0]);
@@ -176,8 +169,11 @@ router.post("/password", requireLogin, passwordLimiter, async function (req, res
   const isAdmin = req.session.user.role === "admin";
   const minLength = isAdmin ? 10 : 8;
 
+  const { rows } = await db.query("SELECT password_hash FROM users WHERE id = $1", [req.session.user.id]);
+  const hasPassword = Boolean(rows[0] && rows[0].password_hash);
+
   const problems = [];
-  if (!currentPassword) {
+  if (hasPassword && !currentPassword) {
     problems.push({ field: "currentPassword", message: "Enter your current password." });
   }
   if (newPassword.length < minLength || newPassword.length > 200) {
@@ -189,8 +185,8 @@ router.post("/password", requireLogin, passwordLimiter, async function (req, res
     return res.status(400).json({ error: "Please fix the highlighted fields.", problems: problems });
   }
 
-  const { rows } = await db.query("SELECT password_hash FROM users WHERE id = $1", [req.session.user.id]);
-  const ok = rows[0] ? await bcrypt.compare(currentPassword, rows[0].password_hash) : false;
+  // Accounts made with Google have no password yet: they can set one without a current password.
+  const ok = hasPassword ? await bcrypt.compare(currentPassword, rows[0].password_hash) : true;
   if (!ok) {
     return res.status(401).json({
       error: "Your current password is not correct.",
@@ -208,16 +204,32 @@ router.post("/password", requireLogin, passwordLimiter, async function (req, res
   res.json({ ok: true });
 });
 
+// POST /api/account/google/unlink -> stop using Google sign-in (only if the account has a password)
+router.post("/google/unlink", requireLogin, async function (req, res) {
+  const { rows } = await db.query("SELECT password_hash FROM users WHERE id = $1", [req.session.user.id]);
+  if (!rows[0] || !rows[0].password_hash) {
+    return res.status(400).json({ error: "Set a password first, otherwise you could not log in any more." });
+  }
+  await db.query("UPDATE users SET google_sub = NULL WHERE id = $1", [req.session.user.id]);
+  res.json({ ok: true });
+});
+
 // DELETE /api/account  { password }  -> members can delete their own account and everything they posted
 router.delete("/", requireLogin, async function (req, res) {
   if (req.session.user.role === "admin") {
     return res.status(400).json({ error: "The admin account cannot be deleted from the website." });
   }
   const password = typeof req.body.password === "string" ? req.body.password : "";
-  const { rows } = await db.query("SELECT password_hash FROM users WHERE id = $1", [req.session.user.id]);
-  const ok = rows[0] ? await bcrypt.compare(password, rows[0].password_hash) : false;
+  const { rows } = await db.query("SELECT username, password_hash FROM users WHERE id = $1", [req.session.user.id]);
+  const user = rows[0];
+  // Accounts without a password (Google sign-in) confirm by typing their username instead.
+  const ok = !user ? false
+    : user.password_hash ? await bcrypt.compare(password, user.password_hash)
+    : password.trim().toLowerCase() === user.username;
   if (!ok) {
-    return res.status(401).json({ error: "That password is not correct." });
+    return res.status(401).json({
+      error: user && !user.password_hash ? "Type your username exactly to confirm." : "That password is not correct."
+    });
   }
   await db.query("DELETE FROM users WHERE id = $1", [req.session.user.id]);
   req.session.destroy(function () {
