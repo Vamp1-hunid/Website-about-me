@@ -14,6 +14,16 @@
     // Storage blocked: script.js falls back to the dark theme.
   }
 
+  // Arrived by clicking a link on this site: start covered, so js/flair.js can wipe the new page in.
+  try {
+    var calmWipe = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!calmWipe && sessionStorage.getItem("mw-wipe") === "1") {
+      root.classList.add("is-wiping");
+    }
+  } catch (error) {
+    // Storage blocked: no page wipe.
+  }
+
   // Show the short boot screen once per visit, on the home page only,
   // and never for visitors who asked their device for reduced motion.
   try {
