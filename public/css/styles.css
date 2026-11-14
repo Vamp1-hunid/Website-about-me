@@ -312,7 +312,13 @@ main {
   width: min(1100px, 100% - 2rem);
   margin: 2rem auto 5rem;
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* one column that can always shrink to the screen */
   gap: 2rem;
+}
+
+/* Long words (a pasted link, a long title) wrap instead of pushing the page sideways. */
+h1, h2, h3, p, li, dd, td, figcaption {
+  overflow-wrap: break-word;
 }
 
 .panel {
@@ -620,12 +626,14 @@ textarea {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  min-height: 2.75rem; /* comfortable to tap on a phone; the label is tappable too */
   margin-bottom: 1rem;
 }
 
 .check-row input {
-  width: 1.15rem;
-  height: 1.15rem;
+  width: 1.4rem;
+  height: 1.4rem;
+  flex: none;
   accent-color: var(--pink);
 }
 
@@ -823,7 +831,7 @@ tbody tr:nth-child(even) {
 
 .calc-form {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
   gap: 0 1.25rem;
   align-items: end;
 }
@@ -836,7 +844,7 @@ tbody tr:nth-child(even) {
 /* Project cards ("mission files") */
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   gap: 1.25rem;
 }
 
@@ -878,7 +886,7 @@ tbody tr:nth-child(even) {
 /* Photo gallery on the home page */
 .gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
   gap: 1.25rem;
 }
 
@@ -944,7 +952,7 @@ tbody tr:nth-child(even) {
 
 .works-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
   gap: 1.25rem;
 }
 
@@ -1147,7 +1155,7 @@ tbody tr:nth-child(even) {
 
 .stat-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
   gap: 1rem;
   margin: 1rem 0 0;
 }
@@ -1712,6 +1720,48 @@ html.fx .panel.reveal.is-in::after {
 @media (max-width: 520px) {
   body {
     font-size: 1rem;
+  }
+
+  /* The learning-plan table turns into one small card per day, so nothing scrolls sideways.
+     Each cell shows its column name from its data-label attribute. */
+  .table-stack table,
+  .table-stack tbody,
+  .table-stack tr,
+  .table-stack td {
+    display: block;
+    width: 100%;
+  }
+
+  .table-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .table-stack tr {
+    margin-bottom: 0.85rem;
+    padding: 0.4rem 0;
+    background: var(--panel-2);
+    border-left: 3px solid var(--cyan);
+  }
+
+  .table-stack td {
+    display: grid;
+    grid-template-columns: 7.5rem 1fr;
+    gap: 0.75rem;
+    padding: 0.35rem 0.85rem;
+    border-bottom: 0;
+  }
+
+  .table-stack td::before {
+    content: attr(data-label);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
   }
 
   main {
