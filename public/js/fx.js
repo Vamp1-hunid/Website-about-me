@@ -734,10 +734,7 @@
         }
       }
     });
-    var brand = document.querySelector(".brand");
-    if (brand) {
-      brand.addEventListener("pointerenter", function () { glitch(brand.querySelector(".brand-text")); });
-    }
+    // (Hovering the brand and titles is handled in js/flair.js.)
   }
 
   /* ---------- Start ---------- */
