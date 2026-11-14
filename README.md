@@ -1,12 +1,16 @@
-# MWAMBA//NET — Mulenga Mwamba's website
+# God's Banditos
 
-Live website: https://mulenga-mwambas-personal-website.onrender.com
+The website of **God's Banditos**, the story creation brand of Mulenga Mwamba.
+
+📘 **Full build report:** [docs/BUILD-REPORT.md](docs/BUILD-REPORT.md) — how everything was built, every third-party account, every animation and how to change it.
+
+Live website: https://mulenga-mwamba-website.onrender.com
 
 ## About this website
 [Two or three sentences in your own words: what the site is and who it is for.]
 
-It started as my ICT251 Activity 3 portfolio page and is now a full website: my profile and
-learning plan, plus an archive where I post my **story art, anime works and writing**.
+It started as my ICT251 Activity 3 portfolio page and is now a full website: the God's Banditos
+brand home, an archive of **story art, anime works and writing**, and a creator page about me.
 Visitors can create a free account to **comment, like and save favourites**. Only my admin
 account can post.
 
@@ -17,7 +21,8 @@ fonts or artwork are used).
 
 | Address | What it is |
 |---|---|
-| `/` | Home: intro, latest works, About me, hobbies, learning plan + calculator, projects, photos, media, contact |
+| `/` | God's Banditos home: logo, what we make, latest works, meet the creator |
+| `/creator` | About me, hobbies, learning plan + calculator, projects, photos, media, contact |
 | `/gallery` | All works, with filters: `?category=story-art`, `anime` or `writing` |
 | `/work/<name>` | One work: image or text, likes, save, comments |
 | `/login`, `/register` | Log in / create a free account |
@@ -106,7 +111,7 @@ the admin password, change `ADMIN_PASSWORD` on Render and redeploy: a *new* valu
 
 ## "Continue with Google" (one-time setup)
 
-1. Go to https://console.cloud.google.com and create a project (any name, e.g. "MWAMBA NET").
+1. Go to https://console.cloud.google.com and create a project (any name, e.g. "God's Banditos").
 2. **Google Auth Platform → Branding** (or "OAuth consent screen"): app name, your email,
    audience **External**. Then **Audience → Publish app** so everyone can use it, not only test users.
 3. **Clients → Create client → Web application**.
