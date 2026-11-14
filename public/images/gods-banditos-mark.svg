@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="gb-title">
+  <title id="gb-title">God's Banditos logo: a masked bandit with a halo</title>
+  <!-- God's Banditos mark, redrawn in the site palette:
+       halo and right-hand circuits cyan (#19e3ff), mask, eyes and left-hand circuits pink (#ff2e97). -->
+  <defs>
+    <filter id="gb-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3.2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="gb-circuit-left" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff2e97"/>
+      <stop offset="1" stop-color="#ff5aad"/>
+    </linearGradient>
+    <linearGradient id="gb-circuit-right" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#19e3ff"/>
+      <stop offset="1" stop-color="#4fb6ff"/>
+    </linearGradient>
+  </defs>
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#gb-glow)">
+    <!-- halo -->
+    <ellipse cx="100" cy="27" rx="44" ry="9.5" stroke="#19e3ff" stroke-width="5.5"/>
+
+    <!-- left circuits (pink) -->
+    <g stroke="url(#gb-circuit-left)" stroke-width="2.6">
+      <path d="M62 66 L50 54 L50 44"/>
+      <path d="M58 82 L34 82 L27 75"/>
+      <path d="M58 96 L40 96 L33 103"/>
+      <path d="M62 110 L48 110 L48 124"/>
+      <path d="M70 124 L62 132 L62 146"/>
+      <path d="M78 138 L78 150"/>
+    </g>
+    <g fill="#ff2e97" stroke="none">
+      <circle cx="50" cy="40" r="4.2"/>
+      <circle cx="24" cy="72" r="4.2"/>
+      <circle cx="30" cy="106" r="4.2"/>
+      <circle cx="48" cy="128" r="4.2"/>
+      <circle cx="62" cy="150" r="4.2"/>
+      <circle cx="78" cy="154" r="3.6"/>
+    </g>
+
+    <!-- right circuits (cyan) -->
+    <g stroke="url(#gb-circuit-right)" stroke-width="2.6">
+      <path d="M138 66 L150 54 L150 44"/>
+      <path d="M142 82 L166 82 L173 75"/>
+      <path d="M142 96 L160 96 L167 103"/>
+      <path d="M138 110 L152 110 L152 124"/>
+      <path d="M130 124 L138 132 L138 146"/>
+      <path d="M122 138 L122 150"/>
+    </g>
+    <g fill="#19e3ff" stroke="none">
+      <circle cx="150" cy="40" r="4.2"/>
+      <circle cx="176" cy="72" r="4.2"/>
+      <circle cx="170" cy="106" r="4.2"/>
+      <circle cx="152" cy="128" r="4.2"/>
+      <circle cx="138" cy="150" r="4.2"/>
+      <circle cx="122" cy="154" r="3.6"/>
+    </g>
+
+    <!-- mask: filled with the page colour so the circuits disappear behind it -->
+    <path d="M64 60 L100 48 L136 60 L142 98 L100 152 L58 98 Z" fill="#0b0a10" stroke="#ff2e97" stroke-width="5.5"/>
+
+    <!-- angry eyes -->
+    <path d="M68 81 L96 92 Q86 102 74 97 Z" stroke="#ff2e97" stroke-width="4.5"/>
+    <path d="M132 81 L104 92 Q114 102 126 97 Z" stroke="#ff2e97" stroke-width="4.5"/>
+
+    <!-- scar -->
+    <path d="M114 122 L107 136" stroke="#ff2e97" stroke-width="2.4"/>
+  </g>
+</svg>

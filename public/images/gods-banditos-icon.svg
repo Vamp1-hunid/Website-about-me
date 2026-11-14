@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="God's Banditos">
+  <!-- Small-size God's Banditos icon (header and browser tab): halo, mask and eyes only. -->
+  <rect width="64" height="64" rx="10" fill="#0b0a10"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="32" cy="10.5" rx="15" ry="3.6" stroke="#19e3ff" stroke-width="3.2"/>
+    <path d="M18 21 L32 16.5 L46 21 L48.5 35 L32 55 L15.5 35 Z" fill="#0b0a10" stroke="#ff2e97" stroke-width="3.6"/>
+    <path d="M20.5 29.5 L30.5 33.5 Q27 37.5 23 35.6 Z" stroke="#ff2e97" stroke-width="2.8" fill="#ff2e97" fill-opacity="0.18"/>
+    <path d="M43.5 29.5 L33.5 33.5 Q37 37.5 41 35.6 Z" stroke="#ff2e97" stroke-width="2.8" fill="#ff2e97" fill-opacity="0.18"/>
+  </g>
+</svg>
