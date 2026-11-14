@@ -55,14 +55,19 @@
   <main id="main">
 
     <section id="intro" class="panel hero">
-      <span class="sticker sticker-pink">Status // building</span>
-      <h1 class="glitch">Mulenga Mwamba</h1>
-      <p class="cmd"><span data-typing>whoami --role "data science student" --status building</span></p>
+      <span class="sticker sticker-pink">Status // building <span class="signal" aria-hidden="true"><i></i><i></i><i></i><i></i></span></span>
+      <h1 class="glitch" data-decode>Mulenga Mwamba</h1>
+      <p class="cmd">whoami --role "<span class="role-cycle" data-roles="[&quot;data science student&quot;, &quot;story artist&quot;, &quot;anime watcher&quot;, &quot;gamer&quot;, &quot;web developer in training&quot;, &quot;future unicorn in tech&quot;]">data science student</span>" --status building</p>
       <p class="programme">Bachelor of Science in Data Science &middot; Year 2 &middot; Mulungushi University, Zambia</p>
       <p class="lead">Welcome! I am a second-year Data Science student at Mulungushi University. This site shows what I am learning and building along the way &mdash; and it's where I post my story art and anime works.</p>
       <div class="hero-actions">
         <a class="btn" href="/gallery">See my works</a>
         <a class="btn btn-ghost" href="#projects">View my projects</a>
+      </div>
+      <!-- Decorative sticker tapes (hidden from screen readers) -->
+      <div class="tapes" aria-hidden="true">
+        <div class="tape tape-yellow"><span>MWAMBA//NET ✦ DATA SCIENCE ✦ STORY ART ✦ ANIME WORKS ✦ CYBERSECURITY ✦ GAMING ✦ WEB DEV ✦ MULUNGUSHI ✦ MWAMBA//NET ✦ DATA SCIENCE ✦ STORY ART ✦ ANIME WORKS ✦ CYBERSECURITY ✦ GAMING ✦ WEB DEV ✦ MULUNGUSHI ✦ MWAMBA//NET ✦ DATA SCIENCE ✦ STORY ART ✦ ANIME WORKS ✦ CYBERSECURITY ✦ GAMING ✦ WEB DEV ✦ MULUNGUSHI ✦ </span><span>MWAMBA//NET ✦ DATA SCIENCE ✦ STORY ART ✦ ANIME WORKS ✦ CYBERSECURITY ✦ GAMING ✦ WEB DEV ✦ MULUNGUSHI ✦ MWAMBA//NET ✦ DATA SCIENCE ✦ STORY ART ✦ ANIME WORKS ✦ CYBERSECURITY ✦ GAMING ✦ WEB DEV ✦ MULUNGUSHI ✦ MWAMBA//NET ✦ DATA SCIENCE ✦ STORY ART ✦ ANIME WORKS ✦ CYBERSECURITY ✦ GAMING ✦ WEB DEV ✦ MULUNGUSHI ✦ </span></div>
+        <div class="tape tape-pink"><span>MWAMBA//NET ✦ DATA SCIENCE ✦ STORY ART ✦ ANIME WORKS ✦ CYBERSECURITY ✦ GAMING ✦ WEB DEV ✦ MULUNGUSHI ✦ MWAMBA//NET ✦ DATA SCIENCE ✦ STORY ART ✦ ANIME WORKS ✦ CYBERSECURITY ✦ GAMING ✦ WEB DEV ✦ MULUNGUSHI ✦ MWAMBA//NET ✦ DATA SCIENCE ✦ STORY ART ✦ ANIME WORKS ✦ CYBERSECURITY ✦ GAMING ✦ WEB DEV ✦ MULUNGUSHI ✦ </span><span>MWAMBA//NET ✦ DATA SCIENCE ✦ STORY ART ✦ ANIME WORKS ✦ CYBERSECURITY ✦ GAMING ✦ WEB DEV ✦ MULUNGUSHI ✦ MWAMBA//NET ✦ DATA SCIENCE ✦ STORY ART ✦ ANIME WORKS ✦ CYBERSECURITY ✦ GAMING ✦ WEB DEV ✦ MULUNGUSHI ✦ MWAMBA//NET ✦ DATA SCIENCE ✦ STORY ART ✦ ANIME WORKS ✦ CYBERSECURITY ✦ GAMING ✦ WEB DEV ✦ MULUNGUSHI ✦ </span></div>
       </div>
     </section>
 
@@ -70,7 +75,7 @@
       <div class="section-head">
         <div>
           <p class="node-label">Node 01 // Archive</p>
-          <h2 id="works-title">Latest works</h2>
+          <h2 id="works-title" data-decode>Latest works</h2>
         </div>
         <a class="btn btn-ghost btn-small" href="/gallery">All works</a>
       </div>
@@ -88,7 +93,7 @@
         </div>
         <div class="about-text">
           <p class="node-label">Node 02 // Dossier</p>
-          <h2 id="about-title">About me</h2>
+          <h2 id="about-title" data-decode>About me</h2>
           <p>
             My name is Mulenga Mwamba, and I am a second-year Bachelor of Science in Data Science
             student at Mulungushi University in Zambia. I chose Data Science deliberately: I wanted
@@ -107,7 +112,7 @@
 
     <section id="hobbies" class="panel reveal" aria-labelledby="hobbies-title">
       <p class="node-label">Node 03 // Off-duty</p>
-      <h2 id="hobbies-title">My hobbies</h2>
+      <h2 id="hobbies-title" data-decode>My hobbies</h2>
       <ul class="chips">
         <li>Gaming</li>
         <li>Fantasy story writing</li>
@@ -117,7 +122,7 @@
 
     <section id="plan" class="panel reveal" aria-labelledby="plan-title">
       <p class="node-label">Node 04 // Training</p>
-      <h2 id="plan-title">My learning plan</h2>
+      <h2 id="plan-title" data-decode>My learning plan</h2>
       <p>
         I prefer learning from books over live sessions or YouTube &mdash; I can scan pages as fast as
         I want to find exactly what I need and skip what isn't relevant, whereas a video might not
@@ -170,7 +175,7 @@
 
     <section id="projects" class="panel reveal" aria-labelledby="projects-title">
       <p class="node-label">Node 05 // Mission files</p>
-      <h2 id="projects-title">Projects and skills</h2>
+      <h2 id="projects-title" data-decode>Projects and skills</h2>
       <p class="muted">Press and hold <strong>Hold to hack</strong> on a file to decrypt my notes. (Keyboard: press Enter.)</p>
       <div class="card-grid">
         <article class="card">
@@ -234,7 +239,7 @@
 
     <section id="photos" class="panel reveal" aria-labelledby="photos-title">
       <p class="node-label">Node 06 // Camera feeds</p>
-      <h2 id="photos-title">My photos</h2>
+      <h2 id="photos-title" data-decode>My photos</h2>
       <p>A few photos from my life as a student. Point at one (or tap it) to profile it.</p>
       <div class="gallery">
         <figure data-profile="{&quot;name&quot;: &quot;Mulenga Mwamba&quot;, &quot;rows&quot;: [[&quot;STATUS&quot;, &quot;Online&quot;], [&quot;ROLE&quot;, &quot;Builder of this site&quot;], [&quot;FACT&quot;, &quot;The face behind MWAMBA//NET&quot;]], &quot;kicker&quot;: &quot;PROFILER&quot;, &quot;id&quot;: &quot;CAM 01&quot;}">
@@ -258,7 +263,7 @@
 
     <section id="media" class="panel reveal" aria-labelledby="media-title">
       <p class="node-label">Node 07 // Recordings</p>
-      <h2 id="media-title">My media</h2>
+      <h2 id="media-title" data-decode>My media</h2>
       <div class="media-grid">
         <div>
           <h3>Self-introduction video</h3>
@@ -286,7 +291,7 @@
 
     <section id="contact" class="panel reveal" aria-labelledby="contact-title">
       <p class="node-label">Node 08 // Transmission</p>
-      <h2 id="contact-title">Contact</h2>
+      <h2 id="contact-title" data-decode>Contact</h2>
       <p class="notice">Browser demonstration only &mdash; no message is sent.</p>
       <form id="contact-form" novalidate>
         <div class="form-row">
@@ -351,6 +356,7 @@
   <script src="/js/api.js" defer></script>
   <script src="/js/script.js" defer></script>
   <script src="/js/fx.js" defer></script>
+  <script src="/js/flair.js" defer></script>
   <script src="/js/works-grid.js" defer></script>
   <script src="/js/home.js" defer></script>
 </body>

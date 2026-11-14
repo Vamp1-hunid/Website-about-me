@@ -1622,15 +1622,47 @@ html.is-booting .boot.is-done {
 /* ===== 20. Scroll reveal =====
    Panels slide in once when they scroll into view. Without JavaScript
    (no html.fx class) everything is simply visible. */
+/* Sections open like a scanner: a wipe from left to right, a cyan scan line sweeps across,
+   and the HUD corner brackets grow in last. */
 html.fx .reveal {
   opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 0.5s ease, transform 0.5s ease;
+  clip-path: inset(0 100% 0 0);
+  transition: opacity 0.35s ease, clip-path 0.75s cubic-bezier(0.7, 0, 0.2, 1);
 }
 
 html.fx .reveal.is-in {
   opacity: 1;
-  transform: none;
+  /* negative inset = nothing is cut off, not even the drop shadow */
+  clip-path: inset(-80px -80px -80px -80px);
+}
+
+html.fx .panel.reveal {
+  background-image: linear-gradient(90deg, transparent, color-mix(in srgb, var(--cyan) 22%, transparent) 50%, transparent);
+  background-size: 28% 100%;
+  background-repeat: no-repeat;
+  background-position: -40% 0;
+}
+
+html.fx .panel.reveal.is-in {
+  animation: scan-sweep 0.9s ease-out 0.15s 1 both;
+}
+
+@keyframes scan-sweep {
+  from { background-position: -40% 0; }
+  to   { background-position: 140% 0; }
+}
+
+html.fx .panel.reveal::before,
+html.fx .panel.reveal::after {
+  width: 0;
+  height: 0;
+  transition: width 0.35s ease 0.6s, height 0.35s ease 0.6s;
+}
+
+html.fx .panel.reveal.is-in::before,
+html.fx .panel.reveal.is-in::after {
+  width: 26px;
+  height: 26px;
 }
 
 /* ===== 21. Small screens ===== */
@@ -1754,7 +1786,17 @@ html.fx .reveal.is-in {
 
   html.fx .reveal {
     opacity: 1;
-    transform: none;
+    clip-path: none;
+  }
+
+  html.fx .panel.reveal::before,
+  html.fx .panel.reveal::after {
+    width: 26px;
+    height: 26px;
+  }
+
+  .tape span {
+    animation: none !important;
   }
 }
 
@@ -1813,4 +1855,377 @@ html.fx .reveal.is-in {
 /* Forms inside wide panels line up on the left, under their heading. */
 .panel form.narrow {
   margin-inline: 0;
+}
+
+
+/* =========================================================
+   23. Flair (js/flair.js)
+   All of this is decoration and is switched off for reduced motion
+   (flair.js doesn't run, and section 22 stops the animations).
+   ========================================================= */
+
+/* --- Scroll progress bar --- */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  height: 3px;
+  background: linear-gradient(90deg, var(--pink), var(--yellow), var(--cyan));
+  transform: scaleX(0);
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+/* --- Signal bars on the status sticker --- */
+.signal {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 0.8em;
+  margin-left: 0.4rem;
+  vertical-align: -0.05em;
+}
+
+.signal i {
+  display: block;
+  width: 3px;
+  background: currentColor;
+  animation: signal 1.2s ease-in-out infinite;
+}
+
+.signal i:nth-child(1) { height: 30%; animation-delay: 0s; }
+.signal i:nth-child(2) { height: 55%; animation-delay: 0.15s; }
+.signal i:nth-child(3) { height: 80%; animation-delay: 0.3s; }
+.signal i:nth-child(4) { height: 100%; animation-delay: 0.45s; }
+
+@keyframes signal {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
+
+/* --- Stickers slap on when they appear --- */
+html.fx .hero .sticker,
+html.fx .reveal.is-in .about-photo-wrap .sticker {
+  animation: sticker-slap 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) 0.5s both;
+}
+
+@keyframes sticker-slap {
+  from { opacity: 0; transform: scale(1.8) rotate(-14deg); }
+  to   { opacity: 1; transform: scale(1) rotate(-2deg); }
+}
+
+/* --- Rotating role in the hero command line --- */
+.role-cycle {
+  color: var(--yellow);
+}
+
+:root[data-theme="light"] .role-cycle {
+  color: var(--pink-ink);
+}
+
+.role-cycle.is-typing::after {
+  content: "\258C";
+  margin-left: 1px;
+  color: var(--pink);
+  animation: blink 0.9s steps(1) infinite;
+}
+
+/* --- Sticker tapes across the bottom of the hero --- */
+.hero:has(.tapes) {
+  position: relative;
+  padding-bottom: clamp(6.5rem, 12vw, 8rem);
+}
+
+.tapes {
+  position: absolute;
+  left: -5%;
+  right: -5%;
+  bottom: 1.2rem;
+  height: 5.5rem;
+  pointer-events: none;
+}
+
+.tape {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  overflow: hidden;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  padding: 0.4rem 0;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.tape span {
+  flex: none;
+  padding-right: 0.5em;
+  animation: tape-scroll 38s linear infinite;
+}
+
+.tape-yellow {
+  top: 0.4rem;
+  color: #0b0a10;
+  background: var(--yellow);
+  transform: rotate(-2.2deg);
+}
+
+.tape-pink {
+  top: 2.6rem;
+  color: #0b0a10;
+  background: var(--pink);
+  transform: rotate(1.6deg);
+  opacity: 0.92;
+}
+
+:root[data-theme="light"] .tape-pink {
+  color: #ffffff;
+}
+
+.tape-pink span {
+  animation-direction: reverse;
+  animation-duration: 46s;
+}
+
+@keyframes tape-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-100%); }
+}
+
+/* --- Tilt and glare on cards and photos --- */
+.stat,
+.chips li {
+  position: relative;
+}
+
+.tilt {
+  transform-style: preserve-3d;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.18s ease;
+}
+
+.tilt.is-tilting {
+  transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateY(-3px);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.45), -6px 6px 0 color-mix(in srgb, var(--pink) 55%, transparent);
+  transition: transform 0.08s linear, box-shadow 0.25s ease;
+}
+
+.tilt::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at var(--glare-x, 50%) var(--glare-y, 50%), rgba(255, 255, 255, 0.16), transparent 55%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.tilt.is-tilting::after {
+  opacity: 1;
+}
+
+/* Work thumbnails: a short colour-split jolt when you point at them. */
+.work-card:hover .thumb img {
+  animation: thumb-jolt 0.36s steps(3, end) 1;
+}
+
+@keyframes thumb-jolt {
+  0%   { filter: none; transform: scale(1.04); }
+  33%  { filter: drop-shadow(-4px 0 0 rgba(255, 46, 151, 0.8)) drop-shadow(4px 0 0 rgba(25, 227, 255, 0.8)); transform: scale(1.04) translateX(-3px); }
+  66%  { filter: drop-shadow(3px 0 0 rgba(255, 46, 151, 0.8)) drop-shadow(-3px 0 0 rgba(25, 227, 255, 0.8)); transform: scale(1.04) translateX(2px); }
+  100% { filter: none; transform: scale(1.04); }
+}
+
+/* --- Button shine sweep --- */
+.btn,
+button[type="submit"] {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::after,
+button[type="submit"]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
+}
+
+.btn:hover::after,
+button[type="submit"]:hover::after {
+  animation: shine 0.6s ease-out 1;
+}
+
+@keyframes shine {
+  to { left: 130%; }
+}
+
+/* Navigation links: an underline that wipes in. */
+.site-nav a::after {
+  content: "";
+  position: absolute;
+  left: 0.65rem;
+  right: 0.65rem;
+  bottom: 0.15rem;
+  height: 2px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.2s ease;
+}
+
+.site-nav a:hover::after,
+.site-nav a:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* --- Pixel bursts --- */
+.pixel {
+  position: fixed;
+  z-index: 400;
+  pointer-events: none;
+  box-shadow: 0 0 6px currentColor;
+}
+
+/* --- ACCESS GRANTED stamp --- */
+.card {
+  overflow: hidden;
+}
+
+.stamp {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  z-index: 3;
+  padding: 0.35rem 0.9rem;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  color: var(--success);
+  border: 3px double var(--success);
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
+  pointer-events: none;
+  animation: stamp 1.9s ease-out 1 forwards;
+}
+
+@keyframes stamp {
+  0%   { opacity: 0; transform: translate(-50%, -50%) rotate(-12deg) scale(2.2); }
+  14%  { opacity: 1; transform: translate(-50%, -50%) rotate(-8deg) scale(1); }
+  75%  { opacity: 1; transform: translate(-50%, -50%) rotate(-8deg) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(-8deg) scale(0.95); }
+}
+
+/* --- Targeting reticle that trails the mouse --- */
+.reticle {
+  position: fixed;
+  top: -16px;
+  left: -16px;
+  z-index: 95;
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid var(--pink);
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, width 0.18s ease, height 0.18s ease, top 0.18s ease, left 0.18s ease, border-color 0.18s ease;
+}
+
+.reticle::before,
+.reticle::after {
+  content: "";
+  position: absolute;
+  background: var(--pink);
+  transition: background 0.18s ease;
+}
+
+.reticle::before {
+  left: 50%;
+  top: -7px;
+  bottom: -7px;
+  width: 1.5px;
+  transform: translateX(-50%);
+  clip-path: polygon(0 0, 100% 0, 100% 22%, 0 22%, 0 78%, 100% 78%, 100% 100%, 0 100%);
+}
+
+.reticle::after {
+  top: 50%;
+  left: -7px;
+  right: -7px;
+  height: 1.5px;
+  transform: translateY(-50%);
+  clip-path: polygon(0 0, 22% 0, 22% 100%, 0 100%, 0 0, 78% 0, 100% 0, 100% 100%, 78% 100%, 78% 0);
+}
+
+.reticle.is-on {
+  opacity: 0.85;
+}
+
+.reticle.is-hot {
+  top: -24px;
+  left: -24px;
+  width: 48px;
+  height: 48px;
+  border-color: var(--cyan);
+}
+
+.reticle.is-hot::before,
+.reticle.is-hot::after {
+  background: var(--cyan);
+}
+
+.reticle.is-down {
+  top: -11px;
+  left: -11px;
+  width: 22px;
+  height: 22px;
+}
+
+/* --- Page wipe between pages --- */
+html.is-wiping::after {
+  content: "MWAMBA//NET \25B8 ROUTING";
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  font: 700 clamp(1rem, 3vw, 1.4rem) var(--font-mono);
+  letter-spacing: 0.2em;
+  color: #f3eff8;
+  background:
+    repeating-linear-gradient(-45deg, rgba(255, 46, 151, 0.16) 0 14px, transparent 14px 28px),
+    #0b0a10;
+  /* fail-safe: uncover the page after 1.5 s even if the script never runs */
+  animation: wipe-failsafe 0s linear 1.5s forwards;
+}
+
+html.is-wiping.wipe-in::after {
+  animation: wipe-in 0.22s cubic-bezier(0.7, 0, 0.3, 1) both;
+}
+
+html.is-wiping.wipe-out::after {
+  animation: wipe-out 0.4s cubic-bezier(0.7, 0, 0.3, 1) both;
+}
+
+@keyframes wipe-in {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes wipe-out {
+  from { clip-path: inset(0 0 0 0); }
+  to   { clip-path: inset(0 0 0 100%); }
+}
+
+@keyframes wipe-failsafe {
+  to { visibility: hidden; }
 }
