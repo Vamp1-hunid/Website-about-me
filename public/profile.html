@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile | God's Banditos</title>
+  <meta name="description" content="Your member profile.">
+  <meta name="author" content="Mulenga Mwamba">
+  <meta name="robots" content="noindex">
+  <meta property="og:site_name" content="God's Banditos">
+  <meta property="og:title" content="Profile | God's Banditos">
+  <meta property="og:description" content="Your member profile.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://mulenga-mwamba-website.onrender.com/images/og-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#0b0a10">
+  <link rel="icon" href="/images/gods-banditos-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/images/gods-banditos-icon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css?v=7">
+  <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
+  <script src="/js/theme-boot.js"></script>
+</head>
+<body data-page="profile">
+
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="God's Banditos, home">
+      <img class="brand-logo" src="/images/gods-banditos-icon.svg" alt="" width="36" height="36">
+      <span class="brand-text glitch">GOD'S <span class="brand-dim">BANDITOS</span></span>
+    </a>
+    <div class="header-actions">
+      <!-- Filled in by js/api.js: "Log in / Join", or your name, Profile and Log out -->
+      <div class="auth-area" id="auth-area"></div>
+      <!-- Feature: mobile navigation button (shown only on narrow screens) -->
+      <button id="menu-toggle" class="btn btn-ghost btn-small menu-toggle" type="button"
+              aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <!-- Feature: light and dark theme switch -->
+      <button id="theme-toggle" class="btn btn-ghost btn-small" type="button">Light mode</button>
+    </div>
+  </header>
+
+  <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+    <a href="/" data-nav="home">Home</a>
+    <a href="/gallery" data-nav="works">Works</a>
+    <a href="/gallery?category=story-art">Story art</a>
+    <a href="/gallery?category=anime">Anime</a>
+    <a href="/gallery?category=writing">Writing</a>
+    <a href="/creator" data-nav="creator">Creator</a>
+    <a href="/creator#contact">Contact</a>
+  </nav>
+
+  <main id="main">
+    <section class="panel" aria-labelledby="profile-title">
+      <p class="node-label">Member // profile</p>
+      <h1 id="profile-title" class="glitch">Profile</h1>
+      <p id="profile-sub" class="lead loading">Loading&hellip;</p>
+      <dl id="profile-stats" class="stat-row" hidden>
+        <div class="stat"><dt>Joined</dt><dd id="stat-joined">&ndash;</dd></div>
+        <div class="stat"><dt>Saved</dt><dd id="stat-favourites">0</dd></div>
+        <div class="stat"><dt>Likes</dt><dd id="stat-likes">0</dd></div>
+        <div class="stat"><dt>Comments</dt><dd id="stat-comments">0</dd></div>
+      </dl>
+      <p id="admin-link" hidden><a class="btn" href="/admin">Open the admin area</a></p>
+    </section>
+
+    <section class="panel" aria-labelledby="saved-title" id="saved-panel" hidden>
+      <p class="node-label">Member // saved files</p>
+      <h2 id="saved-title">Your favourites</h2>
+      <div id="favourites" class="works-grid"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="google-title" id="google-panel" hidden>
+      <p class="node-label">Security // linked accounts</p>
+      <h2 id="google-title">Google sign-in</h2>
+      <p id="google-status" class="lead"></p>
+      <div class="hero-actions">
+        <a class="btn btn-google" id="google-link" href="/auth/google?link=1&amp;next=%2Fprofile" hidden>
+          <span class="g-mark" aria-hidden="true">G</span> Link my Google account
+        </a>
+        <button class="btn btn-ghost" type="button" id="google-unlink" hidden>Unlink Google</button>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="password-title" id="password-panel" hidden>
+      <p class="node-label">Security // credentials</p>
+      <h2 id="password-title">Change password</h2>
+      <form id="password-form" class="narrow" novalidate>
+        <div class="form-row" id="current-password-row">
+          <label for="current-password">Current password</label>
+          <input type="password" id="current-password" name="currentPassword" autocomplete="current-password" required
+                 aria-describedby="current-password-error">
+          <p class="error" id="current-password-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="new-password">New password</label>
+          <input type="password" id="new-password" name="newPassword" autocomplete="new-password" required
+                 aria-describedby="new-password-hint new-password-error">
+          <p class="muted" id="new-password-hint">At least 8 characters (10 for the site owner).</p>
+          <p class="error" id="new-password-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="new-password2">Repeat new password</label>
+          <input type="password" id="new-password2" name="newPassword2" autocomplete="new-password" required
+                 aria-describedby="new-password2-error">
+          <p class="error" id="new-password2-error"></p>
+        </div>
+        <button type="submit">Change password</button>
+        <p class="feedback" id="password-feedback" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="panel danger-zone" aria-labelledby="delete-title" id="delete-panel" hidden>
+      <p class="node-label">Danger zone</p>
+      <h2 id="delete-title">Delete my account</h2>
+      <p>This removes your account, your comments, likes and favourites for good.</p>
+      <form id="delete-form" novalidate>
+        <div class="form-row">
+          <label for="delete-password" id="delete-label">Type your password to confirm</label>
+          <input type="password" id="delete-password" name="password" autocomplete="current-password" required
+                 aria-describedby="delete-password-error">
+          <p class="error" id="delete-password-error"></p>
+        </div>
+        <button type="submit" class="btn btn-danger">Delete my account</button>
+      </form>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p class="footer-brand"><img src="/images/gods-banditos-icon.svg" alt="" width="28" height="28"> &copy; 2026 God's Banditos &middot; created by <a href="/creator">Mulenga Mwamba</a></p>
+    <p><a href="https://github.com/Vamp1-hunid/Website-about-me">View source on GitHub</a> &middot; <a href="https://developer.mozilla.org/en-US/docs/Learn" target="_blank" rel="noopener">MDN Web Docs (external)</a></p>
+    <p>Last updated: 14 November 2026</p>
+  </footer>
+
+  <script src="/js/api.js" defer></script>
+  <script src="/js/script.js" defer></script>
+  <script src="/js/fx.js" defer></script>
+  <script src="/js/flair.js" defer></script>
+  <script src="/js/works-grid.js" defer></script>
+  <script src="/js/profile.js" defer></script>
+</body>
+</html>
