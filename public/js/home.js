@@ -1,5 +1,6 @@
 // js/home.js
-// Home page: shows the three newest works in the "Latest works" section.
+// Home page: shows the three newest works in "Latest works",
+// and how many works each "What we make" tile links to.
 
 (function () {
   "use strict";
@@ -16,4 +17,16 @@
       box.textContent = "";
       box.appendChild(MW.el("p", { class: "empty" }, "The works archive is offline right now. Please try again later."));
     });
+
+  // Live counts on the "What we make" tiles.
+  document.querySelectorAll("[data-count]").forEach(function (badge) {
+    var category = badge.getAttribute("data-count");
+    MW.api("/posts?category=" + encodeURIComponent(category))
+      .then(function (data) {
+        badge.textContent = data.total === 1 ? "1 work \u2192" : data.total + " works \u2192";
+      })
+      .catch(function () {
+        badge.textContent = "Browse \u2192";
+      });
+  });
 })();

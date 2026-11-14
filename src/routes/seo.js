@@ -46,6 +46,7 @@ router.get("/sitemap.xml", async function (req, res) {
   const urls = [
     { loc: base + "/", lastmod: newest, priority: "1.0" },
     { loc: base + "/gallery", lastmod: newest, priority: "0.9" },
+    { loc: base + "/creator", lastmod: newest, priority: "0.9" },
     { loc: base + "/gallery?category=story-art", lastmod: newest, priority: "0.7" },
     { loc: base + "/gallery?category=anime", lastmod: newest, priority: "0.7" },
     { loc: base + "/gallery?category=writing", lastmod: newest, priority: "0.7" }

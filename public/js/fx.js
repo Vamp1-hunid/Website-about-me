@@ -1,5 +1,5 @@
 // js/fx.js
-// The MWAMBA//NET effects layer. Everything here is decoration: the site still
+// The God's Banditos effects layer. Everything here is decoration: the site still
 // works (and all content stays readable) if this file fails or never loads.
 //
 //  1. Boot screen         (home page, once per visit)
@@ -50,7 +50,8 @@
     boot.setAttribute("aria-hidden", "true");
     boot.innerHTML =
       '<div class="boot-frame">' +
-      '<p class="boot-logo">MWAMBA//NET</p>' +
+      '<img class="boot-mark" src="/images/gods-banditos-mark.svg" alt="" width="96" height="96">' +
+      '<p class="boot-logo">GOD\'S BANDITOS</p>' +
       '<pre class="boot-log"></pre>' +
       '<div class="boot-bar"><span></span></div>' +
       '<p class="boot-hint">TAP OR PRESS ANY KEY TO SKIP</p>' +
@@ -60,8 +61,8 @@
     var log = boot.querySelector(".boot-log");
     var bar = boot.querySelector(".boot-bar span");
     var lines = [
-      "> connecting to node network ...",
-      "> loading profile: MULENGA_MWAMBA",
+      "> connecting to the banditos network ...",
+      "> loading creator: MULENGA_MWAMBA",
       "> unlocking works archive ...",
       "> ACCESS GRANTED"
     ];
@@ -545,7 +546,9 @@
     if (open) window.setTimeout(function () { consoleInput.focus(); }, 60);
   }
 
-  var SECTIONS = ["about", "hobbies", "plan", "projects", "photos", "media", "contact", "works"];
+  // Sections on the home page and on the creator page (goto finds the right page).
+  var SECTIONS = ["works", "make", "creator", "about", "hobbies", "plan", "projects", "photos", "media", "contact"];
+  var CREATOR_SECTIONS = ["about", "hobbies", "plan", "projects", "photos", "media", "contact"];
 
   function runCommand(raw) {
     var text = String(raw || "").trim();
@@ -557,7 +560,7 @@
 
     switch (cmd) {
       case "help":
-        MW.log("help | whoami | goto <section> | works [art|anime|writing] | theme [dark|light] | login | hack | clear", "ok");
+        MW.log("help | whoami | goto <section> | creator | works [art|anime|writing] | theme [dark|light] | login | hack | clear", "ok");
         MW.log("sections: " + SECTIONS.join(", "), "info");
         break;
       case "whoami":
@@ -571,13 +574,13 @@
       case "go":
         if (SECTIONS.indexOf(arg) === -1) {
           MW.log("UNKNOWN SECTION // try: goto projects", "warn");
-        } else if (arg === "works") {
-          window.location.href = "/gallery";
+        } else if (arg === "creator") {
+          window.location.href = "/creator";
         } else if (document.getElementById(arg)) {
           document.getElementById(arg).scrollIntoView({ behavior: calm() ? "auto" : "smooth" });
           MW.log("ROUTE // #" + arg.toUpperCase(), "ok");
         } else {
-          window.location.href = "/#" + arg;
+          window.location.href = (CREATOR_SECTIONS.indexOf(arg) !== -1 ? "/creator#" : "/#") + arg;
         }
         break;
       case "works": {
@@ -593,6 +596,9 @@
         MW.log("THEME // " + wanted.toUpperCase(), "ok");
         break;
       }
+      case "creator":
+        window.location.href = "/creator";
+        break;
       case "login":
         window.location.href = "/login?next=" + encodeURIComponent(location.pathname + location.search);
         break;
@@ -619,7 +625,7 @@
     consoleEl.setAttribute("aria-label", "Site console");
 
     var header = el("header");
-    header.appendChild(el("span", "", "MWAMBA//NET CONSOLE"));
+    header.appendChild(el("span", "", "GOD'S BANDITOS // CONSOLE"));
     var close = el("button", "", "×");
     close.type = "button";
     close.setAttribute("aria-label", "Close console");
@@ -664,7 +670,7 @@
       }
     });
 
-    MW.log("MWAMBA//NET ONLINE", "ok");
+    MW.log("GOD'S BANDITOS ONLINE", "ok");
     MW.log("type help to see commands", "info");
   }
 

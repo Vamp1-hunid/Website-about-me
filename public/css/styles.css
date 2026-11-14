@@ -1,5 +1,5 @@
 /* =========================================================
-   css/styles.css  -  "MWAMBA//NET" theme
+   css/styles.css  -  God's Banditos theme
    An original street-hacker look inspired by Watch Dogs 2:
    near-black panels, hot pink + cyan + sticker yellow,
    HUD corner brackets, halftone dots and pixel-ish labels.
@@ -1781,8 +1781,8 @@ html.fx .panel.reveal.is-in::after {
     justify-content: flex-start;
   }
 
-  .brand-text .brand-dim {
-    display: none;
+  .brand {
+    font-size: 0.95rem;
   }
 
   .header-actions .btn-small {
@@ -2242,7 +2242,7 @@ button[type="submit"]:hover::after {
 
 /* --- Page wipe between pages --- */
 html.is-wiping::after {
-  content: "MWAMBA//NET \25B8 ROUTING";
+  content: "GOD'S BANDITOS \25B8 ROUTING";
   position: fixed;
   inset: 0;
   z-index: 500;
@@ -2278,4 +2278,151 @@ html.is-wiping.wipe-out::after {
 
 @keyframes wipe-failsafe {
   to { visibility: hidden; }
+}
+
+
+/* =========================================================
+   24. God's Banditos branding
+   ========================================================= */
+
+.brand-logo {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 8px;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--pink) 45%, transparent);
+}
+
+/* Home page: big logo next to the name (stacked on narrow screens) */
+.brand-lockup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.5rem;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.hero-logo-wrap {
+  flex: none;
+  width: clamp(130px, 22vw, 210px);
+}
+
+.hero-logo {
+  width: 100%;
+  height: auto;
+  animation: logo-float 5s ease-in-out infinite;
+}
+
+/* The logo drifts up and down and its neon glow breathes. */
+@keyframes logo-float {
+  0%, 100% { transform: translateY(0);    filter: drop-shadow(0 0 6px rgba(255, 46, 151, 0.35)); }
+  50%      { transform: translateY(-8px); filter: drop-shadow(0 0 16px rgba(25, 227, 255, 0.45)); }
+}
+
+/* The name in a pink-to-cyan gradient, like the logo. */
+.wordmark {
+  margin: 0;
+  flex: 1 1 14rem;
+  font-size: clamp(2.4rem, 8vw, 5rem);
+  line-height: 1;
+  background: linear-gradient(95deg, var(--pink), #c45cff 50%, var(--cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.wordmark.glitch {
+  text-shadow: -2px 0 rgba(255, 46, 151, 0.35), 2px 0 rgba(25, 227, 255, 0.35);
+}
+
+/* "What we make" tiles */
+.make-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: 1.25rem;
+}
+
+.make-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.25rem;
+  color: var(--ink);
+  text-decoration: none;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--pink);
+}
+
+.make-tile:hover,
+.make-tile:focus-visible {
+  color: var(--ink);
+  border-color: var(--cyan);
+}
+
+.make-tile .sticker {
+  align-self: flex-start;
+}
+
+.make-tile h3 {
+  margin: 0.5rem 0 0;
+}
+
+.make-tile p {
+  margin: 0;
+  color: var(--ink-dim);
+}
+
+.make-count {
+  margin-top: auto;
+  padding-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--cyan);
+}
+
+/* Creator page: quick links to its sections */
+.section-index {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.section-index a {
+  padding: 0.35rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.section-index a:hover,
+.section-index a:focus-visible {
+  color: var(--on-accent);
+  background: var(--cyan);
+  border-color: var(--cyan);
+}
+
+/* Footer brand line */
+.footer-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.footer-brand img {
+  border-radius: 6px;
+}
+
+/* Boot screen logo */
+.boot-mark {
+  display: block;
+  width: 96px;
+  height: 96px;
+  margin-bottom: 0.5rem;
 }
