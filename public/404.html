@@ -3,21 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Page not found | Mulenga Mwamba</title>
+  <title>Page not found | God's Banditos</title>
   <meta name="description" content="Page not found.">
   <meta name="author" content="Mulenga Mwamba">
   <meta name="robots" content="noindex">
-  <meta property="og:site_name" content="Mulenga Mwamba">
-  <meta property="og:title" content="Page not found | Mulenga Mwamba">
+  <meta property="og:site_name" content="God's Banditos">
+  <meta property="og:title" content="Page not found | God's Banditos">
   <meta property="og:description" content="Page not found.">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="/images/selfie.jpg">
+  <meta property="og:image" content="https://mulenga-mwamba-website.onrender.com/images/og-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="theme-color" content="#0b0a10">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0a10'/%3E%3Cpath d='M0 0h32v22l-10 10H0z' fill='%23ff2e97'/%3E%3Ctext x='5' y='22' font-family='monospace' font-size='15' font-weight='700' fill='%230b0a10'%3E%3E_%3C/text%3E%3C/svg%3E">
+  <link rel="icon" href="/images/gods-banditos-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/images/gods-banditos-icon-180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=6">
+  <link rel="stylesheet" href="/css/styles.css?v=7">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -26,9 +30,9 @@
   <a class="skip-link" href="#main">Skip to main content</a>
 
   <header class="site-header">
-    <a class="brand" href="/" aria-label="Mulenga Mwamba, home">
-      <span class="brand-mark" aria-hidden="true">&gt;_</span>
-      <span class="brand-text glitch">MWAMBA<span class="brand-dim">//NET</span></span>
+    <a class="brand" href="/" aria-label="God's Banditos, home">
+      <img class="brand-logo" src="/images/gods-banditos-icon.svg" alt="" width="36" height="36">
+      <span class="brand-text glitch">GOD'S <span class="brand-dim">BANDITOS</span></span>
     </a>
     <div class="header-actions">
       <!-- Filled in by js/api.js: "Log in / Join", or your name, Profile and Log out -->
@@ -44,13 +48,11 @@
   <nav id="site-nav" class="site-nav" aria-label="Main navigation">
     <a href="/" data-nav="home">Home</a>
     <a href="/gallery" data-nav="works">Works</a>
-    <a href="/#about">About</a>
-    <a href="/#plan">Learning plan</a>
-    <a href="/#projects">Projects</a>
-    <a href="/#photos">Photos</a>
-    <a href="/#media">Media</a>
-    <a href="/#contact">Contact</a>
-    <a href="https://developer.mozilla.org/en-US/docs/Learn" target="_blank" rel="noopener">MDN Web Docs (external)</a>
+    <a href="/gallery?category=story-art">Story art</a>
+    <a href="/gallery?category=anime">Anime</a>
+    <a href="/gallery?category=writing">Writing</a>
+    <a href="/creator" data-nav="creator">Creator</a>
+    <a href="/creator#contact">Contact</a>
   </nav>
 
   <main id="main">
@@ -67,9 +69,9 @@
   </main>
 
   <footer class="site-footer">
-    <p>&copy; 2026 Mulenga Mwamba. Mulungushi University.</p>
-    <p><a href="https://github.com/Vamp1-hunid/Website-about-me">View source on GitHub</a></p>
-    <p>Last updated: 12 November 2026</p>
+    <p class="footer-brand"><img src="/images/gods-banditos-icon.svg" alt="" width="28" height="28"> &copy; 2026 God's Banditos &middot; created by <a href="/creator">Mulenga Mwamba</a></p>
+    <p><a href="https://github.com/Vamp1-hunid/Website-about-me">View source on GitHub</a> &middot; <a href="https://developer.mozilla.org/en-US/docs/Learn" target="_blank" rel="noopener">MDN Web Docs (external)</a></p>
+    <p>Last updated: 14 November 2026</p>
   </footer>
 
   <script src="/js/api.js" defer></script>
