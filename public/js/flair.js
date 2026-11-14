@@ -49,10 +49,14 @@
   /* ---------- 1. Decode text ---------- */
 
   function decode(node, duration) {
-    if (!node || node._decoding) return;
-    var finalText = node.getAttribute("data-final") || node.textContent;
-    node.setAttribute("data-final", finalText);
-    if (!node.hasAttribute("aria-label")) node.setAttribute("aria-label", finalText);
+    // Only plain-text headings (no links or icons inside), and never twice at once.
+    if (!node || node._decoding || node.children.length) return;
+    // Read the text fresh each time: some pages change their headings (e.g. "Edit: ...").
+    var finalText = node.textContent;
+    if (!finalText.trim()) return;
+    // Screen readers hear the real words while the letters are scrambled.
+    var hadLabel = node.hasAttribute("aria-label");
+    if (!hadLabel) node.setAttribute("aria-label", finalText);
     node._decoding = true;
     var start = performance.now();
     duration = duration || 700;
@@ -70,11 +74,34 @@
         window.requestAnimationFrame(frame);
       } else {
         node.textContent = finalText;
+        if (!hadLabel) node.removeAttribute("aria-label");
         node._decoding = false;
       }
     })(start);
   }
   MW.decode = decode;
+
+  // Every time you point at a title it glitches and re-decrypts (not just the first time).
+  var TITLE_SELECTOR = "h1, h2, .card h3, .work-card h3";
+
+  function initTitleHover() {
+    if (!finePointer) return;
+    document.addEventListener("pointerover", function (event) {
+      if (event.pointerType !== "mouse" || !event.target.closest) return;
+      var title = event.target.closest(TITLE_SELECTOR);
+      if (!title || title.contains(event.relatedTarget)) return; // still inside the same title
+      if (MW.glitch) MW.glitch(title);
+      decode(title, title.tagName === "H1" ? 600 : 420);
+    });
+
+    // The brand in the header has two coloured parts, so it only glitches (no decode).
+    var brand = document.querySelector(".brand");
+    if (brand && MW.glitch) {
+      brand.addEventListener("pointerenter", function () {
+        MW.glitch(brand.querySelector(".brand-text"));
+      });
+    }
+  }
 
   function initDecode() {
     var nodes = document.querySelectorAll("[data-decode]");
@@ -355,6 +382,7 @@
 
   safe(initPageWipe);
   safe(initDecode);
+  safe(initTitleHover);
   safe(initRoles);
   safe(initMicroGlitch);
   safe(initProgress);
