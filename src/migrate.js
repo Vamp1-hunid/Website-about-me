@@ -14,6 +14,16 @@ async function migrate() {
   await ensureAdmin();
   await assignOwnership();
   await require("./flags").ensureDefaults();
+  await openCommunityFeatures();
+}
+
+// One time only: the suggestion box and the Fund the heist button go live for everyone
+// (they started as "only me"). After this the admin's choices on Site features are kept.
+async function openCommunityFeatures() {
+  const done = await db.query("SELECT 1 FROM app_settings WHERE key = 'community_features_v1'");
+  if (done.rows.length) return;
+  await db.query("UPDATE feature_flags SET audience = 'everyone', updated_at = NOW() WHERE key IN ('suggestion_box', 'hub_support', 'donations')");
+  await db.query("INSERT INTO app_settings (key, value) VALUES ('community_features_v1', '1') ON CONFLICT (key) DO NOTHING");
 }
 
 // Version 4 (Chapterhive): every work, story and character has an owner. Anything made

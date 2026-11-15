@@ -404,6 +404,26 @@
     main.appendChild(panel);
   }
 
+  // A simple line-drawn magnifying glass (SVG, so it matches the theme colours).
+  function searchIcon(cls) {
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("width", "18");
+    svg.setAttribute("height", "18");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("class", "search-svg" + (cls ? " " + cls : ""));
+    var c = document.createElementNS(ns, "circle");
+    c.setAttribute("cx", "10.5"); c.setAttribute("cy", "10.5"); c.setAttribute("r", "6.5");
+    var l = document.createElementNS(ns, "line");
+    l.setAttribute("x1", "15.5"); l.setAttribute("y1", "15.5"); l.setAttribute("x2", "21"); l.setAttribute("y2", "21");
+    [c, l].forEach(function (n) {
+      n.setAttribute("fill", "none"); n.setAttribute("stroke", "currentColor"); n.setAttribute("stroke-width", "2.4"); n.setAttribute("stroke-linecap", "round");
+      svg.appendChild(n);
+    });
+    return svg;
+  }
+
   // The search box sits at the end of the tab bar, where people look for it.
   function moveSearchToNav() {
     var nav = document.querySelector(".site-nav");
@@ -412,7 +432,13 @@
     search.classList.add("nav-search");
     var input = search.querySelector("input");
     if (input) input.placeholder = MW.isHub ? "Search books, series, creators…" : "Search works, stories…";
-    if (!search.querySelector("button")) search.appendChild(el("button", { type: "submit", class: "btn btn-small", "aria-label": "Search" }, "🔍"));
+    if (!search.querySelector("button")) {
+      var go = el("button", { type: "submit", class: "btn btn-small nav-search-go" });
+      go.appendChild(searchIcon());
+      go.appendChild(el("span", {}, "Search"));
+      search.appendChild(go);
+    }
+    if (input && !search.querySelector(".nav-search-icon")) search.insertBefore(searchIcon("nav-search-icon"), input);
     nav.appendChild(search);
   }
 
