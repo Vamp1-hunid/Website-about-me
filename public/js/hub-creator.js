@@ -25,6 +25,15 @@
     var c = data.creator;
     document.title = c.name + " (@" + c.handle + ") | Chapterhive";
     box.textContent = "";
+    // Premium creators can style their page: a theme, an accent colour and a wallpaper behind everything.
+    if (c.pageStyle) {
+      document.body.setAttribute("data-page-theme", c.pageStyle.theme || "hive");
+      if (c.pageStyle.accent) document.body.style.setProperty("--page-accent", c.pageStyle.accent);
+      if (c.pageStyle.wallpaperUrl) {
+        document.body.classList.add("has-wallpaper");
+        document.body.style.setProperty("--page-wallpaper", "url(\"" + c.pageStyle.wallpaperUrl.replace(/["\\]/g, "") + "\")");
+      }
+    }
     var banner = el("div", { class: "profile-banner" });
     if (c.bannerUrl) banner.style.backgroundImage = "url(\"" + c.bannerUrl.replace(/["\\]/g, "") + "\")";
     box.appendChild(banner);
@@ -35,6 +44,7 @@
     var h1 = el("h1", {}, c.name);
     h1.appendChild(MW.onlineDot(c.online));
     names.appendChild(h1);
+    if (c.premium) names.appendChild(el("span", { class: "premium-badge" }, "✦ Premium"));
     names.appendChild(el("p", { class: "mono muted" }, "@" + c.handle + (c.isBanditos ? " · Chapterhive founder" : "")));
     top.appendChild(names);
     var actions = el("div", { class: "profile-actions" });

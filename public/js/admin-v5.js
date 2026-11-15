@@ -282,29 +282,90 @@
 
   /* ---------- Features (feature flags) ---------- */
 
-  var AUDIENCES = [["off", "Off"], ["admin", "Only me"], ["beta", "Beta testers"], ["everyone", "Everyone"]];
+  // Site features: every switchable part of the site, grouped.
+  //  Live      = everyone            Queued (only me) = admin
+  //  Queued (beta testers) = beta    Suspended        = off
+  // A queued feature can be given a launch time; it goes live for everyone then.
+  var STATES = [["everyone", "Live for everyone"], ["admin", "Queued: only me"], ["beta", "Queued: me + beta testers"], ["off", "Suspended (off)"]];
+  function localInput(date) {
+    var d = new Date(date);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+  }
   function loadFlags() {
     var list = $("flag-list");
     MW.api("/admin/flags").then(function (d) {
       list.textContent = "";
-      d.flags.forEach(function (f) {
-        var row = el("div", { class: "flag-row" });
-        var info = el("div");
-        info.appendChild(el("strong", {}, f.label));
-        info.appendChild(el("p", { class: "muted" }, f.description));
-        row.appendChild(info);
-        var sel = el("select", { "aria-label": "Who sees " + f.label });
-        AUDIENCES.forEach(function (a) { sel.appendChild(el("option", { value: a[0] }, a[1])); });
-        sel.value = f.audience;
-        sel.addEventListener("change", function () {
-          MW.api("/admin/flags/" + f.key, { method: "PUT", json: { audience: sel.value } })
-            .then(function () { MW.toast(f.label + ": " + sel.options[sel.selectedIndex].textContent); })
-            .catch(function (e) { MW.toast(e.message, true); sel.value = f.audience; });
-        });
-        row.appendChild(sel);
-        list.appendChild(row);
+      var groups = {};
+      d.flags.forEach(function (f) { (groups[f.grp || "Extras"] = groups[f.grp || "Extras"] || []).push(f); });
+      Object.keys(groups).forEach(function (name) {
+        list.appendChild(el("h3", { class: "flag-group" }, name));
+        groups[name].forEach(function (f) { list.appendChild(flagRow(f)); });
       });
     }).catch(function (e) { list.textContent = e.message; });
+  }
+  function flagRow(f) {
+    var row = el("div", { class: "flag-row flag-" + f.audience });
+    var info = el("div", { class: "flag-info" });
+    var title = el("strong", {}, f.label);
+    info.appendChild(title);
+    info.appendChild(el("p", { class: "muted" }, f.description));
+    var status = el("p", { class: "mono flag-status" });
+    info.appendChild(status);
+    row.appendChild(info);
+
+    var controls = el("div", { class: "flag-controls" });
+    // The big switch: on = live for everyone, off = suspended.
+    var switchLabel = el("label", { class: "switch", title: "Live / suspended" });
+    var toggle = el("input", { type: "checkbox", role: "switch", "aria-label": f.label + " live" });
+    toggle.checked = f.audience === "everyone";
+    switchLabel.append(toggle, el("span", { class: "switch-track", "aria-hidden": "true" }));
+    controls.appendChild(switchLabel);
+
+    var sel = el("select", { "aria-label": "Status of " + f.label });
+    STATES.forEach(function (a) { sel.appendChild(el("option", { value: a[0] }, a[1])); });
+    sel.value = f.audience;
+    controls.appendChild(sel);
+
+    var when = el("input", { type: "datetime-local", "aria-label": "Launch " + f.label + " at" });
+    when.min = localInput(Date.now() + 60000);
+    if (f.launch_at) when.value = localInput(f.launch_at);
+    var schedule = el("button", { type: "button", class: "btn btn-ghost btn-small" }, f.launch_at ? "Change launch" : "Schedule launch");
+    var cancel = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "Cancel launch");
+    var sched = el("div", { class: "flag-schedule" });
+    sched.append(when, schedule, cancel);
+    controls.appendChild(sched);
+    row.appendChild(controls);
+
+    function paint(flag) {
+      f = flag;
+      row.className = "flag-row flag-" + f.audience;
+      toggle.checked = f.audience === "everyone";
+      sel.value = f.audience;
+      sched.hidden = f.audience === "everyone";
+      cancel.hidden = !f.launch_at;
+      schedule.textContent = f.launch_at ? "Change launch" : "Schedule launch";
+      status.textContent = f.audience === "everyone" ? "● LIVE" : f.audience === "off" ? "■ SUSPENDED" :
+        "◆ QUEUED" + (f.launch_at ? " · launches " + MW.formatDateTime(f.launch_at) : "");
+    }
+    function save(audience, launchAt, message) {
+      return MW.api("/admin/flags/" + f.key, { method: "PUT", json: { audience: audience, launchAt: launchAt || null } })
+        .then(function (r) { paint(r.flag); MW.toast(message || (f.label + ": " + sel.options[sel.selectedIndex].textContent)); })
+        .catch(function (e) { MW.toast(e.message, true); paint(f); });
+    }
+    toggle.addEventListener("change", function () {
+      if (!toggle.checked && !window.confirm("Suspend " + f.label + " for everyone?")) { toggle.checked = true; return; }
+      save(toggle.checked ? "everyone" : "off", null, f.label + (toggle.checked ? " is live." : " is suspended."));
+    });
+    sel.addEventListener("change", function () { save(sel.value, null); });
+    schedule.addEventListener("click", function () {
+      if (!when.value) { MW.toast("Pick a date and time first.", true); when.focus(); return; }
+      var audience = f.audience === "off" ? "admin" : f.audience;
+      save(audience, new Date(when.value).toISOString(), f.label + " will launch " + MW.formatDateTime(new Date(when.value)) + ".");
+    });
+    cancel.addEventListener("click", function () { save(f.audience, null, "Launch cancelled. " + f.label + " stays queued."); });
+    paint(f);
+    return row;
   }
   ADMIN.onShow("features", loadFlags);
 

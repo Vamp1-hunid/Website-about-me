@@ -10,6 +10,7 @@ const { VISIBLE, SELECT_POST, toPost, BANDITOS_ONLY } = require("./posts");
 const { CHAR_VISIBLE } = require("./stories");
 
 const router = express.Router();
+const flagsLib = require("../flags");
 
 const searchLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -27,14 +28,16 @@ const TYPES = {
   episodes: ["series", "anime"],
   films: ["film"],
   art: ["art", "story-art", "comedy", "meme"],
-  writing: ["writing", "thoughts"],
+  writing: ["writing", "thoughts", "novel", "poetry"],
+  books: ["novel", "storybook", "educational"],
+  music: ["song"],
   stories: [],
   characters: [],
   news: [],
   products: []
 };
 
-router.get("/search", searchLimiter, async function (req, res) {
+router.get("/search", flagsLib.requireFlag("search", { adminAlways: true }), searchLimiter, async function (req, res) {
   const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 80) : "";
   const hub = req.query.site === "hub";
   const type = Object.prototype.hasOwnProperty.call(TYPES, req.query.type) ? req.query.type : "all";
@@ -189,7 +192,7 @@ async function readSupport() {
 // GET /api/support -> what the button shows (nothing at all while it's switched off)
 router.get("/support", async function (req, res) {
   const support = await readSupport();
-  if (!support.enabled || !support.methods.length) return res.json({ enabled: false });
+  if (!support.enabled || !support.methods.length || !(await flagsLib.isOn("donations", req))) return res.json({ enabled: false });
   res.json(support);
 });
 

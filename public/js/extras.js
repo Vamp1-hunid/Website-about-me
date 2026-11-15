@@ -137,6 +137,41 @@
 
   /* ---------- Welcome card (once per account) ---------- */
 
+  // A short animated tribute to the people who make the hive: the creators, and the founder.
+  function tribute() {
+    var box = el("div", { class: "tribute", "aria-label": "A tribute to our creators" });
+    box.appendChild(el("p", { class: "tribute-title" }, "Made possible by our creators"));
+    box.appendChild(el("p", { class: "muted tribute-lead" },
+      "Every novel, storybook, song, lesson, comic, film and drawing here exists because someone was brave enough to share it. Thank you to every creator in the hive."));
+    var track = el("div", { class: "tribute-track" });
+    var reel = el("div", { class: "tribute-reel" });
+    track.appendChild(reel);
+    box.appendChild(track);
+    box.appendChild(el("p", { class: "tribute-founder mono" }, "Chapterhive was founded by Mulenga Mwamba · a God's Banditos production"));
+    MW.api("/hub/creators?sort=followers&page=1").then(function (d) {
+      var list = (d.creators || []).slice(0, 14);
+      if (!list.length) { track.remove(); return; }
+      // The names run twice so the scroll loops without a gap.
+      // Only a handful of creators so far: show them once, standing still.
+      var rounds = list.length >= 6 ? [list, list] : [list];
+      if (list.length < 6) reel.classList.add("is-still");
+      rounds.forEach(function (group, round) {
+        group.forEach(function (c) {
+          var chip = el("a", { class: "tribute-chip", href: "/hub/c/" + encodeURIComponent(c.handle), tabindex: round ? "-1" : "0" });
+          if (round) chip.setAttribute("aria-hidden", "true");
+          var pic = el("span", { class: "tribute-pic" });
+          if (c.avatarUrl) pic.appendChild(el("img", { src: c.avatarUrl, alt: "" }));
+          else pic.textContent = (c.name || "?").charAt(0);
+          chip.appendChild(pic);
+          chip.appendChild(el("span", {}, c.name));
+          reel.appendChild(chip);
+        });
+      });
+      reel.style.animationDuration = Math.max(14, list.length * 3) + "s";
+    }).catch(function () { track.remove(); });
+    return box;
+  }
+
   function showWelcome(user) {
     var key = "mw-welcomed-" + user.id;
     try { if (localStorage.getItem(key)) return; } catch (e) { /* storage blocked */ }
@@ -147,6 +182,7 @@
       dialog.appendChild(el("p", { class: "node-label" }, MW.isHub ? "Chapterhive // welcome" : "God's Banditos // welcome"));
       dialog.appendChild(el("h2", { id: "welcome-title" }, w.title));
       w.body.split(/\n+/).forEach(function (para) { dialog.appendChild(el("p", {}, para)); });
+      dialog.appendChild(tribute());
       var actions = el("div", { class: "form-actions" });
       if (w.link) actions.appendChild(el("a", { class: "btn", href: w.link }, "Let's go"));
       var close = el("button", { type: "button", class: "btn btn-ghost" }, "Close");

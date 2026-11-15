@@ -560,7 +560,9 @@
     }
 
     var form = document.getElementById("comment-form");
-    if (user) {
+    if (user && !MW.feature("comments")) {
+      list.appendChild(el("li", { class: "muted" }, "Comments are paused for now."));
+    } else if (user) {
       form.hidden = false;
       form.addEventListener("submit", async function (event) {
         event.preventDefault();

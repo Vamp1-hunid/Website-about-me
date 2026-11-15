@@ -364,7 +364,8 @@ UPDATE posts SET notified_at = COALESCE(notified_at, NOW()) WHERE notified_at IS
 ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_category_check;
 ALTER TABLE posts ADD CONSTRAINT posts_category_check CHECK (category IN (
   'story-art', 'anime', 'writing', 'updates', 'news',
-  'art', 'comedy', 'film', 'series', 'meme', 'thoughts', 'poll'));
+  'art', 'comedy', 'film', 'series', 'meme', 'thoughts', 'poll',
+  'novel', 'storybook', 'educational', 'poetry', 'song'));
 
 -- Polls and questionnaires attached to a post (questions, options, when results show).
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS form JSONB;
@@ -457,3 +458,29 @@ CREATE TABLE IF NOT EXISTS chat_blocks (
 );
 ALTER TABLE reports DROP CONSTRAINT IF EXISTS reports_target_type_check;
 ALTER TABLE reports ADD CONSTRAINT reports_target_type_check CHECK (target_type IN ('post', 'comment', 'creator', 'collab', 'message'));
+
+-- v8: account plans (Premium is queued: hidden until the "premium" feature flag is switched on).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS plan VARCHAR(10) NOT NULL DEFAULT 'free';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_until TIMESTAMPTZ;
+DO $$ BEGIN
+  ALTER TABLE users ADD CONSTRAINT users_plan_check CHECK (plan IN ('free', 'premium'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- A premium creator's page style: theme, accent colour and wallpaper picture.
+ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS page_theme VARCHAR(20);
+ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS page_accent VARCHAR(7);
+ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS page_wallpaper_url TEXT;
+ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS page_wallpaper_public_id TEXT;
+-- People who asked to hear when Premium launches.
+CREATE TABLE IF NOT EXISTS premium_waitlist (
+  user_id    INTEGER PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- v8: site features can be scheduled to launch for everyone at a set time,
+-- and are grouped on the admin "Site features" tab.
+ALTER TABLE feature_flags ADD COLUMN IF NOT EXISTS launch_at TIMESTAMPTZ;
+ALTER TABLE feature_flags ADD COLUMN IF NOT EXISTS grp VARCHAR(30) NOT NULL DEFAULT 'Extras';
+
+-- v8: genres for browsing (horror, sci-fi, romance, education ...). A post can have up to three.
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS genres VARCHAR(20)[] NOT NULL DEFAULT '{}';
+CREATE INDEX IF NOT EXISTS posts_genres_idx ON posts USING GIN (genres);

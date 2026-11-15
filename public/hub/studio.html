@@ -19,8 +19,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=12">
-  <link rel="stylesheet" href="/css/chapterhive.css?v=4">
+  <link rel="stylesheet" href="/css/styles.css?v=13">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=5">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -55,7 +55,6 @@
     <a href="/hub/collabs" data-nav="collabs">Collabs</a>
     <a href="/hub/apply" data-nav="apply">Become a creator</a>
     <a href="/hub/sponsor" data-nav="sponsor">Sponsor</a>
-    <a href="/">God's Banditos</a>
   </nav>
 
   <main id="main" class="admin-main">
@@ -133,6 +132,15 @@
                     <option value="series">Series episode</option>
                     <option value="meme">Meme</option>
                   </optgroup>
+                  <optgroup label="Books">
+                    <option value="novel">Novel or novella</option>
+                    <option value="storybook">Storybook / picture book</option>
+                    <option value="educational">Educational book or guide</option>
+                  </optgroup>
+                  <optgroup label="Music &amp; poetry">
+                    <option value="song">Song, lyrics or music</option>
+                    <option value="poetry">Poetry</option>
+                  </optgroup>
                   <optgroup label="Words">
                     <option value="writing">Story or writing</option>
                     <option value="comedy">Comedy</option>
@@ -181,6 +189,32 @@
             <div class="form-row">
               <label for="tags">Tags <span class="muted">(comma separated, e.g. aldenmere, sketch)</span></label>
               <input type="text" id="tags" name="tags" maxlength="400">
+            </div>
+            <div class="form-row">
+              <span class="label">Genres <span class="muted">(up to 3, helps people find it when browsing)</span></span>
+              <div class="genre-picks" id="genre-picks">
+                <label><input type="checkbox" value="fantasy"><span>Fantasy</span></label>
+                <label><input type="checkbox" value="scifi"><span>Sci-fi</span></label>
+                <label><input type="checkbox" value="horror"><span>Horror</span></label>
+                <label><input type="checkbox" value="mystery"><span>Mystery</span></label>
+                <label><input type="checkbox" value="romance"><span>Romance</span></label>
+                <label><input type="checkbox" value="comedy"><span>Comedy</span></label>
+                <label><input type="checkbox" value="drama"><span>Drama</span></label>
+                <label><input type="checkbox" value="action"><span>Action</span></label>
+                <label><input type="checkbox" value="adventure"><span>Adventure</span></label>
+                <label><input type="checkbox" value="thriller"><span>Thriller</span></label>
+                <label><input type="checkbox" value="slice-of-life"><span>Slice of life</span></label>
+                <label><input type="checkbox" value="historical"><span>Historical</span></label>
+                <label><input type="checkbox" value="children"><span>Children's</span></label>
+                <label><input type="checkbox" value="young-adult"><span>Young adult</span></label>
+                <label><input type="checkbox" value="education"><span>Education</span></label>
+                <label><input type="checkbox" value="science"><span>Science</span></label>
+                <label><input type="checkbox" value="self-help"><span>Self-help</span></label>
+                <label><input type="checkbox" value="faith"><span>Faith</span></label>
+                <label><input type="checkbox" value="poetry"><span>Poetry</span></label>
+                <label><input type="checkbox" value="music"><span>Music</span></label>
+              </div>
+              <p class="error" id="genres-error"></p>
             </div>
 
             <div class="form-row">
@@ -750,6 +784,7 @@
   <script src="/js/admin-stories.js" defer></script>
   <script src="/js/admin-more.js" defer></script>
   <script src="/js/admin-collabs.js" defer></script>
+  <script src="/js/premium-studio.js" defer></script>
   <script src="/js/suggest.js" defer></script>
   <script src="/js/suggest-init.js" defer></script>
 </body>

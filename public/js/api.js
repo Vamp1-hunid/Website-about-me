@@ -128,7 +128,8 @@
 
   MW.categoryName = function (category) {
     return { "story-art": "Story art", anime: "Anime works", writing: "Writing", updates: "Update", news: "News",
-      art: "Art", comedy: "Comedy", film: "Live action film", series: "Series", meme: "Meme", thoughts: "Thoughts", poll: "Poll" }[category] || category;
+      art: "Art", comedy: "Comedy", film: "Live action film", series: "Series", meme: "Meme", thoughts: "Thoughts", poll: "Poll",
+      novel: "Novel", storybook: "Storybook", educational: "Educational", poetry: "Poetry", song: "Song & music" }[category] || category;
   };
 
   // "2026-11-20T15:00:00Z" -> "20 Nov 2026, 17:00" (in the visitor's own time zone)
@@ -355,8 +356,8 @@
 
     var groups = MW.isHub ? [
       ["Chapterhive", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following", true], ["/hub/news", "News & updates"]]],
-      ["Create", [["/hub/collabs", "Collab board", true], ["/hub/collabs#suggest", "Suggestion box", true], ["/hub/apply", "Become a creator", true], ["/legal/content-rules", "Content Rules"]]],
-      ["More", [["/help", "Help & FAQ"], ["/hub/sponsor", "Sponsor & business"], ["/", "God's Banditos"], ["/contact", "Contact"], ["/legal/terms", "Terms"]]]
+      ["Create", [["/hub/collabs", "Collab board", true, "collabs"], ["/hub/collabs#suggest", "Suggestion box", true, "suggestion_box"], ["/hub/apply", "Become a creator", true, "creator_applications"], ["/legal/content-rules", "Content Rules"]]],
+      ["More", [["/help", "Help & FAQ"], ["/hub/premium", "Premium", false, "premium"], ["/hub/sponsor", "Sponsor & business", false, "sponsor_page"], ["/", "God's Banditos"], ["/contact", "Contact"], ["/legal/terms", "Terms"]]]
     ] : [
       ["Explore", [["/", "Home"], ["/gallery", "All works"], ["/gallery?category=story-art", "Story art"],
         ["/gallery?category=anime", "Anime works"], ["/gallery?category=writing", "Writing"], ["/gallery?category=updates", "Updates"]]],
@@ -371,6 +372,7 @@
       group[1].forEach(function (item) {
         var li = el("li");
         if (item[2]) li.setAttribute("data-members", "");
+        if (item[3]) li.setAttribute("data-feature", item[3]);
         li.appendChild(el("a", { href: item[0] }, item[1]));
         ul.appendChild(li);
       });
@@ -389,6 +391,19 @@
 
     MW.me().then(function (user) {
       var ul = account.querySelector("ul");
+      // Switched-off site features (Admin → Site features) disappear from the menu and navigation.
+      menu.querySelectorAll("[data-feature]").forEach(function (li) {
+        if (!MW.feature(li.getAttribute("data-feature"))) li.remove();
+      });
+      var navFeatures = { collabs: "collabs", apply: "creator_applications", sponsor: "sponsor_page" };
+      Object.keys(navFeatures).forEach(function (nav) {
+        if (!MW.feature(navFeatures[nav])) {
+          document.querySelectorAll(".site-nav a[data-nav='" + nav + "']").forEach(function (a) { a.remove(); });
+        }
+      });
+      if (!MW.feature("search")) {
+        document.querySelectorAll(".header-search, .menu-search").forEach(function (f) { f.hidden = true; });
+      }
       // Visitors without an account: members-only links are hidden and replaced by one join prompt.
       if (!user) {
         document.querySelectorAll(".site-nav a[data-nav='feed'], .site-nav a[data-nav='collabs'], .site-nav a[data-nav='apply']")

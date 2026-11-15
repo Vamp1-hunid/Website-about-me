@@ -1090,3 +1090,45 @@ body[data-brand="chapterhive"] .heist-button {
 }
 .guest-gate p { margin: 0 0 0.7rem; }
 .guest-gate .actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+/* ===== v8: Premium creator page themes ===== */
+body[data-brand="chapterhive"][data-page-theme="midnight"] { --bg: #0a0d1a; --panel: #121733; --panel-2: #181e40; --pink: #8fa8ff; --cyan: #c9a4ff; --line: #262d57; }
+body[data-brand="chapterhive"][data-page-theme="sakura"] { --bg: #1a0f14; --panel: #2a1720; --panel-2: #331c27; --pink: #ff8fb8; --cyan: #ffd1e1; --line: #4a2a39; }
+body[data-brand="chapterhive"][data-page-theme="forest"] { --bg: #0b130d; --panel: #132017; --panel-2: #18291d; --pink: #7fd18b; --cyan: #e0c27a; --line: #24392a; }
+body[data-brand="chapterhive"][data-page-theme="ocean"] { --bg: #06141a; --panel: #0d2129; --panel-2: #112a34; --pink: #4fd1e8; --cyan: #9be7c4; --line: #1b3b47; }
+body[data-brand="chapterhive"][data-page-theme="stage"] { --bg: #120812; --panel: #1f0e1f; --panel-2: #291229; --pink: #ff5ec4; --cyan: #ffd84d; --line: #3d1a3d; }
+body[data-brand="chapterhive"][data-page-theme="paper"] { --bg: #f6efe0; --panel: #fffaf0; --panel-2: #f3e8d2; --ink: #2b2116; --ink-dim: #6a5940; --pink: #9a4d1c; --cyan: #3f6f8f; --line: #e2d3b4; --on-accent: #fffaf0; }
+:root[data-theme="light"] body[data-brand="chapterhive"][data-page-theme]:not([data-page-theme="hive"]):not([data-page-theme="paper"]) { --ink: #f4f1ea; --ink-dim: #c9c1b3; }
+body[data-brand="chapterhive"][style*="--page-accent"] { --pink: var(--page-accent); }
+body[data-brand="chapterhive"].has-wallpaper {
+  background: linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.55)), var(--page-wallpaper) center / cover fixed, var(--bg) !important;
+}
+@media (max-width: 760px) {
+  body[data-brand="chapterhive"].has-wallpaper { background-attachment: scroll !important; }
+}
+body[data-brand="chapterhive"].has-wallpaper .panel { background: color-mix(in srgb, var(--panel) 88%, transparent); backdrop-filter: blur(6px); }
+.premium-badge {
+  display: inline-block; margin-top: 0.3rem; padding: 0.2rem 0.6rem; border-radius: 99px; font: 700 0.75rem/1.2 var(--font-ui);
+  background: linear-gradient(135deg, var(--pink), var(--cyan)); color: #1a1205;
+}
+.premium-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin: 1rem 0; }
+.premium-plan { border: 1px solid var(--line); border-radius: 16px; padding: 1.2rem; background: var(--panel-2); }
+.premium-plan.is-premium { border-color: var(--pink); box-shadow: 0 0 0 1px var(--pink) inset; }
+.premium-plan ul { padding-left: 1.1rem; }
+.theme-swatches { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+/* ===== v8: Browse the hive ===== */
+.browse-shelves, .browse-cats, .browse-genres { display: flex; gap: 0.45rem; flex-wrap: wrap; margin: 0.6rem 0; }
+.browse-shelves { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 0.3rem; scrollbar-width: thin; }
+.browse .chip {
+  font: 600 0.88rem/1 var(--font-ui); padding: 0.55rem 0.9rem; border-radius: 999px; white-space: nowrap;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); cursor: pointer;
+}
+.browse-shelves .chip { font-size: 0.95rem; padding: 0.7rem 1.1rem; }
+.browse-genres .chip { font-size: 0.8rem; padding: 0.42rem 0.75rem; }
+.browse .chip:hover { border-color: var(--pink); }
+.browse .chip.is-active { background: var(--pink); border-color: var(--pink); color: var(--on-accent); }
+.browse-cats { padding-left: 0.2rem; border-left: 3px solid var(--pink); }
+.browse-sort select { width: auto; }
+.genre-picks { display: flex; flex-wrap: wrap; gap: 0.4rem 0.9rem; }
+.genre-picks label { display: inline-flex; gap: 0.35rem; align-items: center; text-transform: none; letter-spacing: normal; font-family: var(--font-ui); }

@@ -943,7 +943,14 @@ router.get("/flags", async function (req, res) {
 router.put("/flags/:key", async function (req, res) {
   const audience = ["off", "admin", "beta", "everyone"].includes(req.body.audience) ? req.body.audience : null;
   if (!audience) return res.status(400).json({ error: "Choose off, admin, beta or everyone." });
-  const flag = await flagsLib.setAudience(String(req.params.key).slice(0, 40), audience);
+  // Optional launch time: the switch goes live for everyone at that moment.
+  let launchAt = null;
+  if (req.body.launchAt) {
+    launchAt = new Date(req.body.launchAt);
+    if (isNaN(launchAt) || launchAt <= new Date()) return res.status(400).json({ error: "Pick a launch time in the future." });
+    if (audience === "everyone") return res.status(400).json({ error: "It's already live for everyone. Queue it first to schedule a launch." });
+  }
+  const flag = await flagsLib.setAudience(String(req.params.key).slice(0, 40), audience, launchAt);
   if (!flag) return res.status(404).json({ error: "Unknown feature." });
   res.json({ flag: flag });
 });

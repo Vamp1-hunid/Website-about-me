@@ -17,6 +17,8 @@ const rateLimit = require("express-rate-limit");
 const db = require("../db");
 const storage = require("../storage");
 const { requireLogin } = require("../auth");
+const { requireFlag, isOn: isFlagOn } = require("../flags");
+const { planOf } = require("../plans");
 const { resolveMedia } = require("../media");
 const { VISIBLE, SELECT_POST, toPost } = require("./posts");
 const { CHAR_VISIBLE } = require("./stories");
@@ -24,7 +26,7 @@ const { CHAR_VISIBLE } = require("./stories");
 const router = express.Router();
 
 const HANDLE_PATTERN = /^[a-z0-9](?:[a-z0-9_-]{1,28}[a-z0-9])$/;
-const KINDS = ["manga", "comics", "animation", "illustration", "stories", "comedy", "film", "series", "photography", "music", "memes", "poetry"];
+const KINDS = ["manga", "comics", "animation", "illustration", "stories", "comedy", "film", "series", "photography", "music", "memes", "poetry", "novels", "storybooks", "education", "songwriting"];
 const RESERVED = ["admin", "hub", "studio", "apply", "feed", "news", "creators", "settings", "chapterhive", "afterframe", "support", "help", "legal", "api"];
 
 const applyLimiter = rateLimit({
@@ -74,7 +76,7 @@ function toCreatorCard(row) {
 }
 
 const CREATOR_SQL = `
-  SELECT cp.*, u.username AS account_username, u.avatar_url, u.role, u.created_at AS joined, u.streak_count,
+  SELECT cp.*, u.username AS account_username, u.plan, u.plan_until, u.avatar_url, u.role, u.created_at AS joined, u.streak_count,
     (u.show_online AND u.last_seen_at > NOW() - INTERVAL '5 minutes') AS online,
     (SELECT COUNT(*) FROM follows f WHERE f.creator_id = cp.user_id)::int AS followers,
     (SELECT COUNT(*) FROM posts p WHERE p.user_id = cp.user_id AND p.category <> 'news' AND ${VISIBLE})::int AS works
@@ -159,10 +161,17 @@ router.get("/creators/:handle", async function (req, res) {
     [row.user_id]
   );
   const card = toCreatorCard(row);
+  const premiumOn = await isFlagOn("premium", req);
   res.json({
     creator: Object.assign(card, {
       userId: row.user_id,
       username: row.account_username,
+      // Premium creators' page style (only shown while the Premium feature is on for this visitor).
+      premium: premiumOn && planOf(row).customPage,
+      pageStyle: premiumOn && (planOf(row).customPage || row.role === "admin") && (row.page_theme || row.page_accent || row.page_wallpaper_url) ? {
+        theme: row.page_theme || "hive", accent: row.page_accent || null,
+        wallpaperUrl: storage.displayUrl(row.page_wallpaper_url, "image") || null
+      } : null,
       bio: row.bio,
       links: parseLinks(row.links),
       bannerUrl: storage.displayUrl(row.banner_url, "image") || null,
@@ -212,8 +221,8 @@ async function followRoute(req, res) {
   }
   res.json({ following: req.method === "POST", followers: count.rows[0].n });
 }
-router.post("/creators/:handle/follow", requireLogin, followRoute);
-router.delete("/creators/:handle/follow", requireLogin, followRoute);
+router.post("/creators/:handle/follow", requireLogin, requireFlag("follows"), followRoute);
+router.delete("/creators/:handle/follow", requireLogin, requireFlag("follows"), followRoute);
 
 // GET /api/hub/feed?page=  (also marks the feed as seen)
 router.get("/feed", requireLogin, async function (req, res) {
@@ -275,7 +284,8 @@ function toMyProfile(row) {
   return {
     handle: row.handle, name: row.name, tagline: row.tagline, bio: row.bio, kinds: row.kinds,
     links: parseLinks(row.links), bannerUrl: storage.thumbnailUrl(row.banner_url) || null,
-    status: row.status, reviewNote: row.review_note, canWriteNews: row.can_write_news, application: row.application
+    status: row.status, reviewNote: row.review_note, canWriteNews: row.can_write_news, application: row.application,
+    pageStyle: { theme: row.page_theme || "hive", accent: row.page_accent || "", wallpaperUrl: storage.thumbnailUrl(row.page_wallpaper_url) || null }
   };
 }
 
@@ -284,7 +294,7 @@ router.get("/me", requireLogin, async function (req, res) {
 });
 
 // POST /api/hub/apply { handle, name, tagline, kinds[], application, links[], agree }
-router.post("/apply", requireLogin, applyLimiter, async function (req, res) {
+router.post("/apply", requireLogin, requireFlag("creator_applications"), applyLimiter, async function (req, res) {
   const existing = await myProfile(req.session.user.id);
   if (existing && (existing.status === "approved" || existing.status === "suspended")) {
     return res.status(400).json({ error: existing.status === "approved" ? "You're already an approved creator." : "This account can't apply right now." });

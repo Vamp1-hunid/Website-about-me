@@ -13,7 +13,8 @@
   var el = MW.el;
 
   var KIND_NAMES = { manga: "Manga", comics: "Comics", animation: "Animation", stories: "Stories & writing", illustration: "Art & illustration", music: "Music",
-    comedy: "Comedy", film: "Live action film", series: "Series", photography: "Photography", memes: "Memes", poetry: "Poetry" };
+    comedy: "Comedy", film: "Live action film", series: "Series", photography: "Photography", memes: "Memes", poetry: "Poetry",
+    novels: "Novels", storybooks: "Storybooks", education: "Educational books", songwriting: "Songwriting" };
   MW.kindName = function (k) { return KIND_NAMES[k] || k; };
 
   MW.creatorCard = function (c) {

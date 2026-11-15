@@ -45,7 +45,7 @@ function cleanText(value) {
 }
 
 // POST /api/account/register  { username, displayName, password }
-router.post("/register", registerLimiter, async function (req, res) {
+router.post("/register", flags.requireFlag("signups"), registerLimiter, async function (req, res) {
   const username = cleanText(req.body.username).toLowerCase();
   const displayName = cleanText(req.body.displayName) || username;
   const password = typeof req.body.password === "string" ? req.body.password : "";
@@ -104,7 +104,7 @@ router.get("/username-available", async function (req, res) {
 
 // POST /api/account/google-complete { acceptTerms, username }
 // A first-time Google sign-in waits here until the person has accepted the terms.
-router.post("/google-complete", registerLimiter, async function (req, res) {
+router.post("/google-complete", flags.requireFlag("signups"), registerLimiter, async function (req, res) {
   const pending = req.session.pendingGoogle;
   if (!pending) return res.status(400).json({ error: "Your Google sign-in expired. Please press Continue with Google again." });
   if (req.body.acceptTerms !== true) {
