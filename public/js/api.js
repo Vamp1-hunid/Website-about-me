@@ -279,6 +279,11 @@
       return;
     }
 
+    if (!user && MW.isHub && MW.feature("reservations") && !MW.feature("signups")) {
+      area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub/login" }, "Log in"));
+      area.appendChild(el("a", { class: "btn btn-small reserve-btn", href: "/hub/reserve" }, "Reserve your name"));
+      return;
+    }
     if (!user) {
       var next = encodeURIComponent(MW.currentPath());
       area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub/login?next=" + next }, "Log in"));

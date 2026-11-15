@@ -13,6 +13,7 @@ const db = require("./db");
 const DEFAULTS = [
   // Accounts & community
   ["signups", "New accounts", "People can create new accounts (log in always keeps working).", "everyone", "Accounts & community"],
+  ["reservations", "Pre-launch username reservations", "Instead of creating accounts, visitors reserve a username with their email; at launch you send them links to claim it. Turn New accounts off while this runs.", "off", "Accounts & community"],
   ["chat", "Chat", "Members can message each other and share works they're enjoying.", "everyone", "Accounts & community"],
   ["comments", "Comments", "Members can write and reply to comments.", "everyone", "Accounts & community"],
   ["likes", "Likes & saves", "Members can like and save works.", "everyone", "Accounts & community"],

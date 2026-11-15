@@ -549,3 +549,17 @@ ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS post_visibility VARCHAR(10
 DO $$ BEGIN
   ALTER TABLE creator_profiles ADD CONSTRAINT creator_post_visibility_check CHECK (post_visibility IN ('everyone', 'members', 'followers'));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- v13: pre-launch username reservations. While the "reservations" switch is on, people reserve a username
+-- with their email instead of creating an account; at launch they get a link to claim it.
+CREATE TABLE IF NOT EXISTS username_reservations (
+  id           SERIAL PRIMARY KEY,
+  username     VARCHAR(30)  NOT NULL UNIQUE,
+  email        VARCHAR(254) NOT NULL UNIQUE,
+  display_name VARCHAR(60)  NOT NULL DEFAULT '',
+  country      CHAR(2),
+  claim_token  VARCHAR(64)  NOT NULL UNIQUE,
+  created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  invited_at   TIMESTAMPTZ,
+  claimed_at   TIMESTAMPTZ
+);

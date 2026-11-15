@@ -5,6 +5,7 @@
   "use strict";
 
   var MW = window.MW;
+  var el = MW ? MW.el : null;
   var loginForm = document.getElementById("login-form");
   var registerForm = document.getElementById("register-form");
   var form = loginForm || registerForm;
@@ -13,6 +14,28 @@
   var params = new URLSearchParams(window.location.search);
   var next = MW.safeNext(params.get("next"), MW.isHub ? "/hub" : "/admin");
   var feedback = document.getElementById("form-feedback");
+
+  // Claiming a reserved username: /hub/register?claim=<token> fills in and locks the name.
+  var claimToken = params.get("claim") || "";
+  if (registerForm && claimToken) {
+    MW.api("/reserve/claim?token=" + encodeURIComponent(claimToken)).then(function (d) {
+      var u = document.getElementById("username");
+      u.value = d.username; u.readOnly = true;
+      var e = document.getElementById("email"); if (e && !e.value) e.value = d.email;
+      var dn = document.getElementById("displayName"); if (dn && !dn.value) dn.value = d.displayName || "";
+      var c = document.getElementById("country"); if (c && d.country) c.value = d.country;
+      var note = el("p", { class: "feedback feedback-success" }, "Welcome back! @" + d.username + " is waiting for you: accept the rules and finish setting up your account.");
+      registerForm.closest("section").insertBefore(note, registerForm.closest("section").children[3] || null);
+    }).catch(function (err) {
+      MW.toast(err.message, true);
+      claimToken = "";
+    });
+  } else if (registerForm) {
+    // Before launch, the Join page sends people to the username reservation campaign.
+    MW.me().then(function () {
+      if (MW.feature("reservations") && !MW.feature("signups")) window.location.replace("/hub/reserve");
+    });
+  }
 
   // Keep ?next= when switching between Log in and Join.
   var switchLink = document.getElementById("switch-link");
@@ -243,7 +266,7 @@
           method: "POST",
           json: { username: value("username"), displayName: value("displayName"), email: value("email"), password: value("password"),
             acceptTerms: !termsStep || termsStep.hidden, birthDate: value("birthDate"), country: value("country"),
-            marketing: document.getElementById("marketing").checked, gender: genderValue() }
+            marketing: document.getElementById("marketing").checked, gender: genderValue(), claimToken: claimToken || undefined }
         });
       }
       window.location.href = next;
