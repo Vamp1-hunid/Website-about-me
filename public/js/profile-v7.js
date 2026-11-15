@@ -94,6 +94,25 @@
     });
     panel.appendChild(form);
 
+    // Feed personalisation
+    var fp = el("div", { class: "feed-prefs" });
+    fp.appendChild(el("h3", {}, "Your feed"));
+    fp.appendChild(el("p", { class: "muted" }, "Your For you feed learns from your likes, saves and the ⋯ See more / See less buttons."));
+    var retake = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "Retake the interests survey");
+    retake.addEventListener("click", function () {
+      var s = document.createElement("script");
+      s.src = "/js/onboarding.js";
+      s.onload = function () { MW.runOnboarding(user); };
+      document.head.appendChild(s);
+    });
+    var reset = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "Reset my feed");
+    reset.addEventListener("click", function () {
+      if (!window.confirm("Forget everything your feed has learned about what you like?")) return;
+      MW.api("/account/interests", { method: "DELETE" }).then(function () { MW.toast("Your feed has been reset."); });
+    });
+    fp.append(retake, document.createTextNode(" "), reset);
+    panel.appendChild(fp);
+
     // Email confirmation
     if (d.hasEmail) {
       var ev = el("p", { class: "muted" }, d.emailVerified ? "✓ Your email address is confirmed." : "Your email address isn't confirmed yet. ");
@@ -131,5 +150,34 @@
     }
 
     anchor.parentNode.insertBefore(panel, anchor);
+
+    // Bio: a few lines about you, shown on your public member page.
+    var bioPanel = el("section", { class: "panel", id: "bio-panel", "aria-labelledby": "bio-title" });
+    bioPanel.appendChild(el("p", { class: "node-label" }, "Account // bio"));
+    bioPanel.appendChild(el("h2", { id: "bio-title" }, "Bio"));
+    bioPanel.appendChild(el("p", { class: "muted" }, "A few lines about you: what you love reading, watching or making. Shown on your public page."));
+    var bioForm = el("form", { novalidate: "" });
+    var bioRow = el("div", { class: "form-row" });
+    bioRow.appendChild(el("label", { for: "bio", class: "sr-only" }, "Bio"));
+    var bio = el("textarea", { id: "bio", name: "bio", rows: "3", maxlength: "300", placeholder: "e.g. Fantasy reader, part-time poet, always hunting for a good horror manga." });
+    var count = el("p", { class: "muted mono bio-count" }, "0 / 300");
+    bio.addEventListener("input", function () { count.textContent = bio.value.length + " / 300"; });
+    bioRow.append(bio, count, el("p", { class: "error", id: "bio-error" }));
+    var bioSave = el("button", { type: "submit" }, "Save bio");
+    var bioFb = el("p", { class: "feedback", "aria-live": "polite" });
+    bioForm.append(bioRow, bioSave, bioFb);
+    bioPanel.appendChild(bioForm);
+    MW.api("/account/bio").then(function (d) { bio.value = d.bio || ""; count.textContent = bio.value.length + " / 300"; }).catch(function () {});
+    bioForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+      bioSave.disabled = true;
+      MW.api("/account/bio", { method: "PUT", json: { bio: bio.value } }).then(function () {
+        bioFb.className = "feedback feedback-success"; bioFb.textContent = "Saved. It's on your public page now.";
+      }).catch(function (e) {
+        MW.showProblems(bioForm, (e.data && e.data.problems) || []);
+        bioFb.className = "feedback feedback-error"; bioFb.textContent = e.message;
+      }).then(function () { bioSave.disabled = false; });
+    });
+    panel.parentNode.insertBefore(bioPanel, panel);
   });
 })();

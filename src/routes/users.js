@@ -18,7 +18,7 @@ router.get("/:username", requireLogin, async function (req, res) {
   }
 
   const { rows } = await db.query(
-    `SELECT u.id, u.username, u.display_name, u.role, u.avatar_url, u.created_at, u.streak_count, u.streak_best, u.status,
+    `SELECT u.id, u.username, u.display_name, u.role, u.avatar_url, u.created_at, u.bio, u.streak_count, u.streak_best, u.status,
        (u.show_online AND u.last_seen_at > NOW() - INTERVAL '5 minutes') AS online,
        (SELECT COUNT(*) FROM comments c JOIN posts p ON p.id = c.post_id
          WHERE c.user_id = u.id AND (p.published AND p.review_status = 'approved' AND (p.publish_at IS NULL OR p.publish_at <= NOW())))::int AS comments,
@@ -43,6 +43,7 @@ router.get("/:username", requireLogin, async function (req, res) {
     user: {
       username: user.username,
       displayName: user.display_name,
+      bio: user.bio || "",
       role: user.role,
       avatarUrl: avatarUrl(user.avatar_url),
       joined: user.created_at,

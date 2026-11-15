@@ -53,9 +53,9 @@ function standingProblem(row) {
 
 const WELCOME = {
   member: {
-    title: "Welcome to Chapterhive and God's Banditos! 🐝",
-    body: "You can now like, save and comment, follow creators, answer polls and get new releases in your bell. " +
-      "Tip: open Following to see posts from creators you follow. Want to publish your own work? Apply to become a creator.",
+    title: "Welcome to Chapterhive 🐝",
+    body: "Brought to you by God's Banditos.\nYou can now like, save and comment, follow creators, chat and get new releases in your bell. " +
+      "Your feed learns what you enjoy: tap ⋯ on any post to see more or less like it. Want to publish your own work? Apply to become a creator.",
     link: "/help"
   },
   creator: {

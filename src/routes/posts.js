@@ -52,6 +52,7 @@ const PAGE_SIZE = 12;
 const MAX_MEDIA = 80;
 const plans = require("../plans");
 const rankings = require("../rankings");
+const interests = require("../interests");
 const { requireFlag, isOn: flagIsOn } = require("../flags");
 const MAX_TAGS = 12;
 
@@ -283,9 +284,22 @@ router.get("/", async function (req, res) {
     const n = "$" + values.length;
     where.push(`(p.title ILIKE ${n} OR p.summary ILIKE ${n} OR p.logline ILIKE ${n} OR array_to_string(p.tags, ' ') ILIKE ${n} OR s.title ILIKE ${n})`);
   }
-  const whereSql = where.length ? "WHERE " + where.join(" AND ") : "";
   // ?feed=1: the scrolling home feed also needs a picture/video to show and whether I liked or saved each post.
+  // The scrolling feed is for members; visitors get the plain new-releases list.
+  if (req.query.feed === "1" && !me) {
+    return res.status(401).json({ error: "Create a free account to get your own feed.", signup: true });
+  }
   const feedExtras = req.query.feed === "1" && !showDrafts;
+  // "For you" (no filters chosen): personalised from the member's interests. Kinds they said "less" to
+  // drift down, and kinds they strongly dislike are left out entirely.
+  let interestBonus = null;
+  if (feedExtras && me && !category && !SHELVES[req.query.shelf] && !GENRES.includes(req.query.genre) && !creatorHandle && !search) {
+    values.push(me.id);
+    const pieces = interests.feedSql(values.length);
+    where.push(pieces.hide);
+    interestBonus = pieces.bonus;
+  }
+  const whereSql = where.length ? "WHERE " + where.join(" AND ") : "";
 
   // Home feed priority: top creators' posts are shown as if they were posted a little later,
   // so they stay near the top longer (#1: +36h, top 3: +24h, rest of top 10 / top 5 in a shelf: +12h).
@@ -294,8 +308,9 @@ router.get("/", async function (req, res) {
           WHEN cr.scope = 'overall' AND cr.rank <= 3 THEN INTERVAL '24 hours' ELSE INTERVAL '12 hours' END)
           FROM creator_ranks cr WHERE cr.user_id = p.user_id), INTERVAL '0'))`
     : "p.created_at";
+  const ranked = interestBonus ? "(" + boost + " + " + interestBonus + ")" : boost;
   const orderSql = {
-    new: boost + " DESC, p.id DESC",
+    new: ranked + " DESC, p.id DESC",
     old: "p.created_at ASC, p.id ASC",
     popular: "likes DESC, comments DESC, p.created_at DESC",
     series: "p.series_order ASC NULLS LAST, p.created_at ASC"
@@ -698,10 +713,12 @@ function toggleRoute(table, column) {
       return res.status(404).json({ error: "That work could not be found." });
     }
     if (req.method === "POST") {
-      await db.query(
+      const added = await db.query(
         `INSERT INTO ${table} (user_id, post_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
         [req.session.user.id, id]
       );
+      // Likes and saves quietly teach the home feed what this person enjoys.
+      if (added.rowCount) await interests.fromPost(req.session.user.id, id, table === "favourites" ? 2 : 1).catch(function () {});
     } else {
       await db.query(`DELETE FROM ${table} WHERE user_id = $1 AND post_id = $2`, [req.session.user.id, id]);
     }

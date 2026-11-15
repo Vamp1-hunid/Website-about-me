@@ -13,6 +13,7 @@ const { mailEnabled, sendMail } = require("../mail");
 const users = require("../users");
 const flags = require("../flags");
 const signup = require("../signup");
+const interests = require("../interests");
 
 const router = express.Router();
 
@@ -95,6 +96,54 @@ router.post("/register", flags.requireFlag("signups"), registerLimiter, async fu
   sendVerification(req, rows[0]).catch(function () { /* email is optional to deliver */ });
   await startSession(req, rows[0]);
   res.status(201).json({ user: req.session.user });
+});
+
+/* ---------- Feed personalisation: welcome survey and "see more / less" ---------- */
+
+const SURVEY_CATEGORIES = ["novel", "storybook", "educational", "poetry", "song", "story-art", "art", "anime", "film", "series",
+  "trailer", "writing", "comedy", "meme", "thoughts"];
+const SURVEY_GENRES = ["fantasy", "scifi", "horror", "mystery", "romance", "comedy", "drama", "action", "adventure", "thriller",
+  "slice-of-life", "historical", "children", "young-adult", "education", "science", "self-help", "faith", "poetry", "music"];
+
+router.get("/interests", requireLogin, async function (req, res) {
+  const { rows } = await db.query("SELECT onboarded_at FROM users WHERE id = $1", [req.session.user.id]);
+  res.json({ interests: await interests.list(req.session.user.id), onboarded: Boolean(rows[0] && rows[0].onboarded_at) });
+});
+
+// PUT /api/account/interests { categories: [], genres: [] }  (the welcome survey; can be retaken later)
+router.put("/interests", requireLogin, async function (req, res) {
+  const cats = (Array.isArray(req.body.categories) ? req.body.categories : []).filter(function (c) { return SURVEY_CATEGORIES.includes(c); });
+  const gens = (Array.isArray(req.body.genres) ? req.body.genres : []).filter(function (g) { return SURVEY_GENRES.includes(g); });
+  const id = req.session.user.id;
+  // Retaking the survey replaces earlier survey-level picks but keeps what was learned from likes and feedback.
+  for (const c of cats) await db.query(
+    `INSERT INTO user_interests (user_id, kind, key, weight) VALUES ($1, 'category', $2, 4)
+     ON CONFLICT (user_id, kind, key) DO UPDATE SET weight = GREATEST(user_interests.weight, 4), updated_at = NOW()`, [id, c]);
+  for (const g of gens) await db.query(
+    `INSERT INTO user_interests (user_id, kind, key, weight) VALUES ($1, 'genre', $2, 4)
+     ON CONFLICT (user_id, kind, key) DO UPDATE SET weight = GREATEST(user_interests.weight, 4), updated_at = NOW()`, [id, g]);
+  await db.query("UPDATE users SET onboarded_at = COALESCE(onboarded_at, NOW()) WHERE id = $1", [id]);
+  res.json({ ok: true, interests: await interests.list(id) });
+});
+
+// POST /api/account/onboarded -> finished (or skipped) the welcome
+router.post("/onboarded", requireLogin, async function (req, res) {
+  await db.query("UPDATE users SET onboarded_at = COALESCE(onboarded_at, NOW()) WHERE id = $1", [req.session.user.id]);
+  res.json({ ok: true });
+});
+
+// POST /api/account/interests/feedback { postId, more: true|false }
+router.post("/interests/feedback", requireLogin, async function (req, res) {
+  const postId = Number(req.body.postId);
+  if (!Number.isInteger(postId) || postId < 1) return res.status(400).json({ error: "Which post?" });
+  await interests.fromPost(req.session.user.id, postId, req.body.more === true ? 3 : -4);
+  res.json({ ok: true });
+});
+
+// DELETE /api/account/interests -> start the feed over
+router.delete("/interests", requireLogin, async function (req, res) {
+  await db.query("DELETE FROM user_interests WHERE user_id = $1", [req.session.user.id]);
+  res.json({ ok: true });
 });
 
 /* ---------- Organisation / group accounts ---------- */
@@ -304,7 +353,7 @@ router.get("/me", async function (req, res) {
   let extra = {};
   if (req.session.user) {
     const { rows } = await db.query(
-      "SELECT show_online, streak_count, streak_best, is_beta, birth_date, country, email, email_verified_at, chat_privacy, gender, account_type FROM users WHERE id = $1",
+      "SELECT show_online, streak_count, streak_best, is_beta, birth_date, country, email, email_verified_at, chat_privacy, gender, account_type, onboarded_at, created_at FROM users WHERE id = $1",
       [req.session.user.id]
     );
     if (rows[0]) {
@@ -313,7 +362,9 @@ router.get("/me", async function (req, res) {
           hasBirthDate: Boolean(rows[0].birth_date), country: rows[0].country || null,
           teen: rows[0].birth_date ? signup.isMinor(rows[0].birth_date) : null,
           hasEmail: Boolean(rows[0].email), emailVerified: Boolean(rows[0].email_verified_at), chatPrivacy: rows[0].chat_privacy,
-          gender: rows[0].gender || null, accountType: rows[0].account_type
+          gender: rows[0].gender || null, accountType: rows[0].account_type,
+          // New accounts (made in the last 7 days) that haven't been through the welcome yet.
+          needsWelcome: !rows[0].onboarded_at && (Date.now() - new Date(rows[0].created_at)) < 7 * 86400000
         } };
     }
   }
@@ -366,6 +417,18 @@ router.post("/verify", async function (req, res) {
     "UPDATE users SET email_verified_at = NOW(), email_verify_token = NULL WHERE email_verify_token = $1 RETURNING id", [token]);
   if (!rows.length) return res.status(400).json({ error: "That link has expired or was already used." });
   res.json({ ok: true });
+});
+
+// GET /api/account/bio  ·  PUT /api/account/bio { bio }   (shown on your member page)
+router.get("/bio", requireLogin, async function (req, res) {
+  const { rows } = await db.query("SELECT bio FROM users WHERE id = $1", [req.session.user.id]);
+  res.json({ bio: rows[0] ? rows[0].bio : "" });
+});
+router.put("/bio", requireLogin, async function (req, res) {
+  const bio = typeof req.body.bio === "string" ? req.body.bio.replace(/\r\n/g, "\n").trim() : "";
+  if (bio.length > 300) return res.status(400).json({ error: "Keep your bio to 300 characters.", problems: [{ field: "bio", message: "Up to 300 characters." }] });
+  await db.query("UPDATE users SET bio = $1 WHERE id = $2", [bio, req.session.user.id]);
+  res.json({ bio: bio });
 });
 
 // PUT /api/account/details { birthDate, country, marketing, chatPrivacy }

@@ -1250,3 +1250,18 @@ body[data-brand="chapterhive"] .aside-hero::after { display: none; }
 .rank-badge.tier-gold { background: linear-gradient(90deg, #241703 0 5px, #ffd23f 5px 10px, #241703 10px 15px, #ffd23f 15px); text-shadow: none; padding-left: 1.15rem; }
 .rank-badge.tier-bronze { background: linear-gradient(90deg, #5b4210 0 4px, #ffe48a 4px 8px, #5b4210 8px 12px, #ffe48a 12px); text-shadow: none; padding-left: 1rem; }
 .rank-badges.is-compact .rank-badge.tier-gold, .rank-badges.is-compact .rank-badge.tier-bronze { padding-left: 0.3rem; }
+
+/* ===== v11: ⋯ menu on feed posts ===== */
+.feed-card-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.feed-menu { position: relative; }
+.feed-menu-btn { font-size: 1.3rem; letter-spacing: 0.05em; }
+.feed-menu-list {
+  position: absolute; right: 0; top: 100%; z-index: 20; min-width: 220px; padding: 0.35rem; border-radius: 14px;
+  background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); display: grid;
+}
+.feed-menu-list[hidden] { display: none; }
+.feed-menu-list button { text-align: left; background: none; border: 0; color: var(--ink); padding: 0.6rem 0.7rem; border-radius: 10px; font: 600 0.9rem/1.2 var(--font-ui); cursor: pointer; }
+.feed-menu-list button:hover { background: var(--panel-2); }
+.feed-hidden-note { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.2rem; border: 1px dashed var(--line); border-radius: 16px; }
+.feed-hidden-note p { margin: 0; }
+.guest-releases-title { margin: 0.5rem 0 0.8rem; }

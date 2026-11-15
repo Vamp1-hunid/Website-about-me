@@ -523,3 +523,17 @@ CREATE TABLE IF NOT EXISTS organisations (
   team         JSONB        NOT NULL DEFAULT '[]',
   created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
+
+-- v11: what each member likes to see. kind: 'category' or 'genre'. weight > 0 = more, < 0 = less.
+-- Set by the welcome survey, the "see more / see less" buttons, and quietly by likes and saves.
+CREATE TABLE IF NOT EXISTS user_interests (
+  user_id    INTEGER     NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  kind       VARCHAR(10) NOT NULL CHECK (kind IN ('category', 'genre')),
+  key        VARCHAR(20) NOT NULL,
+  weight     INTEGER     NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, kind, key)
+);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarded_at TIMESTAMPTZ;
+-- v11: a short bio on member pages (creators also have a longer bio on their creator page).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio VARCHAR(300) NOT NULL DEFAULT '';
