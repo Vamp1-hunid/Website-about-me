@@ -80,3 +80,154 @@ CREATE INDEX IF NOT EXISTS user_sessions_expire_idx ON user_sessions (expire);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub VARCHAR(64) UNIQUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(254);
 ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+
+-- ===== Version 3 additions (all safe to run more than once) =====
+
+-- Series: groups works together, e.g. the chapters of "A Year to Burn".
+CREATE TABLE IF NOT EXISTS series (
+  id          SERIAL PRIMARY KEY,
+  slug        VARCHAR(120) NOT NULL UNIQUE,
+  title       VARCHAR(120) NOT NULL,
+  description VARCHAR(600) NOT NULL DEFAULT '',
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+-- A work can belong to one series (series_order is its chapter / part number)
+-- and have any number of tags (lowercase words such as "aldenmere" or "sketch").
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS series_id INTEGER REFERENCES series (id) ON DELETE SET NULL;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS series_order INTEGER;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
+CREATE INDEX IF NOT EXISTS posts_series_idx ON posts (series_id, series_order);
+CREATE INDEX IF NOT EXISTS posts_tags_idx ON posts USING GIN (tags);
+
+-- Every picture, video clip and audio file of a work, in reading order.
+-- posts.image_url is kept as the work's cover (the first picture) for cards and thumbnails.
+CREATE TABLE IF NOT EXISTS post_media (
+  id         SERIAL PRIMARY KEY,
+  post_id    INTEGER      NOT NULL REFERENCES posts (id) ON DELETE CASCADE,
+  position   INTEGER      NOT NULL DEFAULT 0,
+  kind       VARCHAR(10)  NOT NULL CHECK (kind IN ('image', 'video', 'audio', 'document')),
+  url        TEXT         NOT NULL,
+  public_id  TEXT,
+  caption    VARCHAR(200) NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS post_media_post_idx ON post_media (post_id, position);
+
+-- Works posted before version 3 had a single image: copy it into post_media once.
+INSERT INTO post_media (post_id, position, kind, url, public_id)
+SELECT p.id, 0, 'image', p.image_url, p.image_public_id
+  FROM posts p
+ WHERE p.image_url IS NOT NULL
+   AND NOT EXISTS (SELECT 1 FROM post_media m WHERE m.post_id = p.id);
+-- From now on post_media owns those files (so they are deleted once, from there).
+UPDATE posts p SET image_public_id = NULL
+ WHERE p.image_public_id IS NOT NULL
+   AND EXISTS (SELECT 1 FROM post_media m WHERE m.post_id = p.id AND m.public_id = p.image_public_id);
+
+-- Comment replies (one level: a reply always hangs under a top-level comment) and edits.
+ALTER TABLE comments ADD COLUMN IF NOT EXISTS parent_id INTEGER REFERENCES comments (id) ON DELETE CASCADE;
+ALTER TABLE comments ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS comments_user_idx ON comments (user_id, created_at DESC);
+
+-- Profile pictures.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_public_id TEXT;
+
+-- "Forgot password" links. Only a SHA-256 hash of the token is stored,
+-- so someone who reads the database still can't use a link.
+CREATE TABLE IF NOT EXISTS password_resets (
+  token_hash CHAR(64)    PRIMARY KEY,
+  user_id    INTEGER     NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at    TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS password_resets_user_idx ON password_resets (user_id);
+
+-- Stories: a logline (one-sentence pitch) and a cover picture for each series.
+ALTER TABLE series ADD COLUMN IF NOT EXISTS logline VARCHAR(200) NOT NULL DEFAULT '';
+ALTER TABLE series ADD COLUMN IF NOT EXISTS cover_url TEXT;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS cover_public_id TEXT;
+
+-- Works: a logline, which section of a story they belong to, and an optional publish time.
+-- section: 'main' (chapters and finished pieces) or 'concept-art'.
+-- A work is public when published = TRUE and publish_at is empty or already in the past.
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS logline VARCHAR(200) NOT NULL DEFAULT '';
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS section VARCHAR(20) NOT NULL DEFAULT 'main';
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS publish_at TIMESTAMPTZ;
+DO $$ BEGIN
+  ALTER TABLE posts ADD CONSTRAINT posts_section_check CHECK (section IN ('main', 'concept-art'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- role: 'page' (shown in the work) or 'cover' (only used as the work's cover picture).
+ALTER TABLE post_media ADD COLUMN IF NOT EXISTS role VARCHAR(10) NOT NULL DEFAULT 'page';
+
+-- Characters, each with a profile and pictures (a portrait plus concept art).
+CREATE TABLE IF NOT EXISTS characters (
+  id           SERIAL PRIMARY KEY,
+  slug         VARCHAR(120) NOT NULL UNIQUE,
+  series_id    INTEGER      REFERENCES series (id) ON DELETE SET NULL,
+  name         VARCHAR(120) NOT NULL,
+  role         VARCHAR(80)  NOT NULL DEFAULT '',
+  tagline      VARCHAR(200) NOT NULL DEFAULT '',
+  profile      TEXT         NOT NULL DEFAULT '',
+  sort_order   INTEGER,
+  published    BOOLEAN      NOT NULL DEFAULT FALSE,
+  publish_at   TIMESTAMPTZ,
+  created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS characters_series_idx ON characters (series_id, sort_order);
+
+-- role: 'portrait' (the main picture) or 'concept' (concept art and design sheets).
+CREATE TABLE IF NOT EXISTS character_media (
+  id           SERIAL PRIMARY KEY,
+  character_id INTEGER      NOT NULL REFERENCES characters (id) ON DELETE CASCADE,
+  position     INTEGER      NOT NULL DEFAULT 0,
+  role         VARCHAR(10)  NOT NULL DEFAULT 'concept' CHECK (role IN ('portrait', 'concept')),
+  url          TEXT         NOT NULL,
+  public_id    TEXT,
+  caption      VARCHAR(200) NOT NULL DEFAULT '',
+  created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS character_media_idx ON character_media (character_id, position);
+
+-- Updates: news and announcements, posted from the dashboard like any other work.
+ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_category_check;
+ALTER TABLE posts ADD CONSTRAINT posts_category_check
+  CHECK (category IN ('story-art', 'anime', 'writing', 'updates'));
+
+-- The font a work's text is shown in: theme, serif, typewriter, handwritten or clean.
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS font VARCHAR(20) NOT NULL DEFAULT 'theme';
+
+-- Messages sent with the contact form (also emailed to CONTACT_EMAIL when email is set up).
+CREATE TABLE IF NOT EXISTS contact_messages (
+  id         SERIAL PRIMARY KEY,
+  name       VARCHAR(100)  NOT NULL,
+  email      VARCHAR(254)  NOT NULL,
+  subject    VARCHAR(150)  NOT NULL DEFAULT '',
+  message    VARCHAR(5000) NOT NULL,
+  emailed    BOOLEAN       NOT NULL DEFAULT FALSE,
+  read_at    TIMESTAMPTZ,
+  created_at TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS contact_messages_created_idx ON contact_messages (created_at DESC);
+
+-- "More products by us": other projects shown on the /products page.
+CREATE TABLE IF NOT EXISTS products (
+  id              SERIAL PRIMARY KEY,
+  slug            VARCHAR(120)  NOT NULL UNIQUE,
+  name            VARCHAR(120)  NOT NULL,
+  tagline         VARCHAR(200)  NOT NULL DEFAULT '',
+  status          VARCHAR(40)   NOT NULL DEFAULT '',
+  description     TEXT          NOT NULL DEFAULT '',
+  link            VARCHAR(500),
+  link_label      VARCHAR(40)   NOT NULL DEFAULT '',
+  image_url       TEXT,
+  image_public_id TEXT,
+  sort_order      INTEGER,
+  published       BOOLEAN       NOT NULL DEFAULT TRUE,
+  created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);

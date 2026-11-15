@@ -97,41 +97,102 @@ function handleContactSubmit(event) {
   byId("preview-topic").textContent = topicSelect.options[topicSelect.selectedIndex].textContent;
   byId("preview-message").textContent = values.message.trim();
   preview.hidden = false;
-  feedback.textContent = "Validation passed. Your details were checked in this browser only. No message has been sent.";
+  feedback.textContent = "Validation passed. Check the preview below, then press Send message.";
   feedback.className = "feedback feedback-success";
+  byId("send-feedback").textContent = "";
+  byId("send-message").disabled = false;
+  byId("send-message").hidden = false;
+  byId("edit-message").hidden = false;
+  byId("send-message").focus();
+}
+
+// Sends the checked message to the server, which emails it to the site owner.
+async function sendContactMessage() {
+  const button = byId("send-message");
+  const sendFeedback = byId("send-feedback");
+  const topicSelect = byId("topic");
+  button.disabled = true;
+  button.textContent = "Sending…";
+  sendFeedback.className = "feedback";
+  sendFeedback.textContent = "";
+  try {
+    const response = await fetch("/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        name: byId("name").value,
+        email: byId("email").value,
+        topic: topicSelect.value,
+        message: byId("message").value,
+        website: byId("website") ? byId("website").value : ""
+      })
+    });
+    const data = await response.json().catch(function () { return {}; });
+    if (!response.ok) throw new Error(data.error || "The message couldn't be sent. Please try again.");
+    contactForm.reset();
+    button.hidden = true;
+    byId("edit-message").hidden = true;
+    byId("preview-note").textContent = "Sent. Thank you!";
+    byId("form-feedback").textContent = "";
+    sendFeedback.className = "feedback feedback-success";
+    sendFeedback.textContent = "Message sent. I'll reply to the email address you gave.";
+  } catch (error) {
+    sendFeedback.className = "feedback feedback-error";
+    sendFeedback.textContent = error.message;
+    button.disabled = false;
+  }
+  button.textContent = "Send message";
 }
 
 if (contactForm) {
   contactForm.addEventListener("submit", handleContactSubmit);
+  byId("send-message").addEventListener("click", sendContactMessage);
+  byId("edit-message").addEventListener("click", function () {
+    byId("preview").hidden = true;
+    byId("message").focus();
+  });
 }
-/* ---------- Feature 2: mobile navigation ---------- */
+/* ---------- Feature 2: navigation menu (the three-bar button) ---------- */
+// The ☰ button opens a dropdown with every section of the site (built by js/api.js).
+// On small screens it is the only way to reach the links, because the link bar is hidden.
 
 const menuToggle = byId("menu-toggle");
-const siteNav = byId("site-nav");
+const siteMenu = byId("site-menu");
 
-// Opens or closes the menu and keeps the button text and its aria-expanded state in step with it.
+// Opens or closes the menu and keeps the button's label and aria-expanded state in step with it.
 function setMenuOpen(isOpen) {
-  siteNav.classList.toggle("is-open", isOpen);
+  siteMenu.hidden = !isOpen;
   menuToggle.setAttribute("aria-expanded", String(isOpen));
-  menuToggle.textContent = isOpen ? "Close menu" : "Menu";
+  menuToggle.setAttribute("aria-label", isOpen ? "Close menu" : "Open menu");
+  menuToggle.classList.toggle("is-open", isOpen);
 }
 
-if (menuToggle && siteNav) {
+if (menuToggle && siteMenu) {
   // Clicking the button flips the menu between open and closed.
   menuToggle.addEventListener("click", function () {
-    setMenuOpen(!siteNav.classList.contains("is-open"));
+    setMenuOpen(siteMenu.hidden);
+    if (!siteMenu.hidden) {
+      const first = siteMenu.querySelector("input, a");
+      if (first) first.focus();
+    }
   });
 
-  // Choosing a link closes the menu so the section is visible.
-  siteNav.querySelectorAll("a").forEach(function (link) {
-    link.addEventListener("click", function () {
+  // Choosing a link closes the menu.
+  siteMenu.addEventListener("click", function (event) {
+    if (event.target.closest("a")) setMenuOpen(false);
+  });
+
+  // Clicking anywhere outside the menu closes it.
+  document.addEventListener("click", function (event) {
+    if (!siteMenu.hidden && !siteMenu.contains(event.target) && !menuToggle.contains(event.target)) {
       setMenuOpen(false);
-    });
+    }
   });
 
   // Pressing Escape closes the menu and returns focus to the button.
   document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && siteNav.classList.contains("is-open")) {
+    if (event.key === "Escape" && !siteMenu.hidden) {
       setMenuOpen(false);
       menuToggle.focus();
     }

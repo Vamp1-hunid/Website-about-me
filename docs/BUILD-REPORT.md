@@ -1,7 +1,7 @@
 # God's Banditos — Full Build Report
 
 **Site:** https://mulenga-mwamba-website.onrender.com
-**Repository:** https://github.com/Vamp1-hunid/Website-about-me (branch `full-site`)
+**Repository:** https://github.com/Vamp1-hunid/Website-about-me (branch `main`)
 **Owner:** Mulenga Mwamba · **Report date:** 14 November 2026
 
 This report explains the whole website from the ground up: how it was built, which outside
@@ -334,9 +334,7 @@ a chat.**
 ### 6.1 GitHub — stores the code
 - **What it's for:** keeps every version of the code; Render builds the site from it.
 - **Set-up:** account `Vamp1-hunid`, repository `Website-about-me`.
-- **Branches:** `main` still holds the original static site (your old Render static site
-  builds from it). `full-site` holds this website; the new Render service builds from it.
-  Pull request #5 proposes merging `full-site` into `main`.
+- **Branches:** `main` holds the website; the Render service builds from it.
 
 ### 6.2 Render — runs the server
 - **What it's for:** hosts the Node.js server on the internet at
@@ -344,12 +342,12 @@ a chat.**
 - **How it was set up:**
   1. Render dashboard → **New → Web Service** → repository `Vamp1-hunid/Website-about-me`.
   2. Name `mulenga-mwamba-website` (this becomes the address), language **Node**,
-     branch `full-site`, region Oregon.
+     branch `main`, region Oregon.
   3. Build command `npm install`, start command `npm start`.
   4. Instance type **Free** (Render pre-selects a paid plan; it was switched to $0).
   5. Environment variables added (section 7). `SESSION_SECRET` and `ADMIN_PASSWORD` were
      filled with Render's **Generate** button so nobody had to type them.
-- **Auto-deploy:** every push to `full-site` rebuilds and redeploys (2–4 minutes).
+- **Auto-deploy:** every push to `main` rebuilds and redeploys (2–4 minutes).
 - **Useful tabs:** **Events** (deploy history), **Logs** (server messages and errors),
   **Environment** (settings), **Manual Deploy → Deploy latest commit**.
 
@@ -1125,7 +1123,7 @@ You need **Node.js 20 or newer** (nodejs.org) and **Git**.
 ```bash
 git clone https://github.com/Vamp1-hunid/Website-about-me.git
 cd Website-about-me
-git checkout full-site
+git checkout main
 npm install
 ```
 
@@ -1156,7 +1154,7 @@ Open http://localhost:3000. The admin account is created from `ADMIN_USERNAME` a
 
 ## 16. Deploying, and fixing a failed deploy
 
-**Normal deploy:** commit and push to `full-site`. Render notices, runs `npm install` then
+**Normal deploy:** commit and push to `main`. Render notices, runs `npm install` then
 `npm start`, and switches over when the new version is ready (2–4 minutes). Watch it in
 Render → your service → **Events** and **Logs**.
 
@@ -1197,12 +1195,9 @@ Known gaps you may want later:
 - **Forgotten passwords for members** — there is no "email me a reset link" (the site doesn't
   collect emails for password accounts). Members who signed up with Google can always log in
   with Google; you, as admin, can reset yours from Render (section 7).
-- **Contact form** — still a browser-only demonstration (as required for ICT251); it doesn't send
-  messages.
+- **Contact form** — sends messages to `CONTACT_EMAIL` once email is set up; until then they're
+  only saved in the dashboard Inbox.
 - **One admin** — only the account named in `ADMIN_USERNAME` can post.
-- **`main` branch** — still the old static site. When you're happy with this one, merge pull
-  request #5 (`full-site` → `main`) and point Render at `main`. Merging while the old static site
-  still builds from `main` would break that old site, which is why it hasn't been merged.
 - **`Activity1.html`** — your old Activity 1 page is still public and shows your student number;
   delete it from `public/` if it's no longer needed for marking.
 
@@ -1210,3 +1205,37 @@ Known gaps you may want later:
 
 *Built with Node.js, Express, PostgreSQL (Neon), Cloudinary, Google sign-in and a lot of CSS.
 Created for God's Banditos by Mulenga Mwamba.*
+
+
+---
+
+## Version 3 (November 2026): dashboard, stories, characters and more
+
+**New pages:** `/stories`, `/stories/<name>`, `/characters/<name>`, `/products`, `/search`,
+`/u/<username>`, `/forgot`, `/reset`. The admin page became a tabbed dashboard (see README).
+
+**New database tables** (created automatically by `db/schema.sql` on start; older databases are
+upgraded in place, and old single-image works are moved into `post_media`):
+`series` (stories: logline, cover), `post_media` (every file of a work, in order, with a
+page/cover role), `characters` + `character_media`, `products`, `contact_messages`,
+`password_resets` (only SHA-256 hashes of reset links are stored). New columns on `posts`:
+`logline`, `section` (main / concept-art), `publish_at` (scheduling), `tags`, `series_id`,
+`series_order`, `font`; on `comments`: `parent_id` (replies), `edited_at`; on `users`:
+`avatar_url`.
+
+**Uploads:** big files no longer pass through Render. The browser asks `/api/admin/media/ticket`
+for a signed Cloudinary upload, sends the file straight to Cloudinary, then the save request
+carries Cloudinary's receipt, which the server verifies with your API secret before trusting it.
+Documents (PDF, Word, EPUB ...) are stored as Cloudinary "raw" files. On a laptop without
+Cloudinary, files go to `public/uploads/` instead.
+
+**Scheduling:** a work is public when `published` is true and `publish_at` is empty or in the past.
+Every public query (lists, search, story pages, sitemap, comments, likes) uses that rule, so a
+scheduled work appears by itself at the right time without any timer.
+
+**Email:** `src/mail.js` sends through Brevo or Resend (whichever key is set). Used for
+"Forgot password" links (valid 60 minutes, once; at most 3 per account per hour) and for
+contact-form messages with Reply-To set to the visitor.
+
+**New settings on Render:** `BREVO_API_KEY` (or `RESEND_API_KEY`), `MAIL_FROM`, `CONTACT_EMAIL`.
+All optional; the dashboard's Settings tab shows which are working.

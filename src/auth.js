@@ -45,11 +45,13 @@ function sameOriginOnly(req, res, next) {
 
 // The details about a user that are safe to send to the browser (never the password hash).
 function publicUser(row) {
+  const { avatarUrl } = require("./storage");
   return {
     id: row.id,
     username: row.username,
     displayName: row.display_name,
-    role: row.role
+    role: row.role,
+    avatarUrl: avatarUrl(row.avatar_url) || null
   };
 }
 

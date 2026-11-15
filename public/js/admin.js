@@ -1,5 +1,10 @@
 // js/admin.js
-// Admin area (site owner only): post new works, edit or delete existing ones.
+// Dashboard core (site owner only): the access check, tabs, and the shared building blocks
+// used by the other dashboard scripts (admin-works.js, admin-stories.js, admin-more.js):
+//   ADMIN.toolbar()       formatting buttons for a text box
+//   ADMIN.mediaManager()  upload, order, caption and remove files
+//   ADMIN.coverPicker()   one picture (story covers, product pictures)
+//   ADMIN.visibility()    Publish now / Schedule / Draft
 // The server checks the admin role on every request, so hiding this page is
 // only for convenience, not for security.
 
@@ -12,18 +17,12 @@
   if (!gate || !MW) return;
 
   var el = MW.el;
-  var form = document.getElementById("post-form");
-  var feedback = document.getElementById("form-feedback");
-  var imageInput = document.getElementById("image");
-  var preview = document.getElementById("image-preview");
-  var removeRow = document.getElementById("remove-image-row");
-  var removeBox = document.getElementById("removeImage");
-  var saveBtn = document.getElementById("save-btn");
-  var cancelBtn = document.getElementById("cancel-edit");
-  var list = document.getElementById("admin-list");
-  var listPage = 1;
-  var editing = null; // the post being edited, or null when creating
-  var previewUrl = null;
+  var ADMIN = (window.ADMIN = { el: el });
+  var readyCallbacks = [];
+  var showCallbacks = {};
+
+  ADMIN.onReady = function (fn) { readyCallbacks.push(fn); };
+  ADMIN.onShow = function (tab, fn) { (showCallbacks[tab] = showCallbacks[tab] || []).push(fn); };
 
   /* ---------- Access check ---------- */
 
@@ -32,214 +31,479 @@
       window.location.replace("/login?next=" + encodeURIComponent("/admin"));
       return;
     }
+    gate.classList.remove("loading");
     if (user.role !== "admin") {
-      gate.classList.remove("loading");
       gate.textContent = "Access denied. This area is only for the site owner.";
       return;
     }
-    gate.classList.remove("loading");
-    gate.textContent = "Welcome back, " + user.displayName + ". Post a new work or manage the archive.";
+    gate.textContent = "Welcome back, " + user.displayName + ".";
     area.hidden = false;
-    loadList(1);
-
-    var editId = new URLSearchParams(window.location.search).get("edit");
-    if (editId && /^\d+$/.test(editId)) startEdit(Number(editId));
+    readyCallbacks.forEach(function (fn) { fn(user); });
+    var params = new URLSearchParams(window.location.search);
+    var start = (window.location.hash || "").slice(1);
+    if (params.get("edit")) start = "compose";
+    ADMIN.show(document.querySelector("[data-panel='" + start + "']") ? start : "overview");
   });
 
-  /* ---------- Image preview ---------- */
+  /* ---------- Tabs ---------- */
 
-  function showPreview(src) {
-    if (src) {
-      preview.src = src;
-      preview.hidden = false;
-    } else {
-      preview.removeAttribute("src");
-      preview.hidden = true;
-    }
-  }
+  var tabs = document.querySelectorAll(".dash-tabs [role='tab']");
 
-  imageInput.addEventListener("change", function () {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    previewUrl = null;
-    var file = imageInput.files[0];
-    if (!file) {
-      showPreview(editing && editing.imageUrl);
-      return;
-    }
-    if (file.size > 8 * 1024 * 1024) {
-      MW.showProblems(form, [{ field: "image", message: "That image is bigger than 8 MB. Please choose a smaller one." }]);
-      imageInput.value = "";
-      return;
-    }
-    MW.showProblems(form, []);
-    previewUrl = URL.createObjectURL(file);
-    showPreview(previewUrl);
-    removeBox.checked = false;
+  ADMIN.show = function (name, options) {
+    tabs.forEach(function (tab) {
+      tab.setAttribute("aria-selected", String(tab.getAttribute("data-tab") === name));
+      tab.tabIndex = tab.getAttribute("data-tab") === name ? 0 : -1;
+    });
+    document.querySelectorAll("[data-panel]").forEach(function (panel) {
+      panel.hidden = panel.getAttribute("data-panel") !== name;
+    });
+    if (!(options && options.keepUrl)) history.replaceState(null, "", "/admin#" + name);
+    (showCallbacks[name] || []).forEach(function (fn) { fn(options || {}); });
+  };
+
+  tabs.forEach(function (tab, index) {
+    tab.addEventListener("click", function () { ADMIN.show(tab.getAttribute("data-tab")); });
+    // Arrow keys move between tabs.
+    tab.addEventListener("keydown", function (event) {
+      var step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+      if (!step) return;
+      var next = tabs[(index + step + tabs.length) % tabs.length];
+      next.focus();
+      ADMIN.show(next.getAttribute("data-tab"));
+    });
   });
 
-  removeBox.addEventListener("change", function () {
-    if (removeBox.checked) showPreview(null);
-    else showPreview(editing && editing.imageUrl);
+  document.addEventListener("click", function (event) {
+    var go = event.target.closest("[data-go]");
+    if (go) ADMIN.show(go.getAttribute("data-go"), { fresh: go.hasAttribute("data-new") });
   });
 
-  /* ---------- Create / edit ---------- */
+  /* ---------- Small helpers ---------- */
 
-  function resetForm() {
-    editing = null;
-    form.reset();
-    document.getElementById("published").checked = true;
-    MW.showProblems(form, []);
-    showPreview(null);
-    removeRow.hidden = true;
-    cancelBtn.hidden = true;
-    saveBtn.textContent = "Publish";
-    document.getElementById("editor-title").textContent = "Post a new work";
-    document.getElementById("editor-kicker").textContent = "Upload // new file";
-    if (window.location.search) history.replaceState(null, "", "/admin");
-  }
+  // A Date / ISO string -> the "2026-11-20T17:00" value a datetime-local box wants (local time).
+  ADMIN.toLocalInput = function (value) {
+    if (!value) return "";
+    var d = new Date(value);
+    if (isNaN(d)) return "";
+    var pad = function (n) { return String(n).padStart(2, "0"); };
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  };
 
-  async function startEdit(id) {
-    try {
-      var data = await MW.api("/posts/by-id/" + id);
-      var post = data.post;
-      editing = post;
-      form.reset();
-      MW.showProblems(form, []);
-      feedback.textContent = "";
-      document.getElementById("title").value = post.title;
-      document.getElementById("category").value = post.category;
-      document.getElementById("summary").value = post.summary;
-      document.getElementById("body").value = post.body;
-      document.getElementById("published").checked = post.published;
-      showPreview(post.imageUrl);
-      removeRow.hidden = !post.imageUrl;
-      cancelBtn.hidden = false;
-      saveBtn.textContent = "Save changes";
-      document.getElementById("editor-title").textContent = "Edit: " + post.title;
-      document.getElementById("editor-kicker").textContent = "Edit // file " + String(post.id).padStart(3, "0");
-      history.replaceState(null, "", "/admin?edit=" + post.id);
-      document.getElementById("editor-title").scrollIntoView({ block: "start" });
-    } catch (error) {
-      MW.toast(error.message, true);
-    }
-  }
+  ADMIN.statusText = function (item) {
+    if (item.status === "draft") return "DRAFT";
+    if (item.status === "scheduled") return "SCHEDULED · " + MW.formatDateTime(item.publishAt);
+    return "";
+  };
 
-  cancelBtn.addEventListener("click", resetForm);
-
-  form.addEventListener("submit", async function (event) {
-    event.preventDefault();
-    feedback.textContent = "";
-    feedback.className = "feedback";
-
-    var formData = new FormData();
-    formData.append("title", document.getElementById("title").value);
-    formData.append("category", document.getElementById("category").value);
-    formData.append("summary", document.getElementById("summary").value);
-    formData.append("body", document.getElementById("body").value);
-    formData.append("published", String(document.getElementById("published").checked));
-    if (imageInput.files[0]) formData.append("image", imageInput.files[0]);
-    if (editing && removeBox.checked) formData.append("removeImage", "true");
-
-    // Quick checks before uploading.
-    var problems = [];
-    if (!document.getElementById("title").value.trim()) {
-      problems.push({ field: "title", message: "Give the work a title." });
-    }
-    var needsImage = document.getElementById("category").value !== "writing";
-    var hasImage = imageInput.files[0] || (editing && editing.imageUrl && !removeBox.checked);
-    if (needsImage && !hasImage) {
-      problems.push({ field: "image", message: "Story art and anime works need an image." });
-    }
-    MW.showProblems(form, problems);
-    if (problems.length) return;
-
-    saveBtn.disabled = true;
-    saveBtn.textContent = imageInput.files[0] ? "Uploading…" : "Saving…";
-    try {
-      var result = editing
-        ? await MW.api("/posts/" + editing.id, { method: "PUT", form: formData })
-        : await MW.api("/posts", { method: "POST", form: formData });
-      var wasEditing = Boolean(editing);
-      resetForm();
-      feedback.className = "feedback feedback-success";
-      feedback.textContent = (wasEditing ? "Saved: " : "Published: ") + result.post.title + ". ";
-      var view = el("a", { href: "/work/" + encodeURIComponent(result.post.slug) }, "View it");
-      feedback.appendChild(view);
-      loadList(wasEditing ? listPage : 1);
-    } catch (error) {
-      MW.showProblems(form, (error.data && error.data.problems) || []);
-      feedback.className = "feedback feedback-error";
-      feedback.textContent = error.message;
-      saveBtn.textContent = editing ? "Save changes" : "Publish";
-    }
-    saveBtn.disabled = false;
-  });
-
-  /* ---------- List of works ---------- */
-
-  async function loadList(page) {
-    listPage = page;
-    try {
-      var data = await MW.api("/posts?drafts=1&page=" + page);
-      list.textContent = "";
-      if (!data.posts.length) {
-        list.appendChild(el("li", { class: "muted" }, "Nothing posted yet. Your first work will appear here."));
-      }
-      data.posts.forEach(function (post) { list.appendChild(listItem(post)); });
-
-      document.getElementById("admin-page").textContent = data.pages > 1 ? "Page " + data.page + " of " + data.pages : "";
-      document.getElementById("admin-prev").hidden = data.page <= 1;
-      document.getElementById("admin-next").hidden = data.page >= data.pages;
-    } catch (error) {
-      list.textContent = "";
-      list.appendChild(el("li", { class: "muted" }, error.message));
-    }
-  }
-
-  document.getElementById("admin-prev").addEventListener("click", function () { loadList(listPage - 1); });
-  document.getElementById("admin-next").addEventListener("click", function () { loadList(listPage + 1); });
-
-  function listItem(post) {
-    var item = el("li");
-    if (post.imageUrl) item.appendChild(el("img", { src: post.imageUrl, alt: "", loading: "lazy" }));
-    else item.appendChild(el("div", { class: "no-img", "aria-hidden": "true" }));
-
-    var text = el("div");
-    text.appendChild(el("div", { class: "title" }, post.title));
-    var meta = MW.categoryName(post.category) + " · " + MW.formatDate(post.createdAt) +
-      " · ♥ " + post.likes + " · \u{1F4AC} " + post.comments;
-    text.appendChild(el("div", { class: "mono muted" }, meta));
-    if (!post.published) text.appendChild(el("div", { class: "draft-flag mono" }, "DRAFT"));
-    item.appendChild(text);
-
-    var actions = el("div", { class: "row-actions" });
-    actions.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/work/" + encodeURIComponent(post.slug) }, "View"));
-    var edit = el("button", { class: "btn btn-ghost btn-small", type: "button" }, "Edit");
-    edit.addEventListener("click", function () { startEdit(post.id); });
-    var del = el("button", { class: "btn btn-small btn-danger", type: "button" }, "Delete");
-    del.addEventListener("click", async function () {
-      if (del.getAttribute("data-confirm") !== "yes") {
-        del.setAttribute("data-confirm", "yes");
-        del.textContent = "Confirm delete";
+  // A delete button that asks "Confirm delete" first.
+  ADMIN.confirmButton = function (label, action) {
+    var button = el("button", { class: "btn btn-small btn-danger", type: "button" }, label);
+    button.addEventListener("click", async function () {
+      if (button.getAttribute("data-confirm") !== "yes") {
+        button.setAttribute("data-confirm", "yes");
+        button.textContent = "Confirm";
         window.setTimeout(function () {
-          del.removeAttribute("data-confirm");
-          del.textContent = "Delete";
+          button.removeAttribute("data-confirm");
+          button.textContent = label;
         }, 4000);
         return;
       }
-      del.disabled = true;
+      button.disabled = true;
       try {
-        await MW.api("/posts/" + post.id, { method: "DELETE" });
-        MW.toast("Deleted: " + post.title);
-        if (editing && editing.id === post.id) resetForm();
-        loadList(listPage);
+        await action();
       } catch (error) {
         MW.toast(error.message, true);
-        del.disabled = false;
+        button.disabled = false;
       }
     });
-    actions.append(edit, del);
+    return button;
+  };
+
+  // One row in a dashboard list: picture, title, details, flags and buttons.
+  ADMIN.listItem = function (opts) {
+    var item = el("li");
+    if (opts.imageUrl) item.appendChild(el("img", { src: opts.imageUrl, alt: "", loading: "lazy" }));
+    else item.appendChild(el("div", { class: "no-img", "aria-hidden": "true" }, (opts.title || "?").charAt(0)));
+    var text = el("div");
+    text.appendChild(el("div", { class: "title" }, opts.title));
+    if (opts.meta) text.appendChild(el("div", { class: "mono muted" }, opts.meta));
+    if (opts.flag) text.appendChild(el("div", { class: "draft-flag mono" }, opts.flag));
+    item.appendChild(text);
+    var actions = el("div", { class: "row-actions" });
+    (opts.actions || []).forEach(function (a) { actions.appendChild(a); });
     item.appendChild(actions);
     return item;
+  };
+
+  ADMIN.button = function (label, onClick, ghost) {
+    var b = el("button", { class: "btn btn-small" + (ghost === false ? "" : " btn-ghost"), type: "button" }, label);
+    b.addEventListener("click", onClick);
+    return b;
+  };
+
+  ADMIN.emptyRow = function (list, text) {
+    list.textContent = "";
+    list.appendChild(el("li", { class: "muted empty-row" }, text));
+  };
+
+  /* ---------- Stories (series) in drop-downs ---------- */
+
+  var seriesCache = null;
+  ADMIN.loadSeries = function (refresh) {
+    if (!seriesCache || refresh) {
+      seriesCache = MW.api("/admin/series").then(function (d) { return d.series; });
+    }
+    return seriesCache;
+  };
+
+  ADMIN.fillSeriesSelects = function (refresh) {
+    return ADMIN.loadSeries(refresh).then(function (series) {
+      document.querySelectorAll("#seriesId, #char-series").forEach(function (select) {
+        var current = select.value;
+        select.querySelectorAll("option:not([value=''])").forEach(function (o) { o.remove(); });
+        series.forEach(function (s) { select.appendChild(el("option", { value: String(s.id) }, s.title)); });
+        select.value = current;
+      });
+      return series;
+    });
+  };
+
+  ADMIN.onReady(function () { ADMIN.fillSeriesSelects(); });
+
+  /* ---------- Visibility: publish now / schedule / draft ---------- */
+
+  // radios: name of the radio group; row: the schedule row; input: the datetime-local box
+  ADMIN.visibility = function (radioName, rowId, inputId) {
+    var radios = document.querySelectorAll("input[name='" + radioName + "']");
+    var row = document.getElementById(rowId);
+    var input = document.getElementById(inputId);
+    function current() {
+      var checked = document.querySelector("input[name='" + radioName + "']:checked");
+      return checked ? checked.value : "now";
+    }
+    function update() {
+      row.hidden = current() !== "schedule";
+      if (!row.hidden && !input.value) {
+        var tomorrow = new Date(Date.now() + 24 * 3600 * 1000);
+        tomorrow.setMinutes(0, 0, 0);
+        input.value = ADMIN.toLocalInput(tomorrow);
+      }
+      if (api.onChange) api.onChange();
+    }
+    radios.forEach(function (r) { r.addEventListener("change", update); });
+    var api = {
+      mode: current,
+      // -> { published, publishAt } for the server, or a problem
+      value: function () {
+        var mode = current();
+        if (mode === "draft") return { published: false, publishAt: "" };
+        if (mode === "now") return { published: true, publishAt: "" };
+        var date = new Date(input.value);
+        if (!input.value || isNaN(date)) return { problem: "Choose the date and time it should go public." };
+        return { published: true, publishAt: date.toISOString() };
+      },
+      set: function (published, publishAt) {
+        var mode = !published ? "draft" : publishAt && new Date(publishAt) > new Date() ? "schedule" : "now";
+        radios.forEach(function (r) { r.checked = r.value === mode; });
+        input.value = mode === "schedule" ? ADMIN.toLocalInput(publishAt) : "";
+        update();
+      }
+    };
+    return api;
+  };
+
+  /* ---------- Formatting toolbar ---------- */
+
+  var TOOLS = [
+    ["B", "Bold", "wrap", "**", "**"],
+    ["I", "Italic", "wrap", "*", "*"],
+    ["H", "Highlight", "wrap", "==", "=="],
+    ["S̶", "Strikethrough", "wrap", "~~", "~~"],
+    ["H1", "Big heading", "line", "# "],
+    ["H2", "Heading", "line", "## "],
+    ["H3", "Small heading", "line", "### "],
+    ["❝", "Quote", "line", "> "],
+    ["•", "Bullet list", "line", "- "],
+    ["1.", "Numbered list", "line", "1. "],
+    ["⇔", "Centre", "wrap", "-> ", " <-"],
+    ["—", "Scene break", "insert", "\n\n---\n\n"],
+    ["🔗", "Link", "link"],
+    ["🖼", "Insert picture", "image"]
+  ];
+
+  function replaceSelection(area, before, middle, after) {
+    var start = area.selectionStart;
+    var end = area.selectionEnd;
+    var text = area.value;
+    area.focus();
+    area.value = text.slice(0, start) + before + middle + after + text.slice(end);
+    area.selectionStart = start + before.length;
+    area.selectionEnd = start + before.length + middle.length;
+    area.dispatchEvent(new Event("input", { bubbles: true }));
   }
+
+  ADMIN.toolbar = function (holder, area) {
+    holder.setAttribute("role", "toolbar");
+    holder.setAttribute("aria-label", "Formatting");
+    var fileInput = el("input", { type: "file", class: "sr-only", accept: "image/jpeg,image/png,image/webp,image/gif", tabindex: "-1" });
+    holder.appendChild(fileInput);
+
+    TOOLS.forEach(function (tool) {
+      var b = el("button", { type: "button", class: "tool", title: tool[1], "aria-label": tool[1] }, tool[0]);
+      b.addEventListener("click", function () {
+        var selected = area.value.slice(area.selectionStart, area.selectionEnd);
+        if (tool[2] === "wrap") {
+          replaceSelection(area, tool[3], selected || tool[1].toLowerCase(), tool[4]);
+        } else if (tool[2] === "line") {
+          // Put the marker at the start of every selected line.
+          var start = area.value.lastIndexOf("\n", area.selectionStart - 1) + 1;
+          area.selectionStart = start;
+          var chunk = area.value.slice(start, area.selectionEnd) || tool[1];
+          var lines = chunk.split("\n").map(function (line) { return tool[3] + line.replace(/^(#{1,3} |> |- |\d+\. )/, ""); });
+          replaceSelection(area, "", lines.join("\n"), "");
+        } else if (tool[2] === "insert") {
+          replaceSelection(area, "", tool[3], "");
+        } else if (tool[2] === "link") {
+          var url = window.prompt("Link address (https://…)", "https://");
+          if (url && /^https?:\/\/\S+$/.test(url)) replaceSelection(area, "[", selected || "link text", "](" + url + ")");
+        } else if (tool[2] === "image") {
+          fileInput.click();
+        }
+      });
+      holder.appendChild(b);
+    });
+
+    fileInput.addEventListener("change", async function () {
+      var file = fileInput.files[0];
+      fileInput.value = "";
+      if (!file) return;
+      var marker = "\n![Uploading " + file.name + "…]()\n";
+      replaceSelection(area, "", marker, "");
+      try {
+        var result = await MW.uploadFile(file);
+        var url = result.previewUrl;
+        area.value = area.value.replace(marker, "\n![" + file.name.replace(/\.[^.]+$/, "").replace(/[\[\]]/g, "") + "](" + url + ")\n");
+        area.dispatchEvent(new Event("input", { bubbles: true }));
+        MW.toast("Picture added. Change the words in [ ] to set its caption.");
+      } catch (error) {
+        area.value = area.value.replace(marker, "");
+        area.dispatchEvent(new Event("input", { bubbles: true }));
+        MW.toast(error.message, true);
+      }
+    });
+
+    // Ctrl/Cmd + B and I.
+    area.addEventListener("keydown", function (event) {
+      if (!(event.ctrlKey || event.metaKey)) return;
+      var key = event.key.toLowerCase();
+      if (key === "b" || key === "i") {
+        event.preventDefault();
+        var mark = key === "b" ? "**" : "*";
+        replaceSelection(area, mark, area.value.slice(area.selectionStart, area.selectionEnd) || (key === "b" ? "bold" : "italic"), mark);
+      }
+    });
+  };
+
+  document.querySelectorAll("[data-toolbar-for]").forEach(function (holder) {
+    ADMIN.toolbar(holder, document.getElementById(holder.getAttribute("data-toolbar-for")));
+  });
+
+  var help = document.getElementById("help-dialog");
+  document.addEventListener("click", function (event) {
+    if (event.target.closest("[data-help]") && help && help.showModal) help.showModal();
+  });
+
+  /* ---------- Media manager: upload, order, caption, star (cover / portrait), remove ---------- */
+
+  // options: { list, error, starRole: "cover"|"portrait", normalRole: "page"|"concept", starLabel, onChange }
+  ADMIN.mediaManager = function (options) {
+    var items = []; // { id?, upload?, local?, kind, url, caption, role, uploading, name }
+    var list = options.list;
+
+    function changed() {
+      render();
+      if (options.onChange) options.onChange();
+    }
+
+    function kindLabel(item) {
+      return { image: "Picture", video: "Video", audio: "Audio", document: "Document" }[item.kind] || item.kind;
+    }
+
+    function render() {
+      list.textContent = "";
+      var page = 0;
+      items.forEach(function (item, index) {
+        var li = el("li", { class: "media-row" + (item.role === options.starRole ? " is-star" : "") + (item.uploading ? " is-uploading" : "") });
+        var thumb = el("div", { class: "media-thumb" });
+        if (item.kind === "image" && item.url) thumb.appendChild(el("img", { src: item.thumbUrl || item.url, alt: "" }));
+        else thumb.appendChild(el("span", { class: "mono" }, { video: "▶", audio: "♪", document: (item.ext || "DOC").toUpperCase() }[item.kind] || "…"));
+        li.appendChild(thumb);
+
+        var body = el("div", { class: "media-body" });
+        var label = kindLabel(item);
+        if (item.kind === "image" && item.role !== options.starRole) { page++; label += " " + page; }
+        if (item.role === options.starRole) label = "★ " + options.starLabel;
+        body.appendChild(el("span", { class: "mono muted" }, label + (item.name ? " · " + item.name : "")));
+        if (item.uploading) {
+          var bar = el("progress", { max: "100", value: String(Math.round((item.progress || 0) * 100)) });
+          body.appendChild(bar);
+        } else {
+          var caption = el("input", {
+            type: "text", maxlength: "200", value: item.caption || "",
+            placeholder: item.kind === "document" ? "File name readers see" : "Caption (optional)",
+            "aria-label": "Caption for " + label
+          });
+          caption.addEventListener("input", function () {
+            item.caption = caption.value;
+            if (options.onChange) options.onChange();
+          });
+          body.appendChild(caption);
+        }
+        li.appendChild(body);
+
+        var tools = el("div", { class: "media-tools" });
+        if (item.kind === "image" && !item.uploading) {
+          var star = el("button", { type: "button", class: "tool", title: "Use as " + options.starLabel.toLowerCase(), "aria-pressed": String(item.role === options.starRole) }, "★");
+          star.addEventListener("click", function () {
+            var on = item.role !== options.starRole;
+            items.forEach(function (m) { if (m.role === options.starRole) m.role = options.normalRole; });
+            item.role = on ? options.starRole : options.normalRole;
+            changed();
+          });
+          tools.appendChild(star);
+        }
+        var up = el("button", { type: "button", class: "tool", title: "Move up", "aria-label": "Move up" }, "↑");
+        up.disabled = index === 0;
+        up.addEventListener("click", function () { items.splice(index - 1, 0, items.splice(index, 1)[0]); changed(); });
+        var down = el("button", { type: "button", class: "tool", title: "Move down", "aria-label": "Move down" }, "↓");
+        down.disabled = index === items.length - 1;
+        down.addEventListener("click", function () { items.splice(index + 1, 0, items.splice(index, 1)[0]); changed(); });
+        var remove = el("button", { type: "button", class: "tool tool-danger", title: "Remove", "aria-label": "Remove" }, "✕");
+        remove.addEventListener("click", function () { items.splice(items.indexOf(item), 1); changed(); });
+        tools.append(up, down, remove);
+        li.appendChild(tools);
+        list.appendChild(li);
+      });
+    }
+
+    // Uploads one file after another (so a slow connection isn't overwhelmed).
+    var queue = Promise.resolve();
+    function add(files, role) {
+      Array.prototype.forEach.call(files, function (file) {
+        var item = {
+          name: file.name, caption: "", uploading: true, progress: 0,
+          kind: /^image\//.test(file.type) ? "image" : /^video\//.test(file.type) ? "video" : /^audio\//.test(file.type) ? "audio" : "document",
+          ext: (file.name.match(/\.([a-z0-9]+)$/i) || [, ""])[1],
+          role: role || options.normalRole
+        };
+        if (item.kind === "document") item.caption = file.name;
+        if (options.kinds && options.kinds.indexOf(item.kind) === -1) {
+          MW.toast(file.name + ": only pictures can be added here.", true);
+          return;
+        }
+        if (role === options.starRole) items.forEach(function (m) { if (m.role === options.starRole) m.role = options.normalRole; });
+        items.push(item);
+        changed();
+        queue = queue.then(async function () {
+          try {
+            var result = await MW.uploadFile(file, function (p) {
+              item.progress = p;
+              var bar = list.children[items.indexOf(item)] && list.children[items.indexOf(item)].querySelector("progress");
+              if (bar) bar.value = Math.round(p * 100);
+            });
+            item.uploading = false;
+            item.kind = result.kind;
+            item.url = result.previewUrl;
+            if (result.upload) item.upload = result.upload;
+            if (result.local) item.local = result.local;
+          } catch (error) {
+            items.splice(items.indexOf(item), 1);
+            MW.toast(error.message, true);
+          }
+          changed();
+        });
+      });
+    }
+
+    return {
+      add: add,
+      load: function (media) {
+        items = (media || []).map(function (m) {
+          return { id: m.id, kind: m.kind, url: m.url, thumbUrl: m.thumbUrl, caption: m.caption || "", role: m.role,
+            ext: (m.url.match(/\.([a-z0-9]+)$/i) || [, ""])[1] };
+        });
+        render();
+      },
+      busy: function () { return items.some(function (m) { return m.uploading; }); },
+      items: function () { return items; },
+      // What the save request sends.
+      value: function () {
+        return items.filter(function (m) { return !m.uploading; }).map(function (m) {
+          var out = { caption: m.caption || "", role: m.role };
+          if (m.id) out.id = m.id;
+          else if (m.upload) out.upload = m.upload;
+          else if (m.local) out.local = m.local;
+          return out;
+        });
+      }
+    };
+  };
+
+  // Drag-and-drop onto a drop zone.
+  ADMIN.dropzone = function (zone, onFiles) {
+    ["dragenter", "dragover"].forEach(function (type) {
+      zone.addEventListener(type, function (event) {
+        event.preventDefault();
+        zone.classList.add("is-over");
+      });
+    });
+    ["dragleave", "drop"].forEach(function (type) {
+      zone.addEventListener(type, function () { zone.classList.remove("is-over"); });
+    });
+    zone.addEventListener("drop", function (event) {
+      event.preventDefault();
+      if (event.dataTransfer && event.dataTransfer.files.length) onFiles(event.dataTransfer.files);
+    });
+  };
+
+  /* ---------- One picture (story covers, product pictures) ---------- */
+
+  ADMIN.coverPicker = function (container) {
+    var img = container.querySelector(".cover-preview");
+    var input = container.querySelector("input[type='file']");
+    var remove = container.querySelector(".cover-remove");
+    var state = { value: undefined, busy: false }; // undefined = keep, null = remove, {upload|local} = new
+
+    function show(url) {
+      if (url) { img.src = url; img.hidden = false; } else { img.removeAttribute("src"); img.hidden = true; }
+      remove.hidden = !url;
+    }
+
+    input.addEventListener("change", async function () {
+      var file = input.files[0];
+      input.value = "";
+      if (!file) return;
+      state.busy = true;
+      remove.hidden = true;
+      MW.toast("Uploading picture…");
+      try {
+        var result = await MW.uploadFile(file);
+        state.value = result.upload ? { upload: result.upload } : { local: result.local };
+        show(result.previewUrl);
+      } catch (error) {
+        MW.toast(error.message, true);
+      }
+      state.busy = false;
+    });
+    remove.addEventListener("click", function () {
+      state.value = null;
+      show(null);
+    });
+
+    return {
+      reset: function (url) { state.value = undefined; show(url || null); },
+      busy: function () { return state.busy; },
+      value: function () { return state.value === undefined ? { keep: true } : state.value; }
+    };
+  };
 })();

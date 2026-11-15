@@ -17,6 +17,8 @@ function clean(name, pattern) {
   } else if (value) {
     console.warn(name + " does not look right, so it is being ignored. Check the value in Render -> Environment.");
     value = "";
+    // Remembered so the admin page's status panel can point at the problem.
+    process.env[name + "_REJECTED"] = "1";
   }
 
   if (value !== raw) {
@@ -29,7 +31,8 @@ clean("DATABASE_URL", /postgres(?:ql)?:\/\/[^\s'"`]+/);
 // cloudinary://key:secret@cloud_name, with no "<placeholders>" left in it
 clean("CLOUDINARY_URL", /cloudinary:\/\/[^\s'"`<>]+:[^\s'"`<>]+@[^\s'"`<>]+/);
 
-["SESSION_SECRET", "ADMIN_USERNAME", "ADMIN_PASSWORD", "ADMIN_DISPLAY_NAME", "NODE_ENV"].forEach(function (name) {
+["SESSION_SECRET", "ADMIN_USERNAME", "ADMIN_PASSWORD", "ADMIN_DISPLAY_NAME", "NODE_ENV",
+  "BREVO_API_KEY", "RESEND_API_KEY", "MAIL_FROM", "PUBLIC_URL"].forEach(function (name) {
   if (typeof process.env[name] === "string") {
     process.env[name] = process.env[name].trim();
   }

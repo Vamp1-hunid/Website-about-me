@@ -29,6 +29,8 @@ router.get("/robots.txt", function (req, res) {
       "Disallow: /profile",
       "Disallow: /api/",
       "Disallow: /auth/",
+      "Disallow: /reset",
+      "Disallow: /forgot",
       "",
       "Sitemap: " + siteUrl(req) + "/sitemap.xml",
       ""
@@ -39,7 +41,7 @@ router.get("/robots.txt", function (req, res) {
 router.get("/sitemap.xml", async function (req, res) {
   const base = siteUrl(req);
   const { rows } = await db.query(
-    "SELECT slug, updated_at FROM posts WHERE published = TRUE ORDER BY created_at DESC LIMIT 5000"
+    "SELECT slug, updated_at FROM posts WHERE published AND (publish_at IS NULL OR publish_at <= NOW()) ORDER BY created_at DESC LIMIT 5000"
   );
   const newest = rows.length ? rows[0].updated_at : new Date();
 

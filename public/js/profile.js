@@ -15,6 +15,10 @@
     }
 
     sub.classList.remove("loading");
+    document.getElementById("profile-avatar").appendChild(MW.avatar(user, "big"));
+    document.getElementById("avatar-actions").hidden = false;
+    document.getElementById("public-link").href = "/u/" + encodeURIComponent(user.username);
+    document.getElementById("email-panel").hidden = false;
     sub.textContent = user.displayName + " · @" + user.username + (user.role === "admin" ? " · site owner" : " · member");
     document.getElementById("profile-stats").hidden = false;
     document.getElementById("saved-panel").hidden = false;
@@ -33,6 +37,8 @@
       document.getElementById("stat-likes").textContent = stats.likes;
       document.getElementById("stat-comments").textContent = stats.comments;
       showSecurity(stats);
+      showEmail(stats);
+      document.getElementById("avatar-remove").hidden = !stats.avatarUrl;
     } catch (error) {
       MW.toast(error.message, true);
     }
@@ -107,6 +113,92 @@
     MW.toast(googleMessages[googleResult][0], googleMessages[googleResult][1]);
     history.replaceState(null, "", "/profile");
   }
+
+  /* ---------- Profile picture ---------- */
+
+  function setAvatar(url) {
+    var box = document.getElementById("profile-avatar");
+    box.textContent = "";
+    MW.me().then(function (user) {
+      user.avatarUrl = url;
+      box.appendChild(MW.avatar(user, "big"));
+    });
+    document.getElementById("avatar-remove").hidden = !url;
+  }
+
+  document.getElementById("avatar-file").addEventListener("change", async function () {
+    var file = this.files[0];
+    this.value = "";
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      MW.toast("Pictures must be 8 MB or smaller.", true);
+      return;
+    }
+    var form = new FormData();
+    form.append("image", file);
+    MW.toast("Uploading…");
+    try {
+      var data = await MW.api("/account/avatar", { method: "POST", form: form });
+      setAvatar(data.avatarUrl);
+      MW.toast("Profile picture updated.");
+    } catch (error) {
+      MW.toast(error.message, true);
+    }
+  });
+
+  document.getElementById("avatar-remove").addEventListener("click", async function () {
+    try {
+      await MW.api("/account/avatar", { method: "DELETE" });
+      setAvatar(null);
+      MW.toast("Profile picture removed.");
+    } catch (error) {
+      MW.toast(error.message, true);
+    }
+  });
+
+  /* ---------- Email for password resets ---------- */
+
+  var emailForm = document.getElementById("email-form");
+
+  function showEmail(stats) {
+    document.getElementById("account-email").value = stats.email || "";
+    document.getElementById("email-password-row").hidden = !stats.hasPassword;
+    var status = document.getElementById("email-status");
+    if (!stats.mailEnabled) {
+      status.textContent = "Save an email now: password reset by email will work as soon as the site owner switches email on. It's never shown to anyone.";
+    } else if (stats.email) {
+      status.textContent = "If you forget your password, use “Forgot your password?” on the login page and we'll email this address.";
+    }
+  }
+
+  emailForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
+    var fb = document.getElementById("email-feedback");
+    fb.className = "feedback";
+    fb.textContent = "";
+    var email = document.getElementById("account-email").value.trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      MW.showProblems(emailForm, [{ field: "email", message: "That email address doesn't look right." }]);
+      return;
+    }
+    MW.showProblems(emailForm, []);
+    var button = emailForm.querySelector("button");
+    button.disabled = true;
+    try {
+      var data = await MW.api("/account/email", {
+        method: "PUT",
+        json: { email: email, currentPassword: document.getElementById("email-password").value }
+      });
+      document.getElementById("email-password").value = "";
+      fb.className = "feedback feedback-success";
+      fb.textContent = data.email ? "Email saved." : "Email removed.";
+    } catch (error) {
+      MW.showProblems(emailForm, (error.data && error.data.problems) || []);
+      fb.className = "feedback feedback-error";
+      fb.textContent = error.message;
+    }
+    button.disabled = false;
+  });
 
   /* ---------- Change password ---------- */
 
