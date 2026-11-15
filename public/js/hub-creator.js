@@ -103,6 +103,12 @@
       document.getElementById("profile-chars").hidden = false;
     }
     loadWorks();
+    MW.api("/collabs?creator=" + encodeURIComponent(c.handle)).then(function (k) {
+      if (!k.collabs.length) return;
+      var ul = document.getElementById("pcollabs");
+      k.collabs.forEach(function (x) { ul.appendChild(MW.collabCard(x)); });
+      document.getElementById("profile-collabs").hidden = false;
+    }).catch(function () {});
   }).catch(function (error) {
     box.textContent = "";
     var body = el("div", { class: "profile-body pad-top" });

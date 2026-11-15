@@ -378,13 +378,13 @@ router.get("/studio/overview", requireLogin, async function (req, res) {
 const REASONS = ["stolen", "explicit", "hate", "harassment", "spam", "spoiler", "other"];
 
 router.post("/reports", requireLogin, reportLimiter, async function (req, res) {
-  const type = ["post", "comment", "creator"].includes(req.body.targetType) ? req.body.targetType : null;
+  const type = ["post", "comment", "creator", "collab"].includes(req.body.targetType) ? req.body.targetType : null;
   const id = Number(req.body.targetId);
   const reason = REASONS.includes(req.body.reason) ? req.body.reason : null;
   if (!type || !Number.isInteger(id) || id < 1 || !reason) {
     return res.status(400).json({ error: "Choose what's wrong." });
   }
-  const table = { post: "posts", comment: "comments", creator: "creator_profiles" }[type];
+  const table = { post: "posts", comment: "comments", creator: "creator_profiles", collab: "collab_posts" }[type];
   const column = type === "creator" ? "user_id" : "id";
   const exists = await db.query(`SELECT 1 FROM ${table} WHERE ${column} = $1`, [id]);
   if (!exists.rows.length) return res.status(404).json({ error: "That could not be found." });

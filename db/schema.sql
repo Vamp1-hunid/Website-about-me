@@ -296,3 +296,36 @@ CREATE TABLE IF NOT EXISTS reports (
   resolved_at TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS reports_status_idx ON reports (status, created_at DESC);
+
+-- ===== Afterframe collabs: creators looking for each other =====
+-- looking_for / offering hold a role from the list in src/routes/collabs.js,
+-- or 'other' with the creator's own words in looking_for_other / offering_other.
+CREATE TABLE IF NOT EXISTS collab_posts (
+  id                SERIAL PRIMARY KEY,
+  user_id           INTEGER       NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  title             VARCHAR(120)  NOT NULL,
+  looking_for       VARCHAR(30)   NOT NULL,
+  looking_for_other VARCHAR(80)   NOT NULL DEFAULT '',
+  offering          VARCHAR(30)   NOT NULL DEFAULT '',
+  offering_other    VARCHAR(80)   NOT NULL DEFAULT '',
+  compensation      VARCHAR(20)   NOT NULL DEFAULT 'negotiable',
+  description       TEXT          NOT NULL DEFAULT '',
+  series_id         INTEGER       REFERENCES series (id) ON DELETE SET NULL,
+  status            VARCHAR(10)   NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+  created_at        TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS collab_posts_status_idx ON collab_posts (status, created_at DESC);
+
+-- "I'm interested" replies. Only the person who posted the request (and the replier) can read them.
+CREATE TABLE IF NOT EXISTS collab_replies (
+  id         SERIAL PRIMARY KEY,
+  collab_id  INTEGER       NOT NULL REFERENCES collab_posts (id) ON DELETE CASCADE,
+  user_id    INTEGER       NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  message    VARCHAR(1500) NOT NULL,
+  created_at TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  UNIQUE (collab_id, user_id)
+);
+
+ALTER TABLE reports DROP CONSTRAINT IF EXISTS reports_target_type_check;
+ALTER TABLE reports ADD CONSTRAINT reports_target_type_check CHECK (target_type IN ('post', 'comment', 'creator', 'collab'));

@@ -308,7 +308,7 @@
 
     var groups = MW.isHub ? [
       ["Afterframe", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following"], ["/hub/news", "Anime updates"]]],
-      ["Create", [["/hub/apply", "Become a creator"], ["/legal/creator-agreement", "Creator Agreement"], ["/legal/content-rules", "Content Rules"]]],
+      ["Create", [["/hub/collabs", "Collab board"], ["/hub/apply", "Become a creator"], ["/legal/creator-agreement", "Creator Agreement"], ["/legal/content-rules", "Content Rules"]]],
       ["More", [["/", "God's Banditos"], ["/creator#contact", "Contact"], ["/legal/terms", "Terms"], ["/legal/privacy", "Privacy"]]]
     ] : [
       ["Explore", [["/", "Home"], ["/gallery", "All works"], ["/gallery?category=story-art", "Story art"],
@@ -348,6 +348,7 @@
       if (user) items.splice(1, 0, ["/hub/feed", "Following feed"]);
       if (isCreator) {
         items.unshift(["/hub/studio#profile", "Creator profile settings"]);
+        items.unshift(["/hub/studio#collabs", "My collab requests"]);
         items.unshift(["/hub/studio", "Creator studio"]);
       } else if (user && MW.creator && MW.creator.status === "pending") {
         items.unshift(["/hub/apply", "Creator application (pending)"]);

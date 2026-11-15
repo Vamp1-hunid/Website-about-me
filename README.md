@@ -46,6 +46,7 @@ other manga artists, animators and story writers publish. Both share accounts, s
 | `/hub/w/<work>`, `/hub/s/<story>`, `/hub/ch/<character>` | Works, stories and characters on Afterframe |
 | `/hub/feed` | New releases from creators you follow (the ☰ button shows a dot when there's something new) |
 | `/hub/news` | Anime updates, written by you or creators you allow |
+| `/hub/collabs` | Collab board: creators post requests ("writer looking for a manga artist"), filter by role and pay, and reply "I'm interested" |
 | `/hub/apply` | Apply to become a creator (accept the Creator Agreement) |
 | `/hub/studio` | A creator's studio: the same composer, uploads, scheduling and drafts as your dashboard, plus their profile |
 | `/legal/terms`, `/legal/privacy`, `/legal/creator-agreement`, `/legal/content-rules` | Legal pages (drafts: have them reviewed) |
@@ -55,6 +56,10 @@ How it works:
   where you can also feature creators and allow them to post anime updates. Approval and rejection are emailed
   when email is set up.
 - Creators can only see and edit their own works, stories and characters, and can delete comments on their own works.
+- **Collabs:** in the studio's Collabs tab a creator picks who they're looking for from a list (writer, artist,
+  animator, colorist, voice actor, composer ...) or chooses "Other (describe it)" and types their own. Anyone logged
+  in can reply; only the poster sees the replies (and gets an email if email is set up). Requests can be closed,
+  reopened, edited or deleted, and reported like anything else.
 - Everyone can report a work, comment or creator (⚑ Report). Reports appear in **Dashboard → Afterframe** with
   buttons to delete the work or comment, suspend the creator, resolve or dismiss.
 - A suspended creator's works disappear everywhere at once.

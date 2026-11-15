@@ -667,6 +667,8 @@ router.get("/reports", async function (req, res) {
                                 FROM comments c JOIN posts p ON p.id = c.post_id JOIN users cu ON cu.id = c.user_id WHERE c.id = r.target_id)
          WHEN 'creator' THEN (SELECT json_build_object('handle', cp.handle, 'name', cp.name, 'id', cp.user_id, 'status', cp.status)
                                 FROM creator_profiles cp WHERE cp.user_id = r.target_id)
+         WHEN 'collab' THEN (SELECT json_build_object('title', c.title, 'id', c.id, 'creator', cp.handle)
+                               FROM collab_posts c JOIN creator_profiles cp ON cp.user_id = c.user_id WHERE c.id = r.target_id)
        END AS target
        FROM reports r LEFT JOIN users u ON u.id = r.reporter_id
       WHERE r.status = $1 ORDER BY r.created_at DESC LIMIT 100`,

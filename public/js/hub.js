@@ -174,3 +174,53 @@
     return a;
   };
 })();
+
+/* ---------- Collabs: shared helpers ---------- */
+(function () {
+  "use strict";
+  var MW = window.MW;
+  if (!MW) return;
+  var metaPromise = null;
+  MW.collabMeta = function () {
+    if (!metaPromise) metaPromise = MW.api("/collabs/meta");
+    return metaPromise;
+  };
+
+  // Fills a <select> with the roles. When "Other (describe it)" is chosen, the matching text box appears.
+  MW.fillRoleSelect = function (select, roles, otherRow) {
+    roles.forEach(function (r) { select.appendChild(MW.el("option", { value: r.key }, r.label)); });
+    if (otherRow) {
+      var sync = function () {
+        otherRow.hidden = select.value !== "other";
+        if (!otherRow.hidden) {
+          var input = otherRow.querySelector("input");
+          if (input && document.activeElement === select) input.focus();
+        }
+      };
+      select.addEventListener("change", sync);
+      sync();
+      select._syncOther = sync;
+    }
+  };
+
+  // A collab request in a list.
+  MW.collabCard = function (c) {
+    var el = MW.el;
+    var li = el("li", { class: "collab-card" });
+    var a = el("a", { class: "collab-link", href: "/hub/collabs/" + c.id });
+    var chips = el("div", { class: "kind-chips" });
+    chips.appendChild(el("span", { class: "kind-chip chip-looking" }, "Looking for: " + c.lookingFor.label));
+    if (c.offering) chips.appendChild(el("span", { class: "kind-chip" }, "Brings: " + c.offering.label));
+    chips.appendChild(el("span", { class: "kind-chip chip-comp" }, c.compensation.label));
+    a.appendChild(chips);
+    a.appendChild(el("h3", {}, c.title));
+    var preview = c.description.replace(/[#*_=~>`\[\]()-]+/g, " ").replace(/\s+/g, " ").trim();
+    a.appendChild(el("p", { class: "muted" }, preview.length > 180 ? preview.slice(0, 179) + "…" : preview));
+    var by = el("p", { class: "collab-by mono muted" });
+    by.appendChild(MW.avatar({ avatarUrl: c.creator.avatarUrl, displayName: c.creator.name }));
+    by.appendChild(document.createTextNode(" " + c.creator.name + " · " + MW.formatDate(c.createdAt) + (c.series ? " · " + c.series.title : "")));
+    a.appendChild(by);
+    li.appendChild(a);
+    return li;
+  };
+})();

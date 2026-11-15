@@ -52,12 +52,17 @@
     <a href="/hub/creators" data-nav="creators">Creators</a>
     <a href="/hub/feed" data-nav="feed">Following</a>
     <a href="/hub/news" data-nav="news">Anime updates</a>
+    <a href="/hub/collabs" data-nav="collabs">Collabs</a>
     <a href="/hub/apply" data-nav="apply">Become a creator</a>
     <a href="/">God's Banditos</a>
   </nav>
 
   <main id="main">
     <section class="panel profile-panel" id="profile" aria-live="polite"><p class="loading pad">Loading&hellip;</p></section>
+    <section class="panel" id="profile-collabs" aria-labelledby="pcollabs-title" hidden>
+      <div class="af-section-head"><h2 id="pcollabs-title">Looking for collaborators</h2><a href="/hub/collabs" class="mono">Collab board &rarr;</a></div>
+      <ul id="pcollabs" class="collab-list"></ul>
+    </section>
     <section class="panel" id="profile-stories" aria-labelledby="pstories-title" hidden>
       <h2 id="pstories-title">Stories</h2>
       <div id="pstories" class="story-grid"></div>

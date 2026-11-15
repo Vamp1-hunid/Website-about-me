@@ -140,6 +140,17 @@
         }));
       }
     }
+    if (t && r.targetType === "collab") {
+      var kp = el("p");
+      kp.appendChild(el("a", { href: "/hub/collabs/" + t.id, target: "_blank" }, t.title));
+      kp.appendChild(document.createTextNode(" by @" + t.creator));
+      li.appendChild(kp);
+      actions.appendChild(ADMIN.confirmButton("Delete request", async function () {
+        await MW.api("/collabs/" + t.id, { method: "DELETE" });
+        await setReport(r, "resolved");
+        MW.toast("Collab request deleted.");
+      }));
+    }
     if (r.details) li.appendChild(el("p", { class: "muted" }, "Details: " + r.details));
     if (r.status === "open") {
       actions.appendChild(ADMIN.button("Mark resolved", function () { setReport(r, "resolved"); }));

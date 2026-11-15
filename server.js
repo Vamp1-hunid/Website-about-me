@@ -83,6 +83,7 @@ api.use("/users", require("./src/routes/users"));
 api.use("/contact", require("./src/routes/contact"));
 api.use("/stories", require("./src/routes/stories"));
 api.use("/hub", require("./src/routes/hub"));
+api.use("/collabs", require("./src/routes/collabs"));
 api.use(require("./src/routes/search"));
 api.use("/admin", require("./src/routes/admin"));
 api.get("/health", function (req, res) {
@@ -177,6 +178,21 @@ app.get("/hub/ch/:slug", async function (req, res) {
     title: c.name + " | " + c.creator_name + " | Afterframe",
     description: c.tagline || (c.role ? c.role + ", by " + c.creator_name + "." : "A character on Afterframe."),
     image: storageForPages.thumbnailUrl(c.portrait)
+  } : null);
+});
+
+app.get("/hub/collabs/:id", async function (req, res) {
+  const db = require("./src/db");
+  const id = /^\d{1,9}$/.test(req.params.id) ? Number(req.params.id) : 0;
+  const { rows } = await db.query(
+    `SELECT c.title, c.description, cp.name FROM collab_posts c JOIN creator_profiles cp ON cp.user_id = c.user_id
+      WHERE c.id = $1 AND c.status = 'open' AND cp.status = 'approved'`,
+    [id]
+  );
+  const c = rows[0];
+  pages.sendPage(req, res, "hub/collab.html", c ? {
+    title: c.title + " | Collabs | Afterframe",
+    description: c.name + " is looking for collaborators: " + c.description.slice(0, 160)
   } : null);
 });
 

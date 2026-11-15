@@ -687,3 +687,70 @@ body[data-brand="afterframe"] .avatar {
 body[data-brand="afterframe"] .dash-two {
   margin-top: 1.25rem;
 }
+
+/* ----- Collab board ----- */
+.collab-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.collab-link {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem 1.1rem;
+  color: var(--ink);
+  text-decoration: none;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  transition: border-color 0.2s ease;
+}
+
+.collab-link:hover,
+.collab-link:focus-visible {
+  border-color: var(--pink);
+}
+
+.collab-link h3 {
+  margin: 0.2rem 0 0;
+  font-size: 1.15rem;
+}
+
+.collab-link p {
+  margin: 0;
+}
+
+.collab-by {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+}
+
+.collab-by .avatar {
+  width: 1.4rem;
+  height: 1.4rem;
+  font-size: 0.65rem;
+}
+
+.chip-looking {
+  color: var(--on-accent);
+  background: var(--pink);
+  border-color: var(--pink);
+}
+
+.chip-comp {
+  color: var(--yellow);
+  border-color: color-mix(in srgb, var(--yellow) 45%, transparent);
+}
+
+.collab-chips {
+  margin: 0.4rem 0 0.2rem;
+}
+
+.reading-left {
+  max-width: 72ch;
+}
