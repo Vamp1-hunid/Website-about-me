@@ -4091,3 +4091,67 @@ main.admin-main {
 .heist-method > .node-label {
   display: flex;
 }
+
+/* New-releases dot on the ☰ button */
+.menu-toggle {
+  position: relative;
+}
+
+.menu-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--pink);
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+.nav-count {
+  font-weight: 700;
+  color: var(--pink-ink);
+}
+
+.narrow-wide {
+  max-width: 760px;
+}
+
+.cover-wide {
+  width: 240px;
+  aspect-ratio: 3 / 1;
+}
+
+/* ----- Moderation (God's Banditos dashboard) ----- */
+.mod-card {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.9rem 1rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--yellow);
+}
+
+.mod-card.is-approved { border-left-color: var(--success); }
+.mod-card.is-rejected,
+.mod-card.is-suspended { border-left-color: var(--error); }
+
+.mod-card p {
+  margin: 0;
+}
+
+.mod-list {
+  list-style: none;
+  margin: 0.8rem 0;
+  padding: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.mod-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+

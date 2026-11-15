@@ -144,7 +144,7 @@ router.get("/callback", async function (req, res) {
     const username = await makeUsername(profile.email, profile.name);
     const displayName = String(profile.name || username).slice(0, 60);
     const created = await db.query(
-      "INSERT INTO users (username, display_name, password_hash, role, google_sub, email) VALUES ($1, $2, NULL, 'member', $3, $4) RETURNING *",
+      "INSERT INTO users (username, display_name, password_hash, role, google_sub, email, terms_accepted_at) VALUES ($1, $2, NULL, 'member', $3, $4, NOW()) RETURNING *",
       [username, displayName, profile.sub, email]
     );
     user = created.rows[0];

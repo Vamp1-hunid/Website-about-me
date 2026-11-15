@@ -231,3 +231,101 @@ CREATE TABLE IF NOT EXISTS products (
   created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
+
+-- ===== Version 4: Afterframe, the creator platform =====
+
+-- Who owns each work, story and character. Older rows are given to the admin
+-- (God's Banditos) by src/migrate.js once the admin account exists.
+ALTER TABLE posts      ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users (id) ON DELETE CASCADE;
+ALTER TABLE series     ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users (id) ON DELETE CASCADE;
+ALTER TABLE characters ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users (id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS posts_user_idx ON posts (user_id, created_at DESC);
+
+-- Anime updates are posts in the 'news' category (shown on Afterframe only).
+ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_category_check;
+ALTER TABLE posts ADD CONSTRAINT posts_category_check
+  CHECK (category IN ('story-art', 'anime', 'writing', 'updates', 'news'));
+
+-- A creator's public profile on Afterframe. status: pending -> approved (or rejected / suspended).
+CREATE TABLE IF NOT EXISTS creator_profiles (
+  user_id        INTEGER      PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+  handle         VARCHAR(30)  NOT NULL UNIQUE,
+  name           VARCHAR(80)  NOT NULL,
+  tagline        VARCHAR(160) NOT NULL DEFAULT '',
+  bio            TEXT         NOT NULL DEFAULT '',
+  kinds          TEXT[]       NOT NULL DEFAULT '{}',
+  links          TEXT         NOT NULL DEFAULT '[]',
+  banner_url     TEXT,
+  banner_public_id TEXT,
+  status         VARCHAR(12)  NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'suspended')),
+  application    TEXT         NOT NULL DEFAULT '',
+  review_note    VARCHAR(500) NOT NULL DEFAULT '',
+  featured       BOOLEAN      NOT NULL DEFAULT FALSE,
+  can_write_news BOOLEAN      NOT NULL DEFAULT FALSE,
+  agreement_accepted_at TIMESTAMPTZ,
+  created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  approved_at    TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS creator_profiles_status_idx ON creator_profiles (status);
+
+-- Viewers following creators.
+CREATE TABLE IF NOT EXISTS follows (
+  follower_id INTEGER     NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  creator_id  INTEGER     NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (follower_id, creator_id),
+  CHECK (follower_id <> creator_id)
+);
+CREATE INDEX IF NOT EXISTS follows_creator_idx ON follows (creator_id);
+
+-- When a member last opened their Following feed (for "new releases" alerts),
+-- and when they accepted the Terms of Service and Privacy Policy.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS feed_seen_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ;
+
+-- Reports of works, comments or creators that may break the rules.
+CREATE TABLE IF NOT EXISTS reports (
+  id          SERIAL PRIMARY KEY,
+  reporter_id INTEGER      REFERENCES users (id) ON DELETE SET NULL,
+  target_type VARCHAR(10)  NOT NULL CHECK (target_type IN ('post', 'comment', 'creator')),
+  target_id   INTEGER      NOT NULL,
+  reason      VARCHAR(30)  NOT NULL,
+  details     VARCHAR(1000) NOT NULL DEFAULT '',
+  status      VARCHAR(10)  NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'resolved', 'dismissed')),
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  resolved_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS reports_status_idx ON reports (status, created_at DESC);
+
+-- ===== Afterframe collabs: creators looking for each other =====
+-- looking_for / offering hold a role from the list in src/routes/collabs.js,
+-- or 'other' with the creator's own words in looking_for_other / offering_other.
+CREATE TABLE IF NOT EXISTS collab_posts (
+  id                SERIAL PRIMARY KEY,
+  user_id           INTEGER       NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  title             VARCHAR(120)  NOT NULL,
+  looking_for       VARCHAR(30)   NOT NULL,
+  looking_for_other VARCHAR(80)   NOT NULL DEFAULT '',
+  offering          VARCHAR(30)   NOT NULL DEFAULT '',
+  offering_other    VARCHAR(80)   NOT NULL DEFAULT '',
+  compensation      VARCHAR(20)   NOT NULL DEFAULT 'negotiable',
+  description       TEXT          NOT NULL DEFAULT '',
+  series_id         INTEGER       REFERENCES series (id) ON DELETE SET NULL,
+  status            VARCHAR(10)   NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+  created_at        TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS collab_posts_status_idx ON collab_posts (status, created_at DESC);
+
+-- "I'm interested" replies. Only the person who posted the request (and the replier) can read them.
+CREATE TABLE IF NOT EXISTS collab_replies (
+  id         SERIAL PRIMARY KEY,
+  collab_id  INTEGER       NOT NULL REFERENCES collab_posts (id) ON DELETE CASCADE,
+  user_id    INTEGER       NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  message    VARCHAR(1500) NOT NULL,
+  created_at TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  UNIQUE (collab_id, user_id)
+);
+
+ALTER TABLE reports DROP CONSTRAINT IF EXISTS reports_target_type_check;
+ALTER TABLE reports ADD CONSTRAINT reports_target_type_check CHECK (target_type IN ('post', 'comment', 'creator', 'collab'));

@@ -10,7 +10,7 @@
   if (!article || !MW) return;
 
   var el = MW.el;
-  var slug = decodeURIComponent(window.location.pathname.replace(/^\/work\//, "").replace(/\/$/, ""));
+  var slug = decodeURIComponent(window.location.pathname.replace(/^\/(work|hub\/w|hub\/news)\//, "").replace(/\/$/, ""));
   var post = null;
   var user = null;
 
@@ -70,7 +70,8 @@
     var stickers = el("div", { class: "sticker-row" });
     stickers.appendChild(el("span", { class: "sticker", "data-category": post.category }, MW.categoryName(post.category)));
     if (post.series) {
-      var s = el("a", { class: "sticker sticker-series", href: "/gallery?series=" + encodeURIComponent(post.series.slug) });
+      var seriesHref = MW.isHub ? MW.storyUrl(post.series.slug, post.creator) : "/gallery?series=" + encodeURIComponent(post.series.slug);
+      var s = el("a", { class: "sticker sticker-series", href: seriesHref });
       s.textContent = post.series.title + (seriesLabel() ? " · " + seriesLabel() : "");
       stickers.appendChild(s);
     }
@@ -97,7 +98,7 @@
       var tags = el("ul", { class: "tag-list", "aria-label": "Tags" });
       post.tags.forEach(function (tag) {
         var li = el("li");
-        li.appendChild(el("a", { href: "/gallery?tag=" + encodeURIComponent(tag) }, "#" + tag));
+        li.appendChild(el("a", { href: MW.isHub ? "/hub/search?q=" + encodeURIComponent(tag) : "/gallery?tag=" + encodeURIComponent(tag) }, "#" + tag));
         tags.appendChild(li);
       });
       info.appendChild(tags);
@@ -107,10 +108,13 @@
     var likeBtn = actionButton(post.liked ? "♥ Liked" : "♡ Like", post.liked, post.likes);
     var saveBtn = actionButton(post.favourited ? "★ Saved" : "☆ Save", post.favourited);
     actions.append(likeBtn, saveBtn);
-    if (user && user.role === "admin") {
-      actions.appendChild(el("a", { class: "btn btn-small", href: "/admin?edit=" + post.id }, "Edit"));
+    if (post.isMine) {
+      var editHref = !MW.isHub && user && user.role === "admin" ? "/admin?edit=" + post.id : "/hub/studio?edit=" + post.id;
+      actions.appendChild(el("a", { class: "btn btn-small", href: editHref }, "Edit"));
     }
     info.appendChild(actions);
+    if (MW.isHub && post.creator && MW.byline) info.appendChild(MW.byline(post.creator, user));
+    if (user && !post.isMine && MW.reportLink) info.appendChild(MW.reportLink("post", post.id, "Report this work"));
 
     if (post.status === "live") {
       wireToggle(likeBtn, "like", "♥ Liked", "♡ Like", true);
@@ -134,7 +138,12 @@
   }
 
   function renderPost() {
-    document.title = post.title + " | God's Banditos";
+    document.title = post.title + (MW.isHub ? " | Afterframe" : " | God's Banditos");
+    if (MW.isHub) {
+      var back = document.getElementById("back-link");
+      if (back && post.category === "news") { back.href = "/hub/news"; back.textContent = "← Anime updates"; }
+      else if (back && post.creator) { back.href = "/hub/c/" + encodeURIComponent(post.creator.handle); back.textContent = "← " + post.creator.name; }
+    }
     var metaDesc = document.querySelector("meta[name='description']");
     if (metaDesc) metaDesc.setAttribute("content", post.summary || MW.categoryName(post.category) + " by Mulenga Mwamba");
     article.textContent = "";
@@ -188,7 +197,7 @@
   /* ---------- Next / previous ---------- */
 
   function navLink(target, label, direction) {
-    var a = el("a", { class: "work-nav-link work-nav-" + direction, href: "/work/" + encodeURIComponent(target.slug) });
+    var a = el("a", { class: "work-nav-link work-nav-" + direction, href: MW.workUrl({ slug: target.slug, category: post.category, creator: post.creator }) });
     a.appendChild(el("span", { class: "mono muted" }, label));
     a.appendChild(el("span", { class: "work-nav-title" }, target.title));
     return a;
@@ -205,7 +214,7 @@
       row.appendChild(el("p", { class: "node-label work-nav-heading" }, "Series // " + nav.series.title + " · " + nav.series.position + " / " + nav.series.count));
       var links = el("div", { class: "work-nav-links" });
       links.appendChild(nav.series.prev ? navLink(nav.series.prev, "← Previous chapter", "prev") : el("span"));
-      var all = el("a", { class: "btn btn-ghost btn-small", href: "/gallery?series=" + encodeURIComponent(nav.series.slug) }, "All chapters");
+      var all = el("a", { class: "btn btn-ghost btn-small", href: MW.isHub ? MW.storyUrl(nav.series.slug, post.creator) : "/gallery?series=" + encodeURIComponent(nav.series.slug) }, "All chapters");
       links.appendChild(all);
       links.appendChild(nav.series.next ? navLink(nav.series.next, "Next chapter →", "next") : el("span"));
       row.appendChild(links);
@@ -214,7 +223,7 @@
 
     if (nav.older || nav.newer) {
       var row2 = el("div", { class: "work-nav-row" });
-      row2.appendChild(el("p", { class: "node-label work-nav-heading" }, "Archive // keep browsing"));
+      row2.appendChild(el("p", { class: "node-label work-nav-heading" }, MW.isHub && post.creator ? "More from " + post.creator.name : "Archive // keep browsing"));
       var links2 = el("div", { class: "work-nav-links" });
       links2.appendChild(nav.newer ? navLink(nav.newer, "← Newer work", "prev") : el("span"));
       links2.appendChild(el("span"));
@@ -231,7 +240,7 @@
       var sNav = nav.series && nav.series.count > 1 ? nav.series : null;
       if (event.key === "ArrowLeft") target = (sNav && sNav.prev) || nav.newer;
       if (event.key === "ArrowRight") target = (sNav && sNav.next) || nav.older;
-      if (target) window.location.href = "/work/" + encodeURIComponent(target.slug);
+      if (target) window.location.href = MW.workUrl({ slug: target.slug, category: post.category, creator: post.creator });
     });
   }
 
@@ -290,6 +299,12 @@
     var header = el("header");
     header.appendChild(MW.avatar(comment.author));
     var who = el("a", { class: "who", href: "/u/" + encodeURIComponent(comment.author.username) }, comment.author.displayName);
+    if (user && !comment.canEdit && MW.reportLink) {
+      var rep = MW.reportLink("comment", comment.id, "Report");
+      rep.classList.add("comment-report");
+      item.dataset.report = "1";
+      window.setTimeout(function () { tools.appendChild(rep); }, 0);
+    }
     header.appendChild(who);
     header.appendChild(el("span", {}, "@" + comment.author.username));
     if (comment.author.role === "admin") header.appendChild(el("span", { class: "sticker sticker-pink" }, "Artist"));

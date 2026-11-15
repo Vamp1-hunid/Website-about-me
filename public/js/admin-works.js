@@ -199,7 +199,7 @@
       field("editor-title").textContent = "Edit: " + post.title;
       field("editor-kicker").textContent = "Edit // file " + String(post.id).padStart(3, "0");
       field("autosave-note").textContent = "";
-      history.replaceState(null, "", "/admin?edit=" + post.id + "#compose");
+      history.replaceState(null, "", ADMIN.base + "?edit=" + post.id + "#compose");
       renderPreview();
       field("editor-title").scrollIntoView({ block: "start" });
     } catch (error) {
@@ -212,8 +212,18 @@
   };
 
   cancelBtn.addEventListener("click", function () {
-    history.replaceState(null, "", "/admin#compose");
+    history.replaceState(null, "", ADMIN.base + "#compose");
     resetForm();
+  });
+
+  // Which categories this person may post in.
+  ADMIN.onReady(function (user) {
+    var select = field("category");
+    var isAdmin = user.role === "admin";
+    var canNews = isAdmin || (MW.creator && MW.creator.canWriteNews);
+    Array.prototype.slice.call(select.options).forEach(function (o) {
+      if ((o.value === "updates" && (!isAdmin || ADMIN.mode === "studio")) || (o.value === "news" && !canNews)) o.remove();
+    });
   });
 
   ADMIN.onReady(function () {
@@ -276,13 +286,13 @@
       var wasEditing = Boolean(editing);
       var post = result.post;
       clearDraftLocally();
-      history.replaceState(null, "", "/admin#compose");
+      history.replaceState(null, "", ADMIN.base + "#compose");
       resetForm();
       clearDraftLocally();
       feedback.className = "feedback feedback-success";
       var verb = post.status === "draft" ? "Draft saved: " : post.status === "scheduled" ? "Scheduled for " + MW.formatDateTime(post.publishAt) + ": " : wasEditing ? "Saved: " : "Published: ";
       feedback.textContent = verb + post.title + ". ";
-      feedback.appendChild(el("a", { href: "/work/" + encodeURIComponent(post.slug) }, post.status === "live" ? "View it" : "Preview it"));
+      feedback.appendChild(el("a", { href: MW.workUrl(post) }, post.status === "live" ? "View it" : "Preview it"));
       MW.toast(verb + post.title);
     } catch (error) {
       MW.showProblems(form, (error.data && error.data.problems) || []);
@@ -326,7 +336,7 @@
       meta: meta,
       flag: ADMIN.statusText(post),
       actions: [
-        el("a", { class: "btn btn-ghost btn-small", href: "/work/" + encodeURIComponent(post.slug) }, post.status === "live" ? "View" : "Preview"),
+        el("a", { class: "btn btn-ghost btn-small", href: MW.workUrl(post) }, post.status === "live" ? "View" : "Preview"),
         ADMIN.button("Edit", function () { ADMIN.editWork(post.id); }),
         ADMIN.confirmButton("Delete", async function () {
           await MW.api("/posts/" + post.id, { method: "DELETE" });

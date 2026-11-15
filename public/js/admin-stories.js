@@ -54,7 +54,7 @@
           meta: s.works + (s.works === 1 ? " work" : " works") + " · " + s.characters + (s.characters === 1 ? " character" : " characters") +
             (s.logline ? " · " + s.logline : ""),
           actions: [
-            el("a", { class: "btn btn-ghost btn-small", href: "/stories/" + encodeURIComponent(s.slug) }, "View"),
+            el("a", { class: "btn btn-ghost btn-small", href: MW.storyUrl(s.slug) }, "View"),
             ADMIN.button("Edit", function () { editStory(s); }),
             ADMIN.confirmButton("Delete", async function () {
               await MW.api("/admin/series/" + s.id, { method: "DELETE" });
@@ -194,7 +194,7 @@
       meta: [c.role, c.seriesTitle].filter(Boolean).join(" · ") || "No story yet",
       flag: ADMIN.statusText(c),
       actions: [
-        el("a", { class: "btn btn-ghost btn-small", href: "/characters/" + encodeURIComponent(c.slug) }, c.status === "live" ? "View" : "Preview"),
+        el("a", { class: "btn btn-ghost btn-small", href: MW.characterUrl(c.slug) }, c.status === "live" ? "View" : "Preview"),
         ADMIN.button("Edit", function () { ADMIN.editCharacter(c.id); }),
         ADMIN.confirmButton("Delete", async function () {
           await MW.api("/admin/characters/" + c.id, { method: "DELETE" });
@@ -253,7 +253,7 @@
       resetChar();
       fb.className = "feedback feedback-success";
       fb.textContent = (c.status === "draft" ? "Draft saved: " : c.status === "scheduled" ? "Scheduled: " : "Published: ") + c.name + ". ";
-      fb.appendChild(el("a", { href: "/characters/" + encodeURIComponent(c.slug) }, c.status === "live" ? "View" : "Preview"));
+      fb.appendChild(el("a", { href: MW.characterUrl(c.slug) }, c.status === "live" ? "View" : "Preview"));
       loadChars();
     } catch (error) {
       MW.showProblems(charForm, (error.data && error.data.problems) || []);

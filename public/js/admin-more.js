@@ -35,6 +35,7 @@
   /* =================== Overview =================== */
 
   async function loadOverview() {
+    if (ADMIN.mode === "studio") return loadStudioOverview();
     try {
       var o = await MW.api("/admin/overview");
       var stats = field("overview-stats");
@@ -49,7 +50,11 @@
         ["Members", o.members],
         ["Comments (7 days)", o.commentsWeek, "comments"],
         ["Likes (7 days)", o.likesWeek],
-        ["Unread messages", o.unreadMessages, "inbox"]
+        ["Unread messages", o.unreadMessages, "inbox"],
+        ["Your followers", o.followers],
+        ["Afterframe creators", o.creators, "afterframe"],
+        ["Pending applications", o.pendingCreators, "afterframe"],
+        ["Open reports", o.openReports, "afterframe"]
       ].forEach(function (s) {
         var box = el("div", { class: "stat" + (s[2] ? " stat-link" : "") });
         box.appendChild(el("dt", {}, s[0]));
@@ -78,6 +83,115 @@
     loadStatus(field("overview-status"));
   }
   ADMIN.onShow("overview", loadOverview);
+
+  function statTile(stats, s) {
+    var box = el("div", { class: "stat" + (s[2] ? " stat-link" : "") });
+    box.appendChild(el("dt", {}, s[0]));
+    box.appendChild(el("dd", {}, String(s[1])));
+    if (s[2]) {
+      box.setAttribute("data-go", s[2]);
+      box.setAttribute("role", "button");
+      box.tabIndex = 0;
+    }
+    stats.appendChild(box);
+  }
+
+  // The studio's overview: the creator's own numbers.
+  async function loadStudioOverview() {
+    var statusBlock = field("overview-status");
+    if (statusBlock) statusBlock.closest("div").hidden = true;
+    try {
+      var o = await MW.api("/hub/studio/overview");
+      var stats = field("overview-stats");
+      stats.textContent = "";
+      [["Live works", o.live, "works"], ["Scheduled", o.scheduled, "drafts"], ["Drafts", o.drafts + o.characterDrafts, "drafts"],
+        ["Stories", o.stories, "stories"], ["Characters", o.characters, "characters"], ["Followers", o.followers],
+        ["Likes", o.likes], ["Comments (7 days)", o.commentsWeek]].forEach(function (s) { statTile(stats, s); });
+      var upcoming = field("overview-upcoming");
+      upcoming.textContent = "";
+      if (!o.upcoming.length) upcoming.appendChild(el("li", { class: "muted" }, "Nothing scheduled."));
+      o.upcoming.forEach(function (u) {
+        var li = el("li");
+        li.appendChild(el("span", { class: "mono" }, MW.formatDateTime(u.publishAt) + " · "));
+        li.appendChild(el("a", { href: "/hub/w/" + encodeURIComponent(u.slug) }, u.title));
+        upcoming.appendChild(li);
+      });
+    } catch (error) {
+      MW.toast(error.message, true);
+    }
+  }
+
+  /* =================== Studio: creator profile =================== */
+
+  var cpForm = field("cprofile-form");
+  if (cpForm && ADMIN.mode === "studio") {
+    var banner = ADMIN.coverPicker(document.querySelector("[data-cover-picker='banner']"));
+    var linksBox = field("cp-links");
+    var linkRow = function (link) {
+      var row = el("div", { class: "link-row" });
+      var label = el("input", { type: "text", maxlength: "30", placeholder: "Label, e.g. Instagram", "aria-label": "Link label", value: (link && link.label) || "" });
+      var url = el("input", { type: "url", maxlength: "300", placeholder: "https://…", "aria-label": "Link", value: (link && link.url) || "" });
+      var remove = ADMIN.button("✕", function () { row.remove(); });
+      remove.setAttribute("aria-label", "Remove link");
+      row.append(label, url, remove);
+      return row;
+    };
+    field("cp-add-link").addEventListener("click", function () { linksBox.appendChild(linkRow()); });
+
+    var loadProfile = async function () {
+      try {
+        var data = await MW.api("/hub/me");
+        var p = data.profile;
+        if (!p) {
+          field("profile-status-line").textContent = "You don't have a creator profile yet.";
+          return;
+        }
+        field("cp-name").value = p.name;
+        field("cp-tagline").value = p.tagline || "";
+        field("cp-bio").value = p.bio || "";
+        document.querySelectorAll("#cp-kinds input").forEach(function (i) { i.checked = (p.kinds || []).includes(i.value); });
+        linksBox.textContent = "";
+        (p.links || []).forEach(function (l) { linksBox.appendChild(linkRow(l)); });
+        if (!linksBox.children.length) linksBox.appendChild(linkRow());
+        banner.reset(p.bannerUrl);
+        field("cp-view").href = "/hub/c/" + encodeURIComponent(p.handle);
+        field("profile-status-line").textContent = "Your page: /hub/c/" + p.handle + (p.canWriteNews ? " · you can post anime updates" : "");
+      } catch (error) {
+        MW.toast(error.message, true);
+      }
+    };
+    ADMIN.onShow("profile", loadProfile);
+
+    cpForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      var fb = field("cprofile-feedback");
+      if (banner.busy()) {
+        MW.showProblems(cpForm, [{ field: "banner", message: "Wait for the picture to finish uploading." }]);
+        return;
+      }
+      try {
+        await MW.api("/hub/profile", { method: "PUT", json: {
+          name: field("cp-name").value,
+          tagline: field("cp-tagline").value,
+          bio: field("cp-bio").value,
+          kinds: Array.prototype.filter.call(document.querySelectorAll("#cp-kinds input"), function (i) { return i.checked; }).map(function (i) { return i.value; }),
+          links: Array.prototype.map.call(linksBox.children, function (row) {
+            var inputs = row.querySelectorAll("input");
+            return { label: inputs[0].value, url: inputs[1].value.trim() };
+          }).filter(function (l) { return l.url; }),
+          banner: banner.value()
+        } });
+        MW.showProblems(cpForm, []);
+        fb.className = "feedback feedback-success";
+        fb.textContent = "Profile saved.";
+        loadProfile();
+      } catch (error) {
+        MW.showProblems(cpForm, (error.data && error.data.problems) || []);
+        fb.className = "feedback feedback-error";
+        fb.textContent = error.message;
+      }
+    });
+  }
 
   function setInboxBadge(n) {
     var badge = field("inbox-badge");

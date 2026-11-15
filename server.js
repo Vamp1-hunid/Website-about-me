@@ -82,6 +82,8 @@ api.use("/comments", require("./src/routes/comments"));
 api.use("/users", require("./src/routes/users"));
 api.use("/contact", require("./src/routes/contact"));
 api.use("/stories", require("./src/routes/stories"));
+api.use("/hub", require("./src/routes/hub"));
+api.use("/collabs", require("./src/routes/collabs"));
 api.use(require("./src/routes/search"));
 api.use("/admin", require("./src/routes/admin"));
 api.get("/health", function (req, res) {
@@ -104,26 +106,106 @@ app.use(require("./src/routes/seo"));
 
 const publicDir = path.join(__dirname, "public");
 
-// /work/a-year-to-burn shows the single-work page; its script reads the slug from the address.
-app.get("/work/:slug", function (req, res) {
-  res.setHeader("Cache-Control", "no-cache");
-  res.sendFile(path.join(publicDir, "work.html"));
+const pages = require("./src/pages");
+const storageForPages = require("./src/storage");
+
+// ----- God's Banditos pages (works, stories and characters by the admin) -----
+// Another creator's work opened at a God's Banditos address is sent to its Afterframe address.
+
+app.get("/work/:slug", async function (req, res) {
+  const post = await pages.findPost(req.params.slug);
+  if (post && post.owner_role !== "admin") return res.redirect(301, "/hub/w/" + encodeURIComponent(post.slug));
+  pages.sendPage(req, res, "work.html", pages.postMeta(req, post, "banditos"));
 });
 
-// /stories/a-year-to-burn shows one story; /characters/<name> one character's profile.
-app.get("/stories/:slug", function (req, res) {
-  res.setHeader("Cache-Control", "no-cache");
-  res.sendFile(path.join(publicDir, "story.html"));
+app.get("/stories/:slug", async function (req, res) {
+  const s = await pages.findSeries(req.params.slug);
+  if (s && s.owner_role !== "admin") return res.redirect(301, "/hub/s/" + encodeURIComponent(s.slug));
+  pages.sendPage(req, res, "story.html", s && s.status === "approved" ? {
+    title: s.title + " | God's Banditos",
+    description: s.logline || s.description || "A story by God's Banditos.",
+    image: storageForPages.thumbnailUrl(s.cover_url),
+    jsonLd: { "@context": "https://schema.org", "@type": "CreativeWorkSeries", name: s.title, description: s.logline || s.description || undefined,
+      author: { "@type": "Organization", name: "God's Banditos" } }
+  } : null);
 });
-app.get("/characters/:slug", function (req, res) {
-  res.setHeader("Cache-Control", "no-cache");
-  res.sendFile(path.join(publicDir, "character.html"));
+
+app.get("/characters/:slug", async function (req, res) {
+  const c = await pages.findCharacter(req.params.slug);
+  if (c && c.owner_role !== "admin") return res.redirect(301, "/hub/ch/" + encodeURIComponent(c.slug));
+  pages.sendPage(req, res, "character.html", c && c.visible ? {
+    title: c.name + " | God's Banditos",
+    description: c.tagline || (c.role ? c.role + " in a God's Banditos story." : "A God's Banditos character."),
+    image: storageForPages.thumbnailUrl(c.portrait)
+  } : null);
 });
 
 // /u/mwamba shows a member's public page.
 app.get("/u/:username", function (req, res) {
-  res.setHeader("Cache-Control", "no-cache");
-  res.sendFile(path.join(publicDir, "user.html"));
+  pages.sendPage(req, res, "user.html", null);
+});
+
+// ----- Afterframe (/hub): the creator platform -----
+
+app.get(["/hub", "/hub/"], function (req, res) {
+  pages.sendPage(req, res, "hub/index.html", null);
+});
+
+app.get("/hub/w/:slug", async function (req, res) {
+  const post = await pages.findPost(req.params.slug);
+  pages.sendPage(req, res, "hub/work.html", pages.postMeta(req, post, "afterframe"));
+});
+
+app.get("/hub/news/:slug", async function (req, res) {
+  const post = await pages.findPost(req.params.slug);
+  pages.sendPage(req, res, "hub/work.html", pages.postMeta(req, post, "afterframe"));
+});
+
+app.get("/hub/s/:slug", async function (req, res) {
+  const s = await pages.findSeries(req.params.slug);
+  pages.sendPage(req, res, "hub/story.html", s && s.status === "approved" ? {
+    title: s.title + " by " + s.creator_name + " | Afterframe",
+    description: s.logline || s.description || "A story on Afterframe.",
+    image: storageForPages.thumbnailUrl(s.cover_url),
+    jsonLd: { "@context": "https://schema.org", "@type": "CreativeWorkSeries", name: s.title, description: s.logline || s.description || undefined,
+      author: { "@type": "Person", name: s.creator_name } }
+  } : null);
+});
+
+app.get("/hub/ch/:slug", async function (req, res) {
+  const c = await pages.findCharacter(req.params.slug);
+  pages.sendPage(req, res, "hub/character.html", c && c.visible ? {
+    title: c.name + " | " + c.creator_name + " | Afterframe",
+    description: c.tagline || (c.role ? c.role + ", by " + c.creator_name + "." : "A character on Afterframe."),
+    image: storageForPages.thumbnailUrl(c.portrait)
+  } : null);
+});
+
+app.get("/hub/collabs/:id", async function (req, res) {
+  const db = require("./src/db");
+  const id = /^\d{1,9}$/.test(req.params.id) ? Number(req.params.id) : 0;
+  const { rows } = await db.query(
+    `SELECT c.title, c.description, cp.name FROM collab_posts c JOIN creator_profiles cp ON cp.user_id = c.user_id
+      WHERE c.id = $1 AND c.status = 'open' AND cp.status = 'approved'`,
+    [id]
+  );
+  const c = rows[0];
+  pages.sendPage(req, res, "hub/collab.html", c ? {
+    title: c.title + " | Collabs | Afterframe",
+    description: c.name + " is looking for collaborators: " + c.description.slice(0, 160)
+  } : null);
+});
+
+app.get("/hub/c/:handle", async function (req, res) {
+  const c = await pages.findCreator(req.params.handle);
+  pages.sendPage(req, res, "hub/creator.html", c && c.status === "approved" ? {
+    title: c.name + " (@" + c.handle + ") | Afterframe",
+    description: c.tagline || String(c.bio || "").slice(0, 180) || c.name + " on Afterframe.",
+    image: storageForPages.thumbnailUrl(c.banner_url) || storageForPages.avatarUrl(c.avatar_url),
+    type: "profile",
+    jsonLd: { "@context": "https://schema.org", "@type": "ProfilePage",
+      mainEntity: { "@type": "Person", name: c.name, alternateName: "@" + c.handle, description: c.tagline || undefined } }
+  } : null);
 });
 
 // Serves index.html, css/, js/, images/ ... and lets /gallery mean gallery.html.

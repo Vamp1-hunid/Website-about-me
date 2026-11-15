@@ -20,6 +20,35 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+// Only lets the request through for the admin or an approved Afterframe creator.
+// Sets req.creator = { userId, handle, status, canWriteNews } and req.isAdmin.
+async function requireCreator(req, res, next) {
+  if (!req.session.user) {
+    return res.status(401).json({ error: "Please log in first." });
+  }
+  const db = require("./db");
+  const { rows } = await db.query(
+    "SELECT handle, status, can_write_news FROM creator_profiles WHERE user_id = $1",
+    [req.session.user.id]
+  );
+  const profile = rows[0];
+  req.isAdmin = req.session.user.role === "admin";
+  if (!req.isAdmin && (!profile || profile.status !== "approved")) {
+    return res.status(403).json({
+      error: profile && profile.status === "pending"
+        ? "Your creator application is still being reviewed."
+        : "Only approved Afterframe creators can do that. Apply at /hub/apply."
+    });
+  }
+  req.creator = {
+    userId: req.session.user.id,
+    handle: profile ? profile.handle : null,
+    status: profile ? profile.status : "approved",
+    canWriteNews: req.isAdmin || Boolean(profile && profile.can_write_news)
+  };
+  next();
+}
+
 // Blocks form posts sent from other websites (cross-site request forgery).
 // Browsers always add an Origin header to cross-site POST/PUT/DELETE requests,
 // so if it is present it must match this site.
@@ -78,4 +107,4 @@ function safeNext(value, fallback) {
   return fallback || "/";
 }
 
-module.exports = { requireLogin, requireAdmin, sameOriginOnly, publicUser, startSession, safeNext };
+module.exports = { requireLogin, requireAdmin, requireCreator, sameOriginOnly, publicUser, startSession, safeNext };

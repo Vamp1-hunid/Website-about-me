@@ -39,21 +39,30 @@
     document.getElementById("search-q").focus();
     return;
   }
-  document.title = "“" + q + "” | Search | God's Banditos";
+  document.title = "“" + q + "” | Search | " + (MW.isHub ? "Afterframe" : "God's Banditos");
   summary.textContent = "Searching…";
 
-  MW.api("/search?q=" + encodeURIComponent(q))
+  MW.api("/search?q=" + encodeURIComponent(q) + (MW.isHub ? "&site=hub" : ""))
     .then(function (data) {
-      var total = data.works.length + data.stories.length + data.characters.length + data.products.length;
+      var total = data.works.length + data.stories.length + data.characters.length + data.products.length +
+        (data.creators || []).length + (data.news || []).length;
       summary.textContent = total
         ? total + (total === 1 ? " result" : " results") + " for “" + q + "”"
         : "Nothing found for “" + q + "”. Try a shorter or different word.";
 
+      if (data.creators && data.creators.length) {
+        var cr = section("Creators", "Results // creators");
+        var crg = el("div", { class: "result-grid" });
+        data.creators.forEach(function (c) {
+          crg.appendChild(simpleCard("/hub/c/" + encodeURIComponent(c.handle), c.avatarUrl, "@" + c.handle, c.name, c.tagline));
+        });
+        cr.appendChild(crg);
+      }
       if (data.stories.length) {
         var s = section("Stories", "Results // stories");
         var sg = el("div", { class: "result-grid" });
         data.stories.forEach(function (st) {
-          sg.appendChild(simpleCard("/stories/" + encodeURIComponent(st.slug), st.coverUrl, "Story", st.title, st.logline));
+          sg.appendChild(simpleCard(MW.storyUrl(st.slug, st.creator), st.coverUrl, "Story", st.title, st.logline));
         });
         s.appendChild(sg);
       }
@@ -61,7 +70,7 @@
         var c = section("Characters", "Results // characters");
         var cg = el("div", { class: "result-grid" });
         data.characters.forEach(function (ch) {
-          cg.appendChild(simpleCard("/characters/" + encodeURIComponent(ch.slug), ch.portraitUrl, ch.role || "Character", ch.name, ch.tagline));
+          cg.appendChild(simpleCard(MW.characterUrl(ch.slug, ch.creator), ch.portraitUrl, ch.role || "Character", ch.name, ch.tagline));
         });
         c.appendChild(cg);
       }
@@ -70,6 +79,14 @@
         var wg = el("div", { class: "works-grid" });
         MW.renderWorks(wg, data.works);
         w.appendChild(wg);
+      }
+      if (data.news && data.news.length) {
+        var nw = section("Anime updates", "Results // updates");
+        var nwg = el("div", { class: "result-grid" });
+        data.news.forEach(function (n) {
+          nwg.appendChild(simpleCard(MW.workUrl(n), n.imageUrl, "Update · " + MW.formatDate(n.createdAt), n.title, n.logline || n.summary));
+        });
+        nw.appendChild(nwg);
       }
       if (data.products.length) {
         var p = section("More products", "Results // products");

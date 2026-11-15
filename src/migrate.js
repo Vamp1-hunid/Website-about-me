@@ -12,6 +12,25 @@ async function migrate() {
   const sql = fs.readFileSync(path.join(__dirname, "..", "db", "schema.sql"), "utf8");
   await db.query(sql);
   await ensureAdmin();
+  await assignOwnership();
+}
+
+// Version 4 (Afterframe): every work, story and character has an owner. Anything made
+// before that belongs to the admin, whose creator profile is "God's Banditos".
+async function assignOwnership() {
+  const { rows } = await db.query("SELECT id, display_name FROM users WHERE role = 'admin' ORDER BY id LIMIT 1");
+  if (!rows.length) return;
+  const admin = rows[0];
+  for (const table of ["posts", "series", "characters"]) {
+    await db.query(`UPDATE ${table} SET user_id = $1 WHERE user_id IS NULL`, [admin.id]);
+  }
+  await db.query(
+    `INSERT INTO creator_profiles (user_id, handle, name, tagline, status, featured, can_write_news, kinds, approved_at, agreement_accepted_at)
+     VALUES ($1, 'gods-banditos', 'God''s Banditos', 'Dark fantasy manga, anime works and stories', 'approved', TRUE, TRUE,
+             '{manga,animation,stories}', NOW(), NOW())
+     ON CONFLICT (user_id) DO NOTHING`,
+    [admin.id]
+  );
 }
 
 // The admin account is created from two environment variables, so the

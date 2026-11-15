@@ -8,11 +8,12 @@
   var hero = document.getElementById("story");
   if (!hero || !MW) return;
   var el = MW.el;
-  var slug = decodeURIComponent(window.location.pathname.replace(/^\/stories\//, "").replace(/\/$/, ""));
+  var slug = decodeURIComponent(window.location.pathname.replace(/^\/(stories|hub\/s)\//, "").replace(/\/$/, ""));
+  var storyCreator = null;
 
   // Shared with the character page and search: a character card.
   MW.characterCard = MW.characterCard || function (c) {
-    var card = el("a", { class: "character-card", href: "/characters/" + encodeURIComponent(c.slug) });
+    var card = el("a", { class: "character-card", href: MW.characterUrl(c.slug, storyCreator) });
     var pic = el("div", { class: "character-portrait" });
     if (c.portraitUrl) pic.appendChild(el("img", { src: c.portraitUrl, alt: "", loading: "lazy" }));
     else pic.appendChild(el("span", { "aria-hidden": "true" }, c.name.charAt(0)));
@@ -25,7 +26,12 @@
 
   function render(data) {
     var story = data.story;
-    document.title = story.title + " | God's Banditos";
+    storyCreator = story.creator;
+    document.title = story.title + (MW.isHub ? " | Afterframe" : " | God's Banditos");
+    if (MW.isHub && story.creator) {
+      var back = document.getElementById("back-link");
+      if (back) { back.href = "/hub/c/" + encodeURIComponent(story.creator.handle); back.textContent = "← " + story.creator.name; }
+    }
     hero.textContent = "";
     var layout = el("div", { class: "story-hero-layout" + (story.coverUrl ? "" : " no-cover") });
     if (story.coverUrl) {
@@ -38,12 +44,13 @@
     if (story.logline) text.appendChild(el("p", { class: "logline logline-big" }, story.logline));
     text.appendChild(el("h1", { class: "glitch" }, story.title));
     if (story.description) text.appendChild(el("p", { class: "lead" }, story.description));
+    if (MW.isHub && story.creator && MW.byline) MW.me().then(function (u) { text.appendChild(MW.byline(story.creator, u)); });
     var counts = [];
     if (data.chapters.length) counts.push(data.chapters.length + (data.chapters.length === 1 ? " chapter" : " chapters"));
     if (data.characters.length) counts.push(data.characters.length + (data.characters.length === 1 ? " character" : " characters"));
     if (counts.length) text.appendChild(el("p", { class: "mono muted" }, counts.join(" · ")));
     if (data.chapters.length) {
-      text.appendChild(el("a", { class: "btn", href: "/work/" + encodeURIComponent(data.chapters[0].slug) }, "Start reading"));
+      text.appendChild(el("a", { class: "btn", href: MW.workUrl(data.chapters[0]) }, "Start reading"));
     }
     layout.appendChild(text);
     hero.appendChild(layout);
@@ -55,7 +62,7 @@
       var list = document.getElementById("chapter-list");
       data.chapters.forEach(function (post, i) {
         var li = el("li");
-        var a = el("a", { class: "chapter-row", href: "/work/" + encodeURIComponent(post.slug) });
+        var a = el("a", { class: "chapter-row", href: MW.workUrl(post) });
         if (post.imageUrl) a.appendChild(el("img", { src: post.imageUrl, alt: "", loading: "lazy" }));
         else a.appendChild(el("span", { class: "chapter-no", "aria-hidden": "true" }, String(post.seriesOrder || i + 1)));
         var t = el("span", { class: "chapter-text" });
@@ -93,7 +100,7 @@
         link.appendChild(el("img", { src: art.url, alt: art.caption || art.character.name + " concept art", loading: "lazy" }));
         fig.appendChild(link);
         var cap = el("figcaption", { class: "mono muted" });
-        cap.appendChild(el("a", { href: "/characters/" + encodeURIComponent(art.character.slug) }, art.character.name));
+        cap.appendChild(el("a", { href: MW.characterUrl(art.character.slug, storyCreator) }, art.character.name));
         if (art.caption) cap.appendChild(document.createTextNode(" · " + art.caption));
         fig.appendChild(cap);
         wall.appendChild(fig);

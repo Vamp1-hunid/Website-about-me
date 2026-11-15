@@ -9,7 +9,7 @@
 const express = require("express");
 const cloudinary = require("cloudinary").v2;
 const db = require("../db");
-const { requireAdmin } = require("../auth");
+const { requireAdmin, requireCreator } = require("../auth");
 const storage = require("../storage");
 const { mailEnabled, mailProvider } = require("../mail");
 const { googleEnabled } = require("./google");
@@ -17,7 +17,12 @@ const { toComment, COMMENT_SELECT, uniqueSlug, VISIBLE } = require("./posts");
 const { resolveMedia, parsePublishAt, statusOf, deleteAll } = require("../media");
 
 const router = express.Router();
-router.use(requireAdmin);
+// Stories, characters and uploads are open to approved Afterframe creators (each sees only their own);
+// everything else here is for the admin only.
+router.use(function (req, res, next) {
+  if (/^\/(series|characters|media|import-document)(\/|$)/.test(req.path)) return requireCreator(req, res, next);
+  return requireAdmin(req, res, next);
+});
 
 router.param("id", function (req, res, next, value) {
   if (!/^\d{1,9}$/.test(value)) {
@@ -145,7 +150,8 @@ router.get("/series", async function (req, res) {
   const { rows } = await db.query(
     `SELECT s.*, (SELECT COUNT(*) FROM posts p WHERE p.series_id = s.id)::int AS works,
             (SELECT COUNT(*) FROM characters c WHERE c.series_id = s.id)::int AS characters
-       FROM series s ORDER BY s.title`
+       FROM series s WHERE s.user_id = $1 ORDER BY s.title`,
+    [req.session.user.id]
   );
   res.json({ series: rows.map(toSeries) });
 });
@@ -168,8 +174,8 @@ async function saveSeries(req, res, old) {
   } else {
     const slug = await uniqueSlug("series", v.title);
     row = (await db.query(
-      "INSERT INTO series (slug, title, description, logline, cover_url, cover_public_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
-      [slug, v.title, v.description, v.logline, cover.url, cover.publicId]
+      "INSERT INTO series (slug, title, description, logline, cover_url, cover_public_id, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+      [slug, v.title, v.description, v.logline, cover.url, cover.publicId, req.session.user.id]
     )).rows[0];
   }
   res.status(old ? 200 : 201).json({ series: toSeries(row) });
@@ -182,14 +188,14 @@ router.post("/series", function (req, res) {
 
 // PUT /api/admin/series/:id
 router.put("/series/:id", async function (req, res) {
-  const old = await db.query("SELECT * FROM series WHERE id = $1", [Number(req.params.id)]);
+  const old = await db.query("SELECT * FROM series WHERE id = $1 AND user_id = $2", [Number(req.params.id), req.session.user.id]);
   if (!old.rows.length) return res.status(404).json({ error: "That story could not be found." });
   return saveSeries(req, res, old.rows[0]);
 });
 
 // DELETE /api/admin/series/:id  (its works and characters stay; they just stop belonging to it)
 router.delete("/series/:id", async function (req, res) {
-  const { rows } = await db.query("DELETE FROM series WHERE id = $1 RETURNING cover_public_id", [Number(req.params.id)]);
+  const { rows } = await db.query("DELETE FROM series WHERE id = $1 AND user_id = $2 RETURNING cover_public_id", [Number(req.params.id), req.session.user.id]);
   if (!rows.length) return res.status(404).json({ error: "That story could not be found." });
   await storage.deleteImage(rows[0].cover_public_id);
   res.json({ ok: true });
@@ -221,16 +227,16 @@ const CHARACTER_SQL = `
 
 // GET /api/admin/characters?status=draft|scheduled
 router.get("/characters", async function (req, res) {
-  let where = "";
-  if (req.query.status === "draft") where = " WHERE NOT c.published";
-  if (req.query.status === "scheduled") where = " WHERE c.published AND c.publish_at > NOW()";
-  const { rows } = await db.query(CHARACTER_SQL + where + " ORDER BY s.title NULLS LAST, c.sort_order NULLS LAST, c.name");
+  let where = " WHERE c.user_id = $1";
+  if (req.query.status === "draft") where += " AND NOT c.published";
+  if (req.query.status === "scheduled") where += " AND c.published AND c.publish_at > NOW()";
+  const { rows } = await db.query(CHARACTER_SQL + where + " ORDER BY s.title NULLS LAST, c.sort_order NULLS LAST, c.name", [req.session.user.id]);
   res.json({ characters: rows.map(function (row) { return toCharacter(row); }) });
 });
 
 // GET /api/admin/characters/:id
 router.get("/characters/:id", async function (req, res) {
-  const { rows } = await db.query(CHARACTER_SQL + " WHERE c.id = $1", [Number(req.params.id)]);
+  const { rows } = await db.query(CHARACTER_SQL + " WHERE c.id = $1 AND c.user_id = $2", [Number(req.params.id), req.session.user.id]);
   if (!rows.length) return res.status(404).json({ error: "That character could not be found." });
   const media = await db.query("SELECT * FROM character_media WHERE character_id = $1 ORDER BY position", [rows[0].id]);
   res.json({ character: toCharacter(rows[0], media.rows) });
@@ -261,8 +267,8 @@ async function saveCharacter(req, res, old) {
   if (values.seriesId !== null && !Number.isInteger(values.seriesId)) {
     problems.push({ field: "seriesId", message: "Choose a story from the list." });
   } else if (values.seriesId) {
-    const found = await db.query("SELECT 1 FROM series WHERE id = $1", [values.seriesId]);
-    if (!found.rows.length) problems.push({ field: "seriesId", message: "That story no longer exists." });
+    const found = await db.query("SELECT 1 FROM series WHERE id = $1 AND user_id = $2", [values.seriesId, req.session.user.id]);
+    if (!found.rows.length) problems.push({ field: "seriesId", message: "That story no longer exists (or isn't yours)." });
   }
   const existingMedia = old ? (await db.query("SELECT * FROM character_media WHERE character_id = $1", [old.id])).rows : [];
   const media = resolveMedia(body.media, existingMedia, { roles: ["concept", "portrait"], kinds: ["image"], max: 60 });
@@ -293,9 +299,9 @@ async function saveCharacter(req, res, old) {
       await client.query("DELETE FROM character_media WHERE character_id = $1 AND NOT (id = ANY ($2::int[]))", [id, keep]);
     } else {
       id = (await client.query(
-        `INSERT INTO characters (slug, series_id, name, role, tagline, profile, sort_order, published, publish_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-        fields
+        `INSERT INTO characters (slug, series_id, name, role, tagline, profile, sort_order, published, publish_at, user_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+        fields.concat([req.session.user.id])
       )).rows[0].id;
     }
     for (let i = 0; i < media.items.length; i++) {
@@ -328,13 +334,15 @@ router.post("/characters", function (req, res) {
 
 // PUT /api/admin/characters/:id
 router.put("/characters/:id", async function (req, res) {
-  const old = await db.query("SELECT * FROM characters WHERE id = $1", [Number(req.params.id)]);
+  const old = await db.query("SELECT * FROM characters WHERE id = $1 AND user_id = $2", [Number(req.params.id), req.session.user.id]);
   if (!old.rows.length) return res.status(404).json({ error: "That character could not be found." });
   return saveCharacter(req, res, old.rows[0]);
 });
 
 // DELETE /api/admin/characters/:id
 router.delete("/characters/:id", async function (req, res) {
+  const owned = await db.query("SELECT 1 FROM characters WHERE id = $1 AND user_id = $2", [Number(req.params.id), req.session.user.id]);
+  if (!owned.rows.length) return res.status(404).json({ error: "That character could not be found." });
   const media = await db.query("SELECT public_id FROM character_media WHERE character_id = $1", [Number(req.params.id)]);
   const { rows } = await db.query("DELETE FROM characters WHERE id = $1 RETURNING id", [Number(req.params.id)]);
   if (!rows.length) return res.status(404).json({ error: "That character could not be found." });
@@ -429,20 +437,26 @@ router.delete("/products/:id", async function (req, res) {
 router.get("/overview", async function (req, res) {
   const { rows } = await db.query(
     `SELECT
-       (SELECT COUNT(*) FROM posts p WHERE ${VISIBLE})::int                         AS live,
-       (SELECT COUNT(*) FROM posts WHERE published AND publish_at > NOW())::int     AS scheduled,
-       (SELECT COUNT(*) FROM posts WHERE NOT published)::int                        AS drafts,
-       (SELECT COUNT(*) FROM characters WHERE NOT published OR publish_at > NOW())::int AS "characterDrafts",
-       (SELECT COUNT(*) FROM characters)::int                                       AS characters,
-       (SELECT COUNT(*) FROM series)::int                                           AS stories,
+       (SELECT COUNT(*) FROM posts p WHERE ${VISIBLE} AND p.user_id = $1)::int     AS live,
+       (SELECT COUNT(*) FROM posts WHERE published AND publish_at > NOW() AND user_id = $1)::int AS scheduled,
+       (SELECT COUNT(*) FROM posts WHERE NOT published AND user_id = $1)::int       AS drafts,
+       (SELECT COUNT(*) FROM characters WHERE (NOT published OR publish_at > NOW()) AND user_id = $1)::int AS "characterDrafts",
+       (SELECT COUNT(*) FROM characters WHERE user_id = $1)::int                     AS characters,
+       (SELECT COUNT(*) FROM series WHERE user_id = $1)::int                         AS stories,
+       (SELECT COUNT(*) FROM creator_profiles WHERE status = 'pending')::int        AS "pendingCreators",
+       (SELECT COUNT(*) FROM creator_profiles WHERE status = 'approved')::int       AS creators,
+       (SELECT COUNT(*) FROM reports WHERE status = 'open')::int                    AS "openReports",
+       (SELECT COUNT(*) FROM follows WHERE creator_id = $1)::int                     AS followers,
        (SELECT COUNT(*) FROM products)::int                                         AS products,
        (SELECT COUNT(*) FROM users WHERE role = 'member')::int                      AS members,
        (SELECT COUNT(*) FROM comments WHERE created_at > NOW() - INTERVAL '7 days')::int AS "commentsWeek",
        (SELECT COUNT(*) FROM likes WHERE created_at > NOW() - INTERVAL '7 days')::int    AS "likesWeek",
-       (SELECT COUNT(*) FROM contact_messages WHERE read_at IS NULL)::int           AS "unreadMessages"`
+       (SELECT COUNT(*) FROM contact_messages WHERE read_at IS NULL)::int           AS "unreadMessages"`,
+    [req.session.user.id]
   );
   const next = await db.query(
-    "SELECT title, slug, publish_at FROM posts WHERE published AND publish_at > NOW() ORDER BY publish_at LIMIT 5"
+    "SELECT title, slug, publish_at FROM posts WHERE published AND publish_at > NOW() AND user_id = $1 ORDER BY publish_at LIMIT 5",
+    [req.session.user.id]
   );
   res.json(Object.assign(rows[0], {
     upcoming: next.rows.map(function (r) { return { title: r.title, slug: r.slug, publishAt: r.publish_at }; })
@@ -568,6 +582,115 @@ router.put("/support", async function (req, res) {
 // GET /api/admin/support -> the saved settings, even while the button is off
 router.get("/support", async function (req, res) {
   res.json({ support: await readSupport() });
+});
+
+/* ---------- Afterframe moderation: creator applications and reports ---------- */
+
+const { sendMail, mailEnabled: canEmail } = require("../mail");
+
+function toCreatorAdmin(row) {
+  return {
+    userId: row.user_id, handle: row.handle, name: row.name, tagline: row.tagline, kinds: row.kinds,
+    status: row.status, application: row.application, reviewNote: row.review_note,
+    featured: row.featured, canWriteNews: row.can_write_news, createdAt: row.created_at, approvedAt: row.approved_at,
+    username: row.username, email: row.email ? row.email.replace(/^(.).*(@.*)$/, "$1…$2") : null,
+    avatarUrl: storage.avatarUrl(row.avatar_url) || null, works: row.works || 0, followers: row.followers || 0,
+    links: (function () { try { return JSON.parse(row.links || "[]"); } catch (e) { return []; } })()
+  };
+}
+
+// GET /api/admin/creators?status=pending|approved|rejected|suspended
+router.get("/creators", async function (req, res) {
+  const status = ["pending", "approved", "rejected", "suspended"].includes(req.query.status) ? req.query.status : null;
+  const { rows } = await db.query(
+    `SELECT cp.*, u.username, u.email, u.avatar_url,
+       (SELECT COUNT(*) FROM posts p WHERE p.user_id = cp.user_id)::int AS works,
+       (SELECT COUNT(*) FROM follows f WHERE f.creator_id = cp.user_id)::int AS followers
+       FROM creator_profiles cp JOIN users u ON u.id = cp.user_id
+      WHERE u.role <> 'admin' ${status ? "AND cp.status = $1" : ""}
+      ORDER BY (cp.status = 'pending') DESC, cp.created_at DESC LIMIT 200`,
+    status ? [status] : []
+  );
+  res.json({ creators: rows.map(toCreatorAdmin) });
+});
+
+// POST /api/admin/creators/:id/review { status, note, featured, canWriteNews }
+router.post("/creators/:id/review", async function (req, res) {
+  const status = ["pending", "approved", "rejected", "suspended"].includes(req.body.status) ? req.body.status : null;
+  if (!status) return res.status(400).json({ error: "Choose approve, reject or suspend." });
+  const note = typeof req.body.note === "string" ? req.body.note.trim().slice(0, 500) : "";
+  const { rows } = await db.query(
+    `UPDATE creator_profiles cp SET status = $1::varchar, review_note = $2,
+            featured = COALESCE($3::boolean, featured), can_write_news = COALESCE($4::boolean, can_write_news),
+            approved_at = CASE WHEN $1::varchar = 'approved' THEN COALESCE(approved_at, NOW()) ELSE approved_at END
+       FROM users u
+      WHERE cp.user_id = $5 AND u.id = cp.user_id AND u.role <> 'admin'
+      RETURNING cp.*, u.username, u.email, u.display_name, u.avatar_url`,
+    [status, note,
+      typeof req.body.featured === "boolean" ? req.body.featured : null,
+      typeof req.body.canWriteNews === "boolean" ? req.body.canWriteNews : null,
+      Number(req.params.id)]
+  );
+  const row = rows[0];
+  if (!row) return res.status(404).json({ error: "That creator could not be found." });
+
+  // Tell them by email when they're approved or turned down (if email is set up and they gave one).
+  let emailed = false;
+  if (row.email && canEmail() && (status === "approved" || status === "rejected") && req.body.notify !== false) {
+    const site = (process.env.PUBLIC_URL || req.protocol + "://" + req.get("host")).replace(/\/+$/, "");
+    const approved = status === "approved";
+    const text = approved
+      ? "Hi " + row.display_name + ",\n\nYour Afterframe creator profile (@" + row.handle + ") has been approved.\n\n" +
+        "Open your studio to publish your first work: " + site + "/hub/studio\n" + (note ? "\nNote from the team: " + note + "\n" : "")
+      : "Hi " + row.display_name + ",\n\nThanks for applying to be an Afterframe creator. We can't approve your profile right now." +
+        (note ? "\n\nNote from the team: " + note : "") + "\n\nYou're welcome to update your application and apply again: " + site + "/hub/apply\n";
+    try {
+      await sendMail(row.email, approved ? "You're in: welcome to Afterframe" : "Your Afterframe application", text,
+        "<p>" + text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>") + "</p>");
+      emailed = true;
+    } catch (error) {
+      console.error("Creator review email failed:", error.message);
+    }
+  }
+  res.json({ creator: toCreatorAdmin(row), emailed: emailed });
+});
+
+// GET /api/admin/reports?status=open
+router.get("/reports", async function (req, res) {
+  const status = ["open", "resolved", "dismissed"].includes(req.query.status) ? req.query.status : "open";
+  const { rows } = await db.query(
+    `SELECT r.*, u.username AS reporter,
+       CASE r.target_type
+         WHEN 'post' THEN (SELECT json_build_object('title', p.title, 'slug', p.slug, 'id', p.id, 'creator', cp.handle)
+                             FROM posts p LEFT JOIN creator_profiles cp ON cp.user_id = p.user_id WHERE p.id = r.target_id)
+         WHEN 'comment' THEN (SELECT json_build_object('body', c.body, 'id', c.id, 'slug', p.slug, 'author', cu.username)
+                                FROM comments c JOIN posts p ON p.id = c.post_id JOIN users cu ON cu.id = c.user_id WHERE c.id = r.target_id)
+         WHEN 'creator' THEN (SELECT json_build_object('handle', cp.handle, 'name', cp.name, 'id', cp.user_id, 'status', cp.status)
+                                FROM creator_profiles cp WHERE cp.user_id = r.target_id)
+         WHEN 'collab' THEN (SELECT json_build_object('title', c.title, 'id', c.id, 'creator', cp.handle)
+                               FROM collab_posts c JOIN creator_profiles cp ON cp.user_id = c.user_id WHERE c.id = r.target_id)
+       END AS target
+       FROM reports r LEFT JOIN users u ON u.id = r.reporter_id
+      WHERE r.status = $1 ORDER BY r.created_at DESC LIMIT 100`,
+    [status]
+  );
+  res.json({
+    reports: rows.map(function (r) {
+      return { id: r.id, targetType: r.target_type, targetId: r.target_id, reason: r.reason, details: r.details,
+        status: r.status, reporter: r.reporter, createdAt: r.created_at, target: r.target };
+    })
+  });
+});
+
+// POST /api/admin/reports/:id { status: resolved | dismissed }
+router.post("/reports/:id", async function (req, res) {
+  const status = ["resolved", "dismissed", "open"].includes(req.body.status) ? req.body.status : null;
+  if (!status) return res.status(400).json({ error: "Choose resolved or dismissed." });
+  await db.query(
+    "UPDATE reports SET status = $1::varchar, resolved_at = CASE WHEN $1::varchar = 'open' THEN NULL ELSE NOW() END WHERE id = $2",
+    [status, Number(req.params.id)]
+  );
+  res.json({ ok: true });
 });
 
 /* ---------- Uploading media for works ---------- */

@@ -6,7 +6,7 @@
 const express = require("express");
 const rateLimit = require("express-rate-limit");
 const db = require("../db");
-const { requireLogin, requireAdmin } = require("../auth");
+const { requireLogin, requireCreator } = require("../auth");
 const storage = require("../storage");
 const { resolveMedia, parsePublishAt, statusOf, deleteAll } = require("../media");
 
@@ -20,12 +20,17 @@ router.param("id", function (req, res, next, value) {
   next();
 });
 
-const CATEGORIES = ["story-art", "anime", "writing", "updates"];
+const CATEGORIES = ["story-art", "anime", "writing", "updates", "news"];
 const SECTIONS = ["main", "concept-art"];
 const FONTS = ["theme", "serif", "typewriter", "handwritten", "clean"];
 
-// A work is public once it's published AND its publish time (if any) has passed.
-const VISIBLE = "(p.published AND (p.publish_at IS NULL OR p.publish_at <= NOW()))";
+// A work is public once it's published, its publish time (if any) has passed,
+// and its creator is approved (a suspended creator's works disappear everywhere).
+const VISIBLE = "(p.published AND (p.publish_at IS NULL OR p.publish_at <= NOW()) AND EXISTS " +
+  "(SELECT 1 FROM creator_profiles cpv WHERE cpv.user_id = p.user_id AND cpv.status = 'approved'))";
+
+// God's Banditos shows only the admin's own works; Afterframe (/hub) shows every creator's.
+const BANDITOS_ONLY = "p.user_id IN (SELECT id FROM users WHERE role = 'admin')";
 const SORTS = ["new", "old", "popular", "series"];
 const PAGE_SIZE = 12;
 const MAX_MEDIA = 80;
@@ -95,6 +100,12 @@ function toPost(row, full) {
     status: statusOf(row),
     imageUrl: full ? storage.displayUrl(row.image_url, "image") : storage.thumbnailUrl(row.image_url),
     tags: row.tags || [],
+    creator: row.creator_handle ? {
+      handle: row.creator_handle,
+      name: row.creator_name,
+      avatarUrl: storage.avatarUrl(row.creator_avatar) || null,
+      isBanditos: row.owner_role === "admin"
+    } : null,
     series: row.series_id ? { id: row.series_id, slug: row.series_slug, title: row.series_title } : null,
     seriesOrder: row.series_order,
     mediaCount: row.media_count || 0,
@@ -133,12 +144,15 @@ async function mediaFor(postId) {
 
 const SELECT_POST = `
   SELECT p.*, s.slug AS series_slug, s.title AS series_title,
+    cp.handle AS creator_handle, cp.name AS creator_name, ou.role AS owner_role, ou.avatar_url AS creator_avatar,
     (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id)::int    AS likes,
     (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)::int AS comments,
     (SELECT COUNT(*) FROM post_media m WHERE m.post_id = p.id AND m.role = 'page' AND m.kind <> 'document')::int AS media_count,
     EXISTS (SELECT 1 FROM post_media m WHERE m.post_id = p.id AND m.kind = 'video') AS has_video,
     EXISTS (SELECT 1 FROM post_media m WHERE m.post_id = p.id AND m.kind = 'audio') AS has_audio
-  FROM posts p LEFT JOIN series s ON s.id = p.series_id`;
+  FROM posts p LEFT JOIN series s ON s.id = p.series_id
+    LEFT JOIN users ou ON ou.id = p.user_id
+    LEFT JOIN creator_profiles cp ON cp.user_id = p.user_id`;
 
 /* ---------- Reading ---------- */
 
@@ -146,8 +160,11 @@ const SELECT_POST = `
 router.get("/", async function (req, res) {
   const category = CATEGORIES.includes(req.query.category) ? req.query.category : null;
   const page = Math.min(10000, Math.max(1, parseInt(req.query.page, 10) || 1));
-  const isAdmin = req.session.user && req.session.user.role === "admin";
-  const showDrafts = isAdmin && req.query.drafts === "1";
+  const me = req.session.user;
+  // ?drafts=1 (or ?mine=1): your own works, drafts and scheduled ones included (dashboard / studio).
+  const showDrafts = Boolean(me) && (req.query.drafts === "1" || req.query.mine === "1");
+  const site = req.query.site === "hub" ? "hub" : "banditos";
+  const creatorHandle = typeof req.query.creator === "string" ? req.query.creator.toLowerCase().slice(0, 30) : "";
   const search = cleanText(req.query.q).slice(0, 80);
   const tag = typeof req.query.tag === "string" ? cleanTags([req.query.tag])[0] || null : null;
   const seriesSlug = typeof req.query.series === "string" ? req.query.series.slice(0, 120) : "";
@@ -156,7 +173,18 @@ router.get("/", async function (req, res) {
 
   const where = [];
   const values = [];
-  if (!showDrafts) where.push(VISIBLE);
+  if (showDrafts) {
+    values.push(me.id);
+    where.push("p.user_id = $" + values.length);
+  } else {
+    where.push(VISIBLE);
+    if (creatorHandle) {
+      values.push(creatorHandle);
+      where.push("cp.handle = $" + values.length);
+    } else if (site === "banditos") {
+      where.push(BANDITOS_ONLY);
+    }
+  }
   // Dashboard filters: ?drafts=1&status=draft|scheduled|live
   if (showDrafts && req.query.status === "draft") where.push("NOT p.published");
   if (showDrafts && req.query.status === "scheduled") where.push("p.published AND p.publish_at > NOW()");
@@ -169,6 +197,8 @@ router.get("/", async function (req, res) {
   if (category) {
     values.push(category);
     where.push("p.category = $" + values.length);
+  } else if (!showDrafts) {
+    where.push("p.category <> 'news'"); // anime updates have their own section on Afterframe
   }
   if (tag) {
     values.push(tag);
@@ -194,7 +224,8 @@ router.get("/", async function (req, res) {
   }[sort];
 
   const total = await db.query(
-    "SELECT COUNT(*)::int AS n FROM posts p LEFT JOIN series s ON s.id = p.series_id " + whereSql,
+    "SELECT COUNT(*)::int AS n FROM posts p LEFT JOIN series s ON s.id = p.series_id " +
+    "LEFT JOIN creator_profiles cp ON cp.user_id = p.user_id " + whereSql,
     values
   );
 
@@ -217,15 +248,16 @@ router.get("/", async function (req, res) {
 
 // GET /api/posts/meta/filters -> the series and tags that have published works (for the gallery filters)
 router.get("/meta/filters", async function (req, res) {
+  const scope = req.query.site === "hub" ? "" : " AND " + BANDITOS_ONLY;
   const series = await db.query(
     `SELECT s.slug, s.title, COUNT(p.id)::int AS works
-       FROM series s JOIN posts p ON p.series_id = s.id AND ${VISIBLE}
+       FROM series s JOIN posts p ON p.series_id = s.id AND ${VISIBLE}${scope}
       GROUP BY s.id ORDER BY s.title`
   );
   const tags = await db.query(
     `SELECT tag, COUNT(*)::int AS works
        FROM posts p, unnest(p.tags) AS tag
-      WHERE ${VISIBLE}
+      WHERE ${VISIBLE}${scope} AND p.category <> 'news'
       GROUP BY tag ORDER BY works DESC, tag LIMIT 40`
   );
   res.json({ series: series.rows, tags: tags.rows });
@@ -233,7 +265,10 @@ router.get("/meta/filters", async function (req, res) {
 
 // Previous / next published works: by date overall, and by chapter number inside a series.
 async function neighbours(row) {
-  const brief = "SELECT p.slug, p.title, p.series_order FROM posts p WHERE " + VISIBLE + " AND p.section = 'main' AND p.id <> $1";
+  // Older / newer works by the same creator (anime updates only lead to other updates).
+  const brief = "SELECT p.slug, p.title, p.series_order FROM posts p WHERE " + VISIBLE +
+    " AND p.section = 'main' AND p.id <> $1 AND p.user_id = " + Number(row.user_id) +
+    (row.category === "news" ? " AND p.category = 'news'" : " AND p.category <> 'news'");
   const older = await db.query(
     brief + " AND (p.created_at, p.id) < ($2, $1) ORDER BY p.created_at DESC, p.id DESC LIMIT 1",
     [row.id, row.created_at]
@@ -272,7 +307,7 @@ router.get("/:slug", async function (req, res) {
   const isAdmin = req.session.user && req.session.user.role === "admin";
 
   const { rows } = await db.query(
-    `SELECT q.*,
+    `SELECT q.*, ${VISIBLE.replace(/\bp\./g, "q.")} AS visible,
        EXISTS (SELECT 1 FROM likes l WHERE l.post_id = q.id AND l.user_id = $2)      AS liked,
        EXISTS (SELECT 1 FROM favourites f WHERE f.post_id = q.id AND f.user_id = $2) AS favourited
        FROM (${SELECT_POST} WHERE p.slug = $1) q`,
@@ -280,10 +315,12 @@ router.get("/:slug", async function (req, res) {
   );
 
   const row = rows[0];
-  if (!row || (statusOf(row) !== "live" && !isAdmin)) {
+  // Drafts, scheduled works and works of suspended creators: only their owner (and the admin) can open them.
+  if (!row || (!row.visible && !isAdmin && row.user_id !== userId)) {
     return res.status(404).json({ error: "That work could not be found." });
   }
   const post = toPost(row, true);
+  post.isMine = Boolean(userId && row.user_id === userId);
   post.media = await mediaFor(row.id);
   post.nav = await neighbours(row);
   res.json({ post: post });
@@ -292,8 +329,8 @@ router.get("/:slug", async function (req, res) {
 /* ---------- Admin: create, edit, delete ---------- */
 
 // GET /api/posts/by-id/:id  (admin: load a work, drafts included, for the edit form)
-router.get("/by-id/:id", requireAdmin, async function (req, res) {
-  const { rows } = await db.query(SELECT_POST + " WHERE p.id = $1", [Number(req.params.id)]);
+router.get("/by-id/:id", requireCreator, async function (req, res) {
+  const { rows } = await db.query(SELECT_POST + " WHERE p.id = $1 AND p.user_id = $2", [Number(req.params.id), req.session.user.id]);
   if (!rows.length) {
     return res.status(404).json({ error: "That work could not be found." });
   }
@@ -308,7 +345,7 @@ function optionalInt(value, min, max) {
   return Number.isInteger(n) && n >= min && n <= max ? n : NaN;
 }
 
-async function validatePost(body) {
+async function validatePost(body, req) {
   const values = {
     title: cleanText(body.title),
     category: cleanText(body.category),
@@ -345,8 +382,14 @@ async function validatePost(body) {
   if (Number.isNaN(values.seriesId)) {
     problems.push({ field: "seriesId", message: "Choose a series from the list." });
   } else if (values.seriesId) {
-    const found = await db.query("SELECT 1 FROM series WHERE id = $1", [values.seriesId]);
-    if (!found.rows.length) problems.push({ field: "seriesId", message: "That series no longer exists." });
+    const found = await db.query("SELECT 1 FROM series WHERE id = $1 AND user_id = $2", [values.seriesId, req.session.user.id]);
+    if (!found.rows.length) problems.push({ field: "seriesId", message: "That story no longer exists (or isn't yours)." });
+  }
+  if (values.category === "news" && !req.creator.canWriteNews) {
+    problems.push({ field: "category", message: "Anime updates can only be posted by approved writers." });
+  }
+  if (values.category === "updates" && !req.isAdmin) {
+    problems.push({ field: "category", message: "Choose Story art, Anime works or Writing." });
   }
   if (Number.isNaN(values.seriesOrder)) {
     problems.push({ field: "seriesOrder", message: "Use a whole number for the chapter, e.g. 1, 2, 3." });
@@ -367,7 +410,7 @@ function coverFor(items) {
 }
 
 async function savePost(req, res, existingRow) {
-  const { values, problems } = await validatePost(req.body);
+  const { values, problems } = await validatePost(req.body, req);
   const existingMedia = existingRow
     ? (await db.query("SELECT * FROM post_media WHERE post_id = $1", [existingRow.id])).rows
     : [];
@@ -418,9 +461,9 @@ async function savePost(req, res, existingRow) {
     } else {
       const inserted = await client.query(
         `INSERT INTO posts (slug, category, title, summary, body, image_url, published, tags, series_id, series_order,
-                            logline, section, font, publish_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id`,
-        fields
+                            logline, section, font, publish_at, user_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id`,
+        fields.concat([req.session.user.id])
       );
       postId = inserted.rows[0].id;
     }
@@ -456,22 +499,26 @@ async function savePost(req, res, existingRow) {
 }
 
 // POST /api/posts  (JSON: title, category, summary, body, published, tags, seriesId, seriesOrder, media[])
-router.post("/", requireAdmin, function (req, res) {
+router.post("/", requireCreator, function (req, res) {
   return savePost(req, res, null);
 });
 
 // PUT /api/posts/:id  (same fields)
-router.put("/:id", requireAdmin, async function (req, res) {
-  const existing = await db.query("SELECT * FROM posts WHERE id = $1", [Number(req.params.id)]);
+router.put("/:id", requireCreator, async function (req, res) {
+  const existing = await db.query("SELECT * FROM posts WHERE id = $1 AND user_id = $2", [Number(req.params.id), req.session.user.id]);
   if (!existing.rows.length) {
     return res.status(404).json({ error: "That work could not be found." });
   }
   return savePost(req, res, existing.rows[0]);
 });
 
-// DELETE /api/posts/:id
-router.delete("/:id", requireAdmin, async function (req, res) {
+// DELETE /api/posts/:id  (the owner, or the admin when removing a reported work)
+router.delete("/:id", requireCreator, async function (req, res) {
   const id = Number(req.params.id);
+  const owned = await db.query("SELECT 1 FROM posts WHERE id = $1 AND (user_id = $2 OR $3)", [id, req.session.user.id, req.isAdmin]);
+  if (!owned.rows.length) {
+    return res.status(404).json({ error: "That work could not be found." });
+  }
   const media = await db.query("SELECT public_id, kind FROM post_media WHERE post_id = $1", [id]);
   const { rows } = await db.query("DELETE FROM posts WHERE id = $1 RETURNING image_public_id", [id]);
   if (!rows.length) {
@@ -485,7 +532,7 @@ router.delete("/:id", requireAdmin, async function (req, res) {
 /* ---------- Members: likes and favourites ---------- */
 
 async function findPublishedPost(id) {
-  const { rows } = await db.query("SELECT id FROM posts p WHERE p.id = $1 AND " + VISIBLE, [id]);
+  const { rows } = await db.query("SELECT id, user_id FROM posts p WHERE p.id = $1 AND " + VISIBLE, [id]);
   return rows[0];
 }
 
@@ -522,7 +569,8 @@ const COMMENT_SELECT = `
   SELECT c.*, u.username, u.display_name, u.role, u.avatar_url
     FROM comments c JOIN users u ON u.id = c.user_id`;
 
-function toComment(row, viewer) {
+// postOwnerId: the creator of the work, who may delete comments on it.
+function toComment(row, viewer, postOwnerId) {
   return {
     id: row.id,
     parentId: row.parent_id,
@@ -536,18 +584,19 @@ function toComment(row, viewer) {
       avatarUrl: storage.avatarUrl(row.avatar_url)
     },
     canEdit: Boolean(viewer && viewer.id === row.user_id),
-    canDelete: Boolean(viewer && (viewer.role === "admin" || viewer.id === row.user_id))
+    canDelete: Boolean(viewer && (viewer.role === "admin" || viewer.id === row.user_id || viewer.id === postOwnerId))
   };
 }
 
 // GET /api/posts/:id/comments  -> top-level comments and replies, oldest first (replies carry parentId)
 router.get("/:id/comments", async function (req, res) {
   const id = Number(req.params.id);
-  if (!(await findPublishedPost(id))) {
+  const post = await findPublishedPost(id);
+  if (!post) {
     return res.status(404).json({ error: "That work could not be found." });
   }
   const { rows } = await db.query(COMMENT_SELECT + " WHERE c.post_id = $1 ORDER BY c.created_at ASC, c.id ASC LIMIT 1000", [id]);
-  res.json({ comments: rows.map(function (row) { return toComment(row, req.session.user); }) });
+  res.json({ comments: rows.map(function (row) { return toComment(row, req.session.user, post.user_id); }) });
 });
 
 // POST /api/posts/:id/comments  { body, parentId? }
@@ -557,7 +606,8 @@ router.post("/:id/comments", requireLogin, commentLimiter, async function (req, 
   if (!body || body.length > 1000) {
     return res.status(400).json({ error: "Comments must be between 1 and 1000 characters." });
   }
-  if (!(await findPublishedPost(id))) {
+  const post = await findPublishedPost(id);
+  if (!post) {
     return res.status(404).json({ error: "That work could not be found." });
   }
 
@@ -579,7 +629,7 @@ router.post("/:id/comments", requireLogin, commentLimiter, async function (req, 
      SELECT c.*, u.username, u.display_name, u.role, u.avatar_url FROM c JOIN users u ON u.id = c.user_id`,
     [id, req.session.user.id, body, parentId]
   );
-  res.status(201).json({ comment: toComment(rows[0], req.session.user) });
+  res.status(201).json({ comment: toComment(rows[0], req.session.user, post.user_id) });
 });
 
 module.exports = router;
@@ -587,5 +637,6 @@ module.exports.toComment = toComment;
 module.exports.COMMENT_SELECT = COMMENT_SELECT;
 module.exports.uniqueSlug = uniqueSlug;
 module.exports.VISIBLE = VISIBLE;
+module.exports.BANDITOS_ONLY = BANDITOS_ONLY;
 module.exports.toPost = toPost;
 module.exports.SELECT_POST = SELECT_POST;

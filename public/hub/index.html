@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Afterframe | Manga, animation and stories by independent creators</title>
+  <meta name="description" content="Afterframe is the home of independent manga artists, animators and story writers. Follow creators, read new releases and catch the latest anime updates.">
+  
+  <meta property="og:site_name" content="Afterframe">
+  <meta property="og:title" content="Afterframe | Manga, animation and stories by independent creators">
+  <meta property="og:description" content="Afterframe is the home of independent manga artists, animators and story writers. Follow creators, read new releases and catch the latest anime updates.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://mulenga-mwamba-website.onrender.com/images/afterframe-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#070b16">
+  <link rel="icon" href="/images/afterframe-mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css?v=9">
+  <link rel="stylesheet" href="/css/afterframe.css?v=1">
+  <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
+  <script src="/js/theme-boot.js"></script>
+</head>
+<body data-page="hub" data-brand="afterframe">
+
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <a class="af-brand" href="/hub" aria-label="Afterframe, home">
+      <img src="/images/afterframe-mark.svg" alt="" width="34" height="34">
+      <span>AFTERFRAME</span>
+    </a>
+    <div class="header-actions">
+      <div class="auth-area" id="auth-area"></div>
+      <form class="header-search" action="/hub/search" method="get" role="search">
+        <label class="sr-only" for="header-q">Search Afterframe</label>
+        <input type="search" id="header-q" name="q" placeholder="Search creators, works&hellip;" maxlength="80" autocomplete="off">
+      </form>
+      <button id="menu-toggle" class="btn btn-ghost btn-small menu-toggle" type="button"
+              aria-expanded="false" aria-controls="site-menu" aria-label="Open menu">
+        <span class="bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
+      <button id="theme-toggle" class="btn btn-ghost btn-small" type="button">Light mode</button>
+    </div>
+  </header>
+
+  <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+    <a href="/hub" data-nav="hub">Home</a>
+    <a href="/hub/creators" data-nav="creators">Creators</a>
+    <a href="/hub/feed" data-nav="feed">Following</a>
+    <a href="/hub/news" data-nav="news">Anime updates</a>
+    <a href="/hub/collabs" data-nav="collabs">Collabs</a>
+    <a href="/hub/apply" data-nav="apply">Become a creator</a>
+    <a href="/">God's Banditos</a>
+  </nav>
+
+  <main id="main">
+    <section class="panel af-hero film-edge" aria-labelledby="hero-title">
+      <p class="node-label">Now showing</p>
+      <h1 id="hero-title">Every story starts in the frame after.</h1>
+      <p class="lead">Afterframe is the home of independent manga artists, animators and story writers. Follow the creators you love, read new chapters the moment they drop, and keep up with anime news.</p>
+      <div class="hero-actions">
+        <a class="btn" href="/hub/creators">Explore creators</a>
+        <a class="btn btn-ghost" href="/hub/apply">Become a creator</a>
+      </div>
+      <div class="af-stats" id="hub-stats" aria-live="polite"></div>
+    </section>
+
+    <section class="panel" id="following-panel" aria-labelledby="following-title" hidden>
+      <div class="af-section-head">
+        <h2 id="following-title">New from creators you follow</h2>
+        <a href="/hub/feed" class="mono">Open your feed &rarr;</a>
+      </div>
+      <div id="home-following" class="works-grid"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="creators-title">
+      <div class="af-section-head">
+        <h2 id="creators-title">Featured creators</h2>
+        <a href="/hub/creators" class="mono">All creators &rarr;</a>
+      </div>
+      <div id="home-creators" class="creator-grid"><p class="loading">Loading&hellip;</p></div>
+    </section>
+
+    <section class="panel" aria-labelledby="latest-title">
+      <div class="af-section-head">
+        <h2 id="latest-title">Latest releases</h2>
+      </div>
+      <div id="home-latest" class="works-grid"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="news-title">
+      <div class="af-section-head">
+        <h2 id="news-title">Anime updates</h2>
+        <a href="/hub/news" class="mono">All updates &rarr;</a>
+      </div>
+      <div id="home-news" class="news-list"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p class="footer-brand"><img src="/images/afterframe-mark.svg" alt="" width="28" height="28"> &copy; 2026 Afterframe &middot; a <a href="/">God's Banditos</a> production</p>
+    <p><a href="/legal/terms">Terms</a> &middot; <a href="/legal/privacy">Privacy</a> &middot; <a href="/legal/creator-agreement">Creator Agreement</a> &middot; <a href="/legal/content-rules">Content Rules</a> &middot; <a href="/creator#contact">Contact</a></p>
+  </footer>
+
+  <script src="/js/api.js" defer></script>
+  <script src="/js/script.js" defer></script>
+  <script src="/js/works-grid.js" defer></script>
+  <script src="/js/hub.js" defer></script>
+  <script src="/js/hub-home.js" defer></script>
+</body>
+</html>

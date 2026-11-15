@@ -11,6 +11,27 @@
 
   var MW = (window.MW = window.MW || {});
 
+  // Which site this page belongs to: God's Banditos ("banditos") or Afterframe ("afterframe").
+  MW.brand = (document.body && document.body.getAttribute("data-brand")) || "banditos";
+  MW.isHub = MW.brand === "afterframe";
+
+  // Where a work, story or character lives. On Afterframe everything opens in Afterframe's look;
+  // on God's Banditos, other creators' things open on Afterframe.
+  MW.workUrl = function (post) {
+    var slug = encodeURIComponent(post.slug);
+    if (post.category === "news") return "/hub/news/" + slug;
+    var banditos = !post.creator || post.creator.isBanditos;
+    return (MW.isHub || !banditos ? "/hub/w/" : "/work/") + slug;
+  };
+  MW.storyUrl = function (slug, creator) {
+    var banditos = !creator || creator.isBanditos;
+    return (MW.isHub || !banditos ? "/hub/s/" : "/stories/") + encodeURIComponent(slug);
+  };
+  MW.characterUrl = function (slug, creator) {
+    var banditos = !creator || creator.isBanditos;
+    return (MW.isHub || !banditos ? "/hub/ch/" : "/characters/") + encodeURIComponent(slug);
+  };
+
   // Sends a request to the server. options: { method, json, form }
   // Resolves with the JSON reply, or rejects with an Error that has .status and .data.
   MW.api = async function (path, options) {
@@ -57,6 +78,7 @@
         .then(function (data) {
           MW.googleEnabled = Boolean(data.googleEnabled);
           MW.mailEnabled = Boolean(data.mailEnabled);
+          MW.creator = data.creator || null;
           return data.user;
         })
         .catch(function () { return null; });
@@ -89,7 +111,7 @@
   };
 
   MW.categoryName = function (category) {
-    return { "story-art": "Story art", anime: "Anime works", writing: "Writing", updates: "Update" }[category] || category;
+    return { "story-art": "Story art", anime: "Anime works", writing: "Writing", updates: "Update", news: "Anime update" }[category] || category;
   };
 
   // "2026-11-20T15:00:00Z" -> "20 Nov 2026, 17:00" (in the visitor's own time zone)
@@ -220,8 +242,10 @@
     me.appendChild(MW.avatar(user));
     me.appendChild(document.createTextNode(" @" + user.username));
     area.appendChild(me);
-    if (user.role === "admin") {
+    if (user.role === "admin" && !MW.isHub) {
       area.appendChild(el("a", { class: "btn btn-small", href: "/admin" }, "Admin"));
+    } else if (MW.isHub && (user.role === "admin" || (MW.creator && MW.creator.status === "approved"))) {
+      area.appendChild(el("a", { class: "btn btn-small", href: "/hub/studio" }, "Studio"));
     }
     area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/profile" }, "Profile"));
     var logout = el("button", { class: "btn btn-ghost btn-small", type: "button" }, "Log out");
@@ -274,18 +298,23 @@
     var menu = el("div", { id: "site-menu", class: "site-menu", hidden: "" });
     menu.setAttribute("aria-label", "Site menu");
 
-    var search = el("form", { class: "menu-search", action: "/search", method: "get", role: "search" });
+    var search = el("form", { class: "menu-search", action: MW.isHub ? "/hub/search" : "/search", method: "get", role: "search" });
     var label = el("label", { class: "sr-only", for: "menu-q" }, "Search the site");
-    var input = el("input", { type: "search", id: "menu-q", name: "q", placeholder: "Search works, stories, characters…", maxlength: "80" });
+    var input = el("input", { type: "search", id: "menu-q", name: "q", maxlength: "80",
+      placeholder: MW.isHub ? "Search creators, works, updates…" : "Search works, stories, characters…" });
     var go = el("button", { type: "submit", class: "btn-small" }, "Search");
     search.append(label, input, go);
     menu.appendChild(search);
 
-    var groups = [
+    var groups = MW.isHub ? [
+      ["Afterframe", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following"], ["/hub/news", "Anime updates"]]],
+      ["Create", [["/hub/collabs", "Collab board"], ["/hub/apply", "Become a creator"], ["/legal/creator-agreement", "Creator Agreement"], ["/legal/content-rules", "Content Rules"]]],
+      ["More", [["/", "God's Banditos"], ["/creator#contact", "Contact"], ["/legal/terms", "Terms"], ["/legal/privacy", "Privacy"]]]
+    ] : [
       ["Explore", [["/", "Home"], ["/gallery", "All works"], ["/gallery?category=story-art", "Story art"],
         ["/gallery?category=anime", "Anime works"], ["/gallery?category=writing", "Writing"], ["/gallery?category=updates", "Updates"]]],
       ["Stories", [["/stories", "All stories"], ["/gallery?section=concept-art", "Concept art"]]],
-      ["Studio", [["/products", "More products by us"], ["/creator", "Meet the creator"], ["/creator#contact", "Contact"]]]
+      ["Studio", [["/products", "More products by us"], ["/creator", "Meet the creator"], ["/creator#contact", "Contact"], ["/hub", "Afterframe ↗"]]]
     ];
     var grid = el("div", { class: "menu-grid" });
     groups.forEach(function (group) {
@@ -313,9 +342,21 @@
     MW.me().then(function (user) {
       var ul = account.querySelector("ul");
       var items = user
-        ? [["/profile", "Your profile"], ["/u/" + encodeURIComponent(user.username), "Your public page"]]
+        ? [["/profile", "Account settings"], ["/u/" + encodeURIComponent(user.username), "Your public page"]]
         : [["/login?next=" + encodeURIComponent(MW.currentPath()), "Log in"], ["/register", "Create a free account"]];
-      if (user && user.role === "admin") items.unshift(["/admin", "Dashboard"]);
+      var isCreator = user && (user.role === "admin" || (MW.creator && MW.creator.status === "approved"));
+      if (user) items.splice(1, 0, ["/hub/feed", "Following feed"]);
+      if (isCreator) {
+        items.unshift(["/hub/studio#profile", "Creator profile settings"]);
+        items.unshift(["/hub/studio#collabs", "My collab requests"]);
+        items.unshift(["/hub/studio", "Creator studio"]);
+      } else if (user && MW.creator && MW.creator.status === "pending") {
+        items.unshift(["/hub/apply", "Creator application (pending)"]);
+      }
+      if (user && user.role === "admin") {
+        items.unshift(["/admin#settings", "Site settings"]);
+        items.unshift(["/admin", "Dashboard"]);
+      }
       items.forEach(function (item) {
         var li = el("li");
         li.appendChild(el("a", { href: item[0] }, item[1]));
@@ -446,11 +487,31 @@
     if (window.location.hash === "#fund") open();
   }
 
-  MW.api("/support").then(buildSupport).catch(function () {});
+  if (!MW.isHub) MW.api("/support").then(buildSupport).catch(function () {});
 
   buildMenu();
   addFooterSocials();
   fillSearch();
   markCurrentNav();
-  MW.me().then(renderAuthArea);
+  MW.me().then(function (user) {
+    renderAuthArea(user);
+    if (user) showFeedBadge();
+  });
+
+  // A dot on the ☰ button and a count in the menu when followed creators post something new.
+  function showFeedBadge() {
+    if (window.location.pathname === "/hub/feed") return;
+    MW.api("/hub/feed/unseen").then(function (data) {
+      if (!data.count) return;
+      var toggle = document.getElementById("menu-toggle");
+      if (toggle) {
+        toggle.appendChild(el("span", { class: "menu-dot", "aria-hidden": "true" }));
+        toggle.setAttribute("aria-label", "Open menu (" + data.count + " new from creators you follow)");
+      }
+      var feedLink = document.querySelector("#site-menu a[href='/hub/feed']");
+      if (feedLink) feedLink.textContent += " (" + data.count + " new)";
+      var navLink = document.querySelector(".site-nav a[href='/hub/feed']");
+      if (navLink) navLink.appendChild(el("span", { class: "nav-count" }, " " + data.count));
+    }).catch(function () {});
+  }
 })();

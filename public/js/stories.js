@@ -6,12 +6,12 @@
 
   var MW = window.MW;
   var grid = document.getElementById("stories-grid");
-  if (!grid || !MW) return;
+  if (!MW) return;
   var el = MW.el;
 
   // Shared by the Stories page and the search page.
   MW.storyCard = function (story) {
-    var card = el("a", { class: "story-card", href: "/stories/" + encodeURIComponent(story.slug) });
+    var card = el("a", { class: "story-card", href: MW.storyUrl(story.slug, story.creator) });
     var cover = el("div", { class: "story-cover" });
     if (story.coverUrl) cover.appendChild(el("img", { src: story.coverUrl, alt: "", loading: "lazy" }));
     else cover.appendChild(el("span", { class: "story-cover-text", "aria-hidden": "true" }, story.title.charAt(0)));
@@ -27,6 +27,7 @@
     return card;
   };
 
+  if (!grid) return;
   MW.api("/stories")
     .then(function (data) {
       grid.textContent = "";

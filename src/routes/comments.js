@@ -37,11 +37,13 @@ router.put("/:id", requireLogin, async function (req, res) {
 });
 
 // DELETE /api/comments/:id  (replies under it are removed too)
+// Allowed for the comment's author, the creator of the work it's on, and the admin.
 router.delete("/:id", requireLogin, async function (req, res) {
   const viewer = req.session.user;
   const { rows } = await db.query(
     `DELETE FROM comments
-      WHERE id = $1 AND ($2 = 'admin' OR user_id = $3)
+      WHERE id = $1 AND ($2 = 'admin' OR user_id = $3
+        OR post_id IN (SELECT id FROM posts WHERE user_id = $3))
       RETURNING id`,
     [Number(req.params.id), viewer.role, viewer.id]
   );

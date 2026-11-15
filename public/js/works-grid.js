@@ -10,7 +10,7 @@
 
   MW.workCard = function (post) {
     var el = MW.el;
-    var card = el("a", { class: "work-card reveal is-in", href: "/work/" + encodeURIComponent(post.slug) });
+    var card = el("a", { class: "work-card reveal is-in", href: MW.workUrl(post) });
 
     var thumb = el("div", { class: "thumb" });
     var sticker = el("span", { class: "sticker", "data-category": post.category }, MW.categoryName(post.category));
@@ -27,6 +27,7 @@
     var meta = el("div", { class: "meta" });
     if (post.logline) meta.appendChild(el("p", { class: "logline" }, post.logline));
     meta.appendChild(el("h3", {}, post.title));
+    if (MW.isHub && post.creator) meta.appendChild(el("p", { class: "card-creator" }, "by " + post.creator.name));
     if (post.series) {
       var chapter = post.seriesOrder !== null && post.seriesOrder !== undefined ? " · Ch. " + post.seriesOrder : "";
       meta.appendChild(el("p", { class: "mono muted card-series" }, post.series.title + chapter));
