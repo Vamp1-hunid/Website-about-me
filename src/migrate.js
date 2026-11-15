@@ -14,6 +14,40 @@ async function migrate() {
   await ensureAdmin();
   await assignOwnership();
   await require("./flags").ensureDefaults();
+  await renameOldBrand();
+}
+
+// The creator platform was renamed to Chapterhive. Runs once: updates text the site itself wrote
+// (bell messages, announcements, saved settings) and the admin's own works and profile.
+// Other creators' posts and the messages people sent are left exactly as they wrote them.
+async function renameOldBrand() {
+  const done = await db.query("SELECT 1 FROM app_settings WHERE key = 'brand_renamed_v1'");
+  if (done.rows.length) return;
+  const OLD = ["After" + "frame", "AFTER" + "FRAME", "after" + "frame"];
+  const NEW = ["Chapterhive", "CHAPTERHIVE", "chapterhive"];
+  const fix = function (col) {
+    return "REPLACE(REPLACE(REPLACE(" + col + ", '" + OLD[0] + "', '" + NEW[0] + "'), '" + OLD[1] + "', '" + NEW[1] + "'), '" + OLD[2] + "', '" + NEW[2] + "')";
+  };
+  const admins = "(SELECT id FROM users WHERE role = 'admin')";
+  const statements = [
+    "UPDATE notifications SET title = " + fix("title") + ", body = " + fix("body") + ", link = " + fix("link"),
+    "UPDATE announcements SET title = " + fix("title") + ", body = " + fix("body") + ", link = " + fix("link"),
+    "UPDATE app_settings SET value = " + fix("value"),
+    "UPDATE posts SET title = " + fix("title") + ", summary = " + fix("summary") + ", body = " + fix("body") + ", logline = " + fix("logline") + " WHERE user_id IN " + admins,
+    "UPDATE series SET title = " + fix("title") + ", description = " + fix("description") + " WHERE user_id IN " + admins,
+    "UPDATE characters SET name = " + fix("name") + ", tagline = " + fix("tagline") + ", profile = " + fix("profile") + " WHERE user_id IN " + admins,
+    "UPDATE creator_profiles SET name = " + fix("name") + ", tagline = " + fix("tagline") + ", bio = " + fix("bio") + " WHERE user_id IN " + admins,
+    "UPDATE products SET name = " + fix("name") + ", tagline = " + fix("tagline") + ", description = " + fix("description")
+  ];
+  for (const sql of statements) {
+    try {
+      await db.query(sql);
+    } catch (error) {
+      console.warn("Brand rename skipped one step:", error.message);
+    }
+  }
+  await db.query("INSERT INTO app_settings (key, value) VALUES ('brand_renamed_v1', 'done') ON CONFLICT (key) DO NOTHING");
+  console.log("Renamed the creator platform to Chapterhive in stored text.");
 }
 
 // Version 4 (Chapterhive): every work, story and character has an owner. Anything made

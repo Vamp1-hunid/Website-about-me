@@ -1243,12 +1243,12 @@ All optional; the dashboard's Settings tab shows which are working.
 
 ---
 
-## Version 4 (November 2026): Afterframe, the creator platform
+## Version 4 (November 2026): Chapterhive, the creator platform
 
 **Two front doors, one server.** God's Banditos pages show only works owned by the admin
-(`BANDITOS_ONLY` in `src/routes/posts.js`). Afterframe pages live under `/hub` (and `public/hub/`),
-use `css/afterframe.css` on top of `styles.css`, and set `data-brand="afterframe"` on `<body>`, which
-`js/api.js` reads to choose links, the ☰ menu and search. Moving Afterframe to its own domain later
+(`BANDITOS_ONLY` in `src/routes/posts.js`). Chapterhive pages live under `/hub` (and `public/hub/`),
+use `css/chapterhive.css` on top of `styles.css`, and set `data-brand="chapterhive"` on `<body>`, which
+`js/api.js` reads to choose links, the ☰ menu and search. Moving Chapterhive to its own domain later
 only needs a redirect from the new domain to `/hub`.
 
 **Ownership.** `posts`, `series` and `characters` have a `user_id`. On start-up `src/migrate.js` gives
