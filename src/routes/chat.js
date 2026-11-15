@@ -166,6 +166,10 @@ router.post("/threads", openLimiter, async function (req, res) {
   const existing = await db.query("SELECT id FROM chat_threads WHERE user_a = $1 AND user_b = $2", [a, b]);
   if (existing.rows.length) return res.json({ id: existing.rows[0].id });
   if (other.chat_privacy === "nobody") return res.status(403).json({ error: "This member isn't accepting new chats." });
+  if (other.chat_privacy === "following") {
+    const f = await db.query("SELECT 1 FROM follows WHERE follower_id = $1 AND creator_id = $2", [other.id, self.id]);
+    if (!f.rows.length) return res.status(403).json({ error: "This member only accepts chats from creators they follow." });
+  }
   const made = await db.query("INSERT INTO chat_threads (user_a, user_b) VALUES ($1, $2) ON CONFLICT (user_a, user_b) DO UPDATE SET user_a = EXCLUDED.user_a RETURNING id", [a, b]);
   res.status(201).json({ id: made.rows[0].id });
 });

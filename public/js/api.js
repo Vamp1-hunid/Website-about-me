@@ -303,6 +303,10 @@
       }).catch(function () {});
     }
 
+    // Settings: always one tap away for members.
+    var gear = el("a", { class: "btn btn-ghost btn-small settings-btn", href: "/hub/settings", title: "Settings", "aria-label": "Settings" }, "⚙");
+    area.appendChild(gear);
+
     var me = el("a", { class: "auth-name", href: "/profile", title: "Your profile" });
     me.appendChild(MW.avatar(user));
     me.appendChild(document.createTextNode(" @" + user.username));
@@ -505,7 +509,7 @@
         }
       }
       var items = user
-        ? [["/profile", "Account settings"], ["/u/" + encodeURIComponent(user.username), "Your public page"]]
+        ? [["/hub/settings", "⚙ Settings & privacy"], ["/profile", "Account settings"], ["/u/" + encodeURIComponent(user.username), "Your public page"]]
         : [["/hub/login?next=" + encodeURIComponent(MW.currentPath()), "Log in"], ["/hub/register", "Create a free account"]];
       // God's Banditos: no accounts here. Visitors are pointed to Chapterhive instead.
       if (!MW.isHub && (!user || user.role !== "admin")) {

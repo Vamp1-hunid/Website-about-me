@@ -18,7 +18,7 @@ router.get("/:username", requireLogin, async function (req, res) {
   }
 
   const { rows } = await db.query(
-    `SELECT u.id, u.username, u.display_name, u.role, u.avatar_url, u.created_at, u.bio, u.streak_count, u.streak_best, u.status,
+    `SELECT u.id, u.username, u.display_name, u.role, u.avatar_url, u.created_at, u.bio, u.profile_visible, u.streak_count, u.streak_best, u.status,
        (u.show_online AND u.last_seen_at > NOW() - INTERVAL '5 minutes') AS online,
        (SELECT COUNT(*) FROM comments c JOIN posts p ON p.id = c.post_id
          WHERE c.user_id = u.id AND (p.published AND p.review_status = 'approved' AND (p.publish_at IS NULL OR p.publish_at <= NOW())))::int AS comments,
@@ -27,6 +27,10 @@ router.get("/:username", requireLogin, async function (req, res) {
     [username]
   );
   const user = rows[0];
+  // Members who hid their page: only they (and the admin) can open it.
+  if (user && !user.profile_visible && user.id !== req.session.user.id && req.session.user.role !== "admin") {
+    return res.status(403).json({ error: "This member keeps their page private.", private: true });
+  }
   if (!user) {
     return res.status(404).json({ error: "That member could not be found." });
   }

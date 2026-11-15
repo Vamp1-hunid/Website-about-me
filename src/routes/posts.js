@@ -170,7 +170,7 @@ async function mediaFor(postId) {
 
 const SELECT_POST = `
   SELECT p.*, s.slug AS series_slug, s.title AS series_title,
-    cp.handle AS creator_handle, cp.name AS creator_name, ou.role AS owner_role, ou.avatar_url AS creator_avatar,
+    cp.handle AS creator_handle, cp.name AS creator_name, cp.post_visibility AS creator_post_visibility, ou.role AS owner_role, ou.avatar_url AS creator_avatar,
     (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id)::int    AS likes,
     (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)::int AS comments,
     (SELECT COUNT(*) FROM post_media m WHERE m.post_id = p.id AND m.role = 'page' AND m.kind <> 'document')::int AS media_count,
@@ -182,6 +182,15 @@ const SELECT_POST = `
     LEFT JOIN creator_profiles cp ON cp.user_id = p.user_id`;
 
 /* ---------- Reading ---------- */
+
+// Creators choose who can see their posts: everyone, members (signed in) or only their followers.
+// SQL for "can the viewer whose id is in $n see this post?" ($n may be NULL for visitors).
+function audienceSql(n) {
+  return `(cp.post_visibility IS NULL OR cp.post_visibility = 'everyone' OR p.user_id = $${n}::int
+    OR $${n}::int IN (SELECT id FROM users WHERE role = 'admin')
+    OR ($${n}::int IS NOT NULL AND (cp.post_visibility = 'members'
+        OR EXISTS (SELECT 1 FROM follows fv WHERE fv.follower_id = $${n}::int AND fv.creator_id = p.user_id))))`;
+}
 
 // For the home feed: the first picture of each post, its first video (members only: streaming
 // needs an account) and the viewer's like / save state.
@@ -234,6 +243,8 @@ router.get("/", async function (req, res) {
     where.push("p.user_id = $" + values.length);
   } else {
     where.push(VISIBLE);
+    values.push(me ? me.id : null);
+    where.push(audienceSql(values.length));
     if (creatorHandle) {
       values.push(creatorHandle);
       where.push("cp.handle = $" + values.length);
@@ -410,6 +421,22 @@ router.get("/:slug", async function (req, res) {
   const row = rows[0];
   if (row && ["news", "updates"].includes(row.category) && !isAdmin && row.user_id !== userId && !(await flagIsOn("updates", req))) {
     return res.status(503).json({ error: "News & updates are paused for now. Please check back soon.", feature: "updates" });
+  }
+  // Followers-only or members-only posts.
+  if (row && row.user_id !== userId && !isAdmin && row.creator_post_visibility && row.creator_post_visibility !== "everyone") {
+    let allowed = false;
+    if (userId && row.creator_post_visibility === "members") allowed = true;
+    if (userId && row.creator_post_visibility === "followers") {
+      allowed = (await db.query("SELECT 1 FROM follows WHERE follower_id = $1 AND creator_id = $2", [userId, row.user_id])).rows.length > 0;
+    }
+    if (!allowed) {
+      return res.status(403).json({
+        error: row.creator_post_visibility === "followers"
+          ? (row.creator_name || "This creator") + " shares posts with followers only. Follow them to see this."
+          : "This post is for members. Create a free account or log in to see it.",
+        locked: row.creator_post_visibility, creator: row.creator_handle, signup: !userId
+      });
+    }
   }
   // Drafts, scheduled works and works of suspended creators: only their owner (and the admin) can open them.
   if (!row || (!row.visible && !isAdmin && row.user_id !== userId)) {
@@ -925,6 +952,7 @@ router.get("/:id/results", async function (req, res) {
 
 module.exports = router;
 module.exports.GENRES = GENRES;
+module.exports.audienceSql = audienceSql;
 module.exports.SHELVES = SHELVES;
 module.exports.cleanForm = cleanForm;
 module.exports.toComment = toComment;

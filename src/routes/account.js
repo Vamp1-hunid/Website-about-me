@@ -419,6 +419,30 @@ router.post("/verify", async function (req, res) {
   res.json({ ok: true });
 });
 
+/* ---------- Privacy settings (Settings page) ---------- */
+
+// GET /api/account/privacy
+router.get("/privacy", requireLogin, async function (req, res) {
+  const { rows } = await db.query(
+    `SELECT u.show_online, u.chat_privacy, u.profile_visible, cp.post_visibility, cp.status AS creator_status
+       FROM users u LEFT JOIN creator_profiles cp ON cp.user_id = u.id WHERE u.id = $1`, [req.session.user.id]);
+  const r = rows[0];
+  res.json({ showOnline: r.show_online, chatPrivacy: r.chat_privacy, profileVisible: r.profile_visible,
+    postVisibility: r.post_visibility || null, isCreator: Boolean(r.creator_status) });
+});
+
+// PUT /api/account/privacy { showOnline, chatPrivacy, profileVisible, postVisibility }
+router.put("/privacy", requireLogin, async function (req, res) {
+  const id = req.session.user.id;
+  if (typeof req.body.showOnline === "boolean") await db.query("UPDATE users SET show_online = $1 WHERE id = $2", [req.body.showOnline, id]);
+  if (["everyone", "following", "nobody"].includes(req.body.chatPrivacy)) await db.query("UPDATE users SET chat_privacy = $1 WHERE id = $2", [req.body.chatPrivacy, id]);
+  if (typeof req.body.profileVisible === "boolean") await db.query("UPDATE users SET profile_visible = $1 WHERE id = $2", [req.body.profileVisible, id]);
+  if (["everyone", "members", "followers"].includes(req.body.postVisibility)) {
+    await db.query("UPDATE creator_profiles SET post_visibility = $1 WHERE user_id = $2", [req.body.postVisibility, id]);
+  }
+  res.json({ ok: true });
+});
+
 // GET /api/account/bio  ·  PUT /api/account/bio { bio }   (shown on your member page)
 router.get("/bio", requireLogin, async function (req, res) {
   const { rows } = await db.query("SELECT bio FROM users WHERE id = $1", [req.session.user.id]);
@@ -453,7 +477,7 @@ router.put("/details", requireLogin, async function (req, res) {
     values.push(signup.checkGender(req.body.gender)); sets.push("gender = $" + values.length);
   }
   if (typeof req.body.marketing === "boolean") { values.push(req.body.marketing); sets.push("marketing_opt_in = $" + values.length); }
-  if (["everyone", "nobody"].includes(req.body.chatPrivacy)) { values.push(req.body.chatPrivacy); sets.push("chat_privacy = $" + values.length); }
+  if (["everyone", "following", "nobody"].includes(req.body.chatPrivacy)) { values.push(req.body.chatPrivacy); sets.push("chat_privacy = $" + values.length); }
   if (problems.length) return res.status(400).json({ error: "Please fix the highlighted fields.", problems: problems });
   if (sets.length) {
     values.push(req.session.user.id);
