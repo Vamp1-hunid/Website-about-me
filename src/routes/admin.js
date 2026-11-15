@@ -513,6 +513,63 @@ router.put("/socials", async function (req, res) {
   res.json({ links: await readSocials() });
 });
 
+/* ---------- Support / donation button ---------- */
+
+const { SUPPORT_TYPES, readSupport } = require("./search");
+
+// PUT /api/admin/support { enabled, title, message, methods: [{ type, label, url, provider, number, name, details }] }
+router.put("/support", async function (req, res) {
+  const b = req.body || {};
+  const text = function (v, max) { return typeof v === "string" ? v.trim().slice(0, max) : ""; };
+  const input = Array.isArray(b.methods) ? b.methods : [];
+  if (input.length > 8) return res.status(400).json({ error: "Up to 8 ways to support." });
+  const methods = [];
+  for (let i = 0; i < input.length; i++) {
+    const m = input[i] || {};
+    const type = SUPPORT_TYPES.includes(m.type) ? m.type : "link";
+    const method = {
+      type: type,
+      label: text(m.label, 40),
+      url: text(m.url, 500),
+      provider: text(m.provider, 40),
+      number: text(m.number, 30),
+      name: text(m.name, 80),
+      details: text(m.details, 400)
+    };
+    const n = i + 1;
+    if (method.url && !/^https:\/\/[^\s<>"]+$/i.test(method.url)) {
+      return res.status(400).json({ error: "Way " + n + ": links must start with https://" });
+    }
+    if ((type === "card" || type === "paypal" || type === "link") && !method.url) {
+      return res.status(400).json({ error: "Way " + n + ": add the payment link (https://...)." });
+    }
+    if (type === "mobile-money" && !/^\+?[0-9 ]{9,16}$/.test(method.number)) {
+      return res.status(400).json({ error: "Way " + n + ": enter the mobile money number, e.g. 097 123 4567." });
+    }
+    methods.push(method);
+  }
+  const support = {
+    enabled: b.enabled === true || b.enabled === "true",
+    title: text(b.title, 60) || "Fund the heist",
+    message: text(b.message, 400),
+    methods: methods
+  };
+  if (support.enabled && !methods.length) {
+    return res.status(400).json({ error: "Add at least one way to support before switching the button on." });
+  }
+  await db.query(
+    `INSERT INTO app_settings (key, value) VALUES ('support', $1)
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+    [JSON.stringify(support)]
+  );
+  res.json({ support: support });
+});
+
+// GET /api/admin/support -> the saved settings, even while the button is off
+router.get("/support", async function (req, res) {
+  res.json({ support: await readSupport() });
+});
+
 /* ---------- Uploading media for works ---------- */
 
 // GET /api/admin/media/ticket -> how the browser should upload the next file:

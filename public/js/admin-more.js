@@ -370,4 +370,89 @@
     }
   });
   ADMIN.onShow("settings", loadSettings);
+
+  /* =================== Settings: support button =================== */
+
+  var supportList = field("support-methods");
+  var SUPPORT_TYPES = {
+    "mobile-money": "Mobile money", card: "Card payment link (Visa / Mastercard)", bank: "Bank transfer",
+    paypal: "PayPal", link: "Other link (Ko-fi etc.)"
+  };
+
+  function supportRow(m) {
+    var li = el("li", { class: "support-edit" });
+    var type = el("select", { "aria-label": "Way to pay" });
+    Object.keys(SUPPORT_TYPES).forEach(function (k) { type.appendChild(el("option", { value: k }, SUPPORT_TYPES[k])); });
+    type.value = m.type || "mobile-money";
+    var inputs = {
+      label: el("input", { type: "text", maxlength: "40", placeholder: "Title shown (optional)", "aria-label": "Title shown" }),
+      url: el("input", { type: "url", maxlength: "500", placeholder: "https://… payment link", "aria-label": "Payment link" }),
+      provider: el("input", { type: "text", maxlength: "40", placeholder: "Network, e.g. MTN MoMo", "aria-label": "Network" }),
+      number: el("input", { type: "text", maxlength: "30", placeholder: "Number, e.g. 097 123 4567", "aria-label": "Number", inputmode: "tel" }),
+      name: el("input", { type: "text", maxlength: "80", placeholder: "Name it's registered to", "aria-label": "Registered name" }),
+      details: el("textarea", { rows: "2", maxlength: "400", placeholder: "Extra details (optional)", "aria-label": "Details" })
+    };
+    Object.keys(inputs).forEach(function (k) { inputs[k].value = m[k] || ""; inputs[k].setAttribute("data-k", k); });
+    function show() {
+      var t = type.value;
+      inputs.url.hidden = !(t === "card" || t === "paypal" || t === "link");
+      inputs.provider.hidden = inputs.number.hidden = inputs.name.hidden = t !== "mobile-money";
+      inputs.details.placeholder = t === "bank"
+        ? "Bank, account name and number, branch, SWIFT… (leave empty to give them out on request)"
+        : "Extra details (optional)";
+      inputs.url.placeholder = t === "paypal" ? "https://paypal.me/yourname" : "https://… payment link";
+    }
+    type.addEventListener("change", show);
+    show();
+    var remove = ADMIN.button("Remove", function () { li.remove(); });
+    var up = ADMIN.button("↑", function () { if (li.previousElementSibling) li.parentNode.insertBefore(li, li.previousElementSibling); });
+    up.setAttribute("aria-label", "Move up");
+    var head = el("div", { class: "support-edit-head" });
+    head.append(type, up, remove);
+    li.appendChild(head);
+    Object.keys(inputs).forEach(function (k) { li.appendChild(inputs[k]); });
+    return li;
+  }
+
+  async function loadSupport() {
+    try {
+      var data = await MW.api("/admin/support");
+      var s = data.support;
+      field("support-enabled").checked = Boolean(s.enabled);
+      field("support-title").value = s.title || "";
+      field("support-message").value = s.message || "";
+      supportList.textContent = "";
+      (s.methods.length ? s.methods : [{ type: "mobile-money" }]).forEach(function (m) { supportList.appendChild(supportRow(m)); });
+    } catch (error) {
+      MW.toast(error.message, true);
+    }
+  }
+
+  field("support-add").addEventListener("click", function () {
+    supportList.appendChild(supportRow({ type: "card" }));
+  });
+
+  field("support-form").addEventListener("submit", async function (event) {
+    event.preventDefault();
+    var fb = field("support-feedback");
+    var methods = Array.prototype.map.call(supportList.children, function (li) {
+      var m = { type: li.querySelector("select").value };
+      li.querySelectorAll("[data-k]").forEach(function (input) { if (!input.hidden) m[input.getAttribute("data-k")] = input.value.trim(); });
+      return m;
+    }).filter(function (m) { return m.url || m.number || m.type === "bank"; });
+    try {
+      var data = await MW.api("/admin/support", {
+        method: "PUT",
+        json: { enabled: field("support-enabled").checked, title: field("support-title").value, message: field("support-message").value, methods: methods }
+      });
+      fb.className = "feedback feedback-success";
+      fb.textContent = data.support.enabled
+        ? "Saved. The button is live on every page (bottom left)."
+        : "Saved. The button is hidden until you tick “Show the button on the site”.";
+    } catch (error) {
+      fb.className = "feedback feedback-error";
+      fb.textContent = error.message;
+    }
+  });
+  ADMIN.onShow("settings", loadSupport);
 })();

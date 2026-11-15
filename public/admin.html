@@ -492,6 +492,38 @@
           </form>
         </div>
         <div class="panel">
+          <p class="node-label">Settings // heist fund</p>
+          <h2>Support button</h2>
+          <p class="muted">A "buy me a coffee"-style loot-bag button on every page. Add the ways people can send you money, then switch it on.</p>
+          <form id="support-form" novalidate>
+            <div class="check-row"><input type="checkbox" id="support-enabled"><label for="support-enabled">Show the button on the site</label></div>
+            <div class="form-row">
+              <label for="support-title">Button text</label>
+              <input type="text" id="support-title" maxlength="60" placeholder="Fund the heist">
+            </div>
+            <div class="form-row">
+              <label for="support-message">Message in the panel</label>
+              <textarea id="support-message" rows="3" maxlength="400"></textarea>
+            </div>
+            <ol id="support-methods" class="support-methods"></ol>
+            <div class="hero-actions">
+              <button type="button" class="btn btn-ghost btn-small" id="support-add">＋ Add a way to pay</button>
+              <button type="submit">Save support button</button>
+            </div>
+            <p class="feedback" id="support-feedback" aria-live="polite"></p>
+            <details class="support-help">
+              <summary>Which services work in Zambia?</summary>
+              <ul>
+                <li><strong>Mobile money</strong> (MTN, Airtel, Zamtel): the simplest. People send straight to your number.</li>
+                <li><strong>Card (Visa / Mastercard)</strong>: create a <em>payment link</em> with a payment company that pays out to you in Zambia (for example Flutterwave, which pays out to mobile money). Paste the link here. Most need ID and some need a registered business.</li>
+                <li><strong>PayPal</strong>: PayPal usually doesn't let Zambian accounts <em>receive</em> money, so only add a PayPal.me link if you've confirmed yours can.</li>
+                <li><strong>Bank transfer</strong>: leave the details empty and visitors will ask for them through the contact form, so your account number isn't public. Or type the details if you're happy for anyone to see them.</li>
+              </ul>
+            </details>
+          </form>
+        </div>
+
+        <div class="panel">
           <p class="node-label">Settings // setup</p>
           <h2>Setup status</h2>
           <p class="muted">Checks the settings on Render. Anything red needs fixing there (Render &rarr; your service &rarr; Environment).</p>

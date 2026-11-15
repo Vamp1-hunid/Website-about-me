@@ -17,7 +17,7 @@ const contactLimiter = rateLimit({
   message: { error: "You've sent a few messages already. Please wait an hour before sending another." }
 });
 
-const TOPICS = { general: "General enquiry", collaboration: "Collaboration", feedback: "Feedback on this site" };
+const TOPICS = { general: "General enquiry", collaboration: "Collaboration", feedback: "Feedback on this site", support: "Supporting your work" };
 const EMAIL_PATTERN = /^[^\s@<>"]{1,64}@[^\s@<>"]+\.[^\s@<>"]{2,}$/;
 
 function clean(value, max) {
