@@ -45,13 +45,14 @@ function cleanText(value) {
 }
 
 // POST /api/account/register  { username, displayName, password }
-router.post("/register", registerLimiter, async function (req, res) {
+router.post("/register", flags.requireFlag("signups"), registerLimiter, async function (req, res) {
   const username = cleanText(req.body.username).toLowerCase();
   const displayName = cleanText(req.body.displayName) || username;
   const password = typeof req.body.password === "string" ? req.body.password : "";
   const email = cleanText(req.body.email).toLowerCase();
   const birth = signup.checkBirthDate(req.body.birthDate);
   const country = signup.checkCountry(req.body.country);
+  const gender = signup.checkGender(req.body.gender);
 
   const problems = [];
   // Under-13s are turned away before anything else is checked, and nothing about them is stored.
@@ -85,9 +86,9 @@ router.post("/register", registerLimiter, async function (req, res) {
 
   const hash = await bcrypt.hash(password, 12);
   const { rows } = await db.query(
-    `INSERT INTO users (username, display_name, password_hash, role, email, terms_accepted_at, terms_version, birth_date, country, marketing_opt_in)
-     VALUES ($1, $2, $3, 'member', $4, NOW(), $5, $6, $7, $8) RETURNING *`,
-    [username, displayName, hash, email, signup.TERMS_VERSION, birth.date, country, req.body.marketing === true]
+    `INSERT INTO users (username, display_name, password_hash, role, email, terms_accepted_at, terms_version, birth_date, country, marketing_opt_in, gender)
+     VALUES ($1, $2, $3, 'member', $4, NOW(), $5, $6, $7, $8, $9) RETURNING *`,
+    [username, displayName, hash, email, signup.TERMS_VERSION, birth.date, country, req.body.marketing === true, gender]
   );
 
   await users.welcome(rows[0].id, "member");
@@ -95,6 +96,105 @@ router.post("/register", registerLimiter, async function (req, res) {
   await startSession(req, rows[0]);
   res.status(201).json({ user: req.session.user });
 });
+
+/* ---------- Organisation / group accounts ---------- */
+
+const ORG_TYPES = { publisher: "Publisher", studio: "Studio", school: "School or university", band: "Band or music group",
+  collective: "Creative collective", ngo: "Non-profit / NGO", company: "Company or brand", church: "Church or faith group", other: "Other group" };
+
+function cleanTeam(value) {
+  const list = Array.isArray(value) ? value : [];
+  return list.slice(0, 30).map(function (m) {
+    return {
+      name: cleanText(m && m.name).slice(0, 80),
+      role: cleanText(m && m.role).slice(0, 80),
+      username: cleanText(m && m.username).toLowerCase().replace(/^@/, "").slice(0, 30)
+    };
+  }).filter(function (m) { return m.name; });
+}
+
+function orgProblems(body) {
+  const problems = [];
+  const org = {
+    name: cleanText(body.orgName).slice(0, 100),
+    type: Object.prototype.hasOwnProperty.call(ORG_TYPES, body.orgType) ? body.orgType : null,
+    website: cleanText(body.website).slice(0, 300),
+    contactName: cleanText(body.contactName).slice(0, 80),
+    contactRole: cleanText(body.contactRole).slice(0, 80),
+    team: cleanTeam(body.team)
+  };
+  if (org.name.length < 2) problems.push({ field: "orgName", message: "Enter your organisation or group's name." });
+  if (!org.type) problems.push({ field: "orgType", message: "Choose what kind of organisation it is." });
+  if (org.website && !/^https?:\/\/[^\s]+\.[^\s]+$/i.test(org.website)) problems.push({ field: "website", message: "Use a full web address starting with https://" });
+  if (org.contactName.length < 2) problems.push({ field: "contactName", message: "Enter the name of the person responsible for this account." });
+  return { org: org, problems: problems };
+}
+
+// POST /api/account/register-org  { username, email, password, birthDate (of the contact person), country,
+//                                   orgName, orgType, website, contactName, contactRole, team[], acceptTerms, confirmAuthority }
+// One shared account for a group. The person signing up must be 18+ and allowed to act for the organisation.
+router.post("/register-org", flags.requireFlag("signups"), registerLimiter, async function (req, res) {
+  const username = cleanText(req.body.username).toLowerCase();
+  const password = typeof req.body.password === "string" ? req.body.password : "";
+  const email = cleanText(req.body.email).toLowerCase();
+  const birth = signup.checkBirthDate(req.body.birthDate);
+  const country = signup.checkCountry(req.body.country);
+  const { org, problems } = orgProblems(req.body);
+
+  if (birth.problem) problems.push({ field: "birthDate", message: birth.problem });
+  else if (birth.age < signup.ADULT_AGE) problems.push({ field: "birthDate", message: "The person running an organisation account must be 18 or older." });
+  if (!country) problems.push({ field: "country", message: "Choose the country the organisation is based in." });
+  if (!email || email.length > 254 || !EMAIL_PATTERN.test(email)) {
+    problems.push({ field: "email", message: "Enter the organisation's contact email." });
+  } else if ((await db.query("SELECT 1 FROM users WHERE lower(email) = $1", [email])).rows.length) {
+    problems.push({ field: "email", message: "That email already has an account." });
+  }
+  const usernameIssue = await users.usernameProblem(username);
+  if (usernameIssue) problems.push({ field: "username", message: usernameIssue });
+  const passwordIssue = signup.passwordProblem(password, username);
+  if (passwordIssue) problems.push({ field: "password", message: passwordIssue });
+  if (req.body.acceptTerms !== true) problems.push({ field: "acceptTerms", message: "Please accept the Terms of Service and Privacy Policy." });
+  if (req.body.confirmAuthority !== true) problems.push({ field: "confirmAuthority", message: "Please confirm you're allowed to create this account for the organisation." });
+  if (problems.length) return res.status(400).json({ error: "Please fix the highlighted fields.", problems: problems });
+
+  const hash = await bcrypt.hash(password, 12);
+  const { rows } = await db.query(
+    `INSERT INTO users (username, display_name, password_hash, role, email, terms_accepted_at, terms_version, birth_date, country,
+                        marketing_opt_in, account_type)
+     VALUES ($1, $2, $3, 'member', $4, NOW(), $5, $6, $7, $8, 'organisation') RETURNING *`,
+    [username, org.name.slice(0, 60), hash, email, signup.TERMS_VERSION, birth.date, country, req.body.marketing === true]);
+  await db.query(
+    "INSERT INTO organisations (user_id, org_name, org_type, website, contact_name, contact_role, team) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    [rows[0].id, org.name, org.type, org.website, org.contactName, org.contactRole, JSON.stringify(org.team)]);
+  await users.welcome(rows[0].id, "member");
+  sendVerification(req, rows[0]).catch(function () { /* optional */ });
+  await startSession(req, rows[0]);
+  res.status(201).json({ user: req.session.user });
+});
+
+// GET /api/account/organisation  -> my organisation details (organisation accounts only)
+router.get("/organisation", requireLogin, async function (req, res) {
+  const { rows } = await db.query("SELECT * FROM organisations WHERE user_id = $1", [req.session.user.id]);
+  if (!rows.length) return res.status(404).json({ error: "This isn't an organisation account." });
+  const o = rows[0];
+  res.json({ organisation: { orgName: o.org_name, orgType: o.org_type, website: o.website, contactName: o.contact_name,
+    contactRole: o.contact_role, team: o.team }, types: ORG_TYPES });
+});
+
+// PUT /api/account/organisation  -> update the organisation details and team list
+router.put("/organisation", requireLogin, async function (req, res) {
+  const exists = await db.query("SELECT 1 FROM organisations WHERE user_id = $1", [req.session.user.id]);
+  if (!exists.rows.length) return res.status(404).json({ error: "This isn't an organisation account." });
+  const { org, problems } = orgProblems(req.body);
+  if (problems.length) return res.status(400).json({ error: "Please fix the highlighted fields.", problems: problems });
+  await db.query(
+    "UPDATE organisations SET org_name = $1, org_type = $2, website = $3, contact_name = $4, contact_role = $5, team = $6 WHERE user_id = $7",
+    [org.name, org.type, org.website, org.contactName, org.contactRole, JSON.stringify(org.team), req.session.user.id]);
+  res.json({ ok: true });
+});
+
+// GET /api/account/org-types
+router.get("/org-types", function (req, res) { res.json({ types: ORG_TYPES }); });
 
 // GET /api/account/username-available?u=name  -> { available, message }  (checked live while typing)
 router.get("/username-available", async function (req, res) {
@@ -104,7 +204,7 @@ router.get("/username-available", async function (req, res) {
 
 // POST /api/account/google-complete { acceptTerms, username }
 // A first-time Google sign-in waits here until the person has accepted the terms.
-router.post("/google-complete", registerLimiter, async function (req, res) {
+router.post("/google-complete", flags.requireFlag("signups"), registerLimiter, async function (req, res) {
   const pending = req.session.pendingGoogle;
   if (!pending) return res.status(400).json({ error: "Your Google sign-in expired. Please press Continue with Google again." });
   if (req.body.acceptTerms !== true) {
@@ -127,9 +227,9 @@ router.post("/google-complete", registerLimiter, async function (req, res) {
   if (already.rows.length) return res.status(409).json({ error: "This Google account already has an account. Log in instead." });
   const { rows } = await db.query(
     `INSERT INTO users (username, display_name, password_hash, role, google_sub, email, terms_accepted_at, terms_version,
-                        birth_date, country, marketing_opt_in, email_verified_at)
-     VALUES ($1, $2, NULL, 'member', $3, $4, NOW(), $5, $6, $7, $8, NOW()) RETURNING *`,
-    [username, pending.displayName, pending.sub, pending.email, signup.TERMS_VERSION, birth.date, country, req.body.marketing === true]
+                        birth_date, country, marketing_opt_in, email_verified_at, gender)
+     VALUES ($1, $2, NULL, 'member', $3, $4, NOW(), $5, $6, $7, $8, NOW(), $9) RETURNING *`,
+    [username, pending.displayName, pending.sub, pending.email, signup.TERMS_VERSION, birth.date, country, req.body.marketing === true, signup.checkGender(req.body.gender)]
   );
   const next = pending.next || "/hub";
   delete req.session.pendingGoogle;
@@ -204,7 +304,7 @@ router.get("/me", async function (req, res) {
   let extra = {};
   if (req.session.user) {
     const { rows } = await db.query(
-      "SELECT show_online, streak_count, streak_best, is_beta, birth_date, country, email, email_verified_at, chat_privacy FROM users WHERE id = $1",
+      "SELECT show_online, streak_count, streak_best, is_beta, birth_date, country, email, email_verified_at, chat_privacy, gender, account_type FROM users WHERE id = $1",
       [req.session.user.id]
     );
     if (rows[0]) {
@@ -212,14 +312,17 @@ router.get("/me", async function (req, res) {
         account: {
           hasBirthDate: Boolean(rows[0].birth_date), country: rows[0].country || null,
           teen: rows[0].birth_date ? signup.isMinor(rows[0].birth_date) : null,
-          hasEmail: Boolean(rows[0].email), emailVerified: Boolean(rows[0].email_verified_at), chatPrivacy: rows[0].chat_privacy
+          hasEmail: Boolean(rows[0].email), emailVerified: Boolean(rows[0].email_verified_at), chatPrivacy: rows[0].chat_privacy,
+          gender: rows[0].gender || null, accountType: rows[0].account_type
         } };
     }
   }
-  const features = await flags.enabledFor(req.session.user ? Object.assign({}, req.session.user, { is_beta: extra.isBeta }) : null);
+  const flagUser = req.session.user ? Object.assign({}, req.session.user, { is_beta: extra.isBeta }) : null;
+  const features = await flags.enabledFor(flagUser);
+  const featureNotices = await flags.noticesFor(flagUser);
   res.json(Object.assign({
     user: req.session.user || null, creator: creator, googleEnabled: googleEnabled(), mailEnabled: mailEnabled(),
-    features: features
+    features: features, featureNotices: featureNotices
   }, extra));
 });
 
@@ -282,6 +385,9 @@ router.put("/details", requireLogin, async function (req, res) {
     const country = signup.checkCountry(req.body.country);
     if (!country) problems.push({ field: "country", message: "Choose a country." });
     else { values.push(country); sets.push("country = $" + values.length); }
+  }
+  if (req.body.gender !== undefined) {
+    values.push(signup.checkGender(req.body.gender)); sets.push("gender = $" + values.length);
   }
   if (typeof req.body.marketing === "boolean") { values.push(req.body.marketing); sets.push("marketing_opt_in = $" + values.length); }
   if (["everyone", "nobody"].includes(req.body.chatPrivacy)) { values.push(req.body.chatPrivacy); sets.push("chat_privacy = $" + values.length); }

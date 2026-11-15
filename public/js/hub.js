@@ -13,7 +13,8 @@
   var el = MW.el;
 
   var KIND_NAMES = { manga: "Manga", comics: "Comics", animation: "Animation", stories: "Stories & writing", illustration: "Art & illustration", music: "Music",
-    comedy: "Comedy", film: "Live action film", series: "Series", photography: "Photography", memes: "Memes", poetry: "Poetry" };
+    comedy: "Comedy", film: "Live action film", series: "Series", photography: "Photography", memes: "Memes", poetry: "Poetry",
+    novels: "Novels", storybooks: "Storybooks", education: "Educational books", songwriting: "Songwriting" };
   MW.kindName = function (k) { return KIND_NAMES[k] || k; };
 
   MW.creatorCard = function (c) {
@@ -26,6 +27,7 @@
     var h3 = el("h3", {}, c.name);
     h3.appendChild(MW.onlineDot(c.online));
     body.appendChild(h3);
+    if (c.badges && c.badges.length) body.appendChild(MW.badges(c.badges.slice(0, 2)));
     body.appendChild(el("p", { class: "mono muted" }, "@" + c.handle + " · " + c.followers + (c.followers === 1 ? " follower" : " followers")));
     if (c.tagline) body.appendChild(el("p", {}, c.tagline));
     if (c.kinds && c.kinds.length) {

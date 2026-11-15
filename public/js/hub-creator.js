@@ -25,6 +25,15 @@
     var c = data.creator;
     document.title = c.name + " (@" + c.handle + ") | Chapterhive";
     box.textContent = "";
+    // Premium creators can style their page: a theme, an accent colour and a wallpaper behind everything.
+    if (c.pageStyle) {
+      document.body.setAttribute("data-page-theme", c.pageStyle.theme || "hive");
+      if (c.pageStyle.accent) document.body.style.setProperty("--page-accent", c.pageStyle.accent);
+      if (c.pageStyle.wallpaperUrl) {
+        document.body.classList.add("has-wallpaper");
+        document.body.style.setProperty("--page-wallpaper", "url(\"" + c.pageStyle.wallpaperUrl.replace(/["\\]/g, "") + "\")");
+      }
+    }
     var banner = el("div", { class: "profile-banner" });
     if (c.bannerUrl) banner.style.backgroundImage = "url(\"" + c.bannerUrl.replace(/["\\]/g, "") + "\")";
     box.appendChild(banner);
@@ -35,6 +44,12 @@
     var h1 = el("h1", {}, c.name);
     h1.appendChild(MW.onlineDot(c.online));
     names.appendChild(h1);
+    if (c.premium) names.appendChild(el("span", { class: "premium-badge" }, "✦ Premium"));
+    if (c.badges && c.badges.length) {
+      var bl = el("p");
+      bl.appendChild(MW.badges(c.badges));
+      names.appendChild(bl);
+    }
     names.appendChild(el("p", { class: "mono muted" }, "@" + c.handle + (c.isBanditos ? " · Chapterhive founder" : "")));
     top.appendChild(names);
     var actions = el("div", { class: "profile-actions" });
@@ -62,6 +77,31 @@
       var chips = el("div", { class: "kind-chips" });
       c.kinds.forEach(function (k) { chips.appendChild(el("span", { class: "kind-chip" }, MW.kindName(k))); });
       body.appendChild(chips);
+    }
+    if (c.organisation) {
+      var TYPES = { publisher: "Publisher", studio: "Studio", school: "School or university", band: "Band or music group",
+        collective: "Creative collective", ngo: "Non-profit / NGO", company: "Company or brand", church: "Church or faith group", other: "Group" };
+      var orgLine = el("p", { class: "org-line" });
+      orgLine.appendChild(el("span", { class: "org-badge" }, "🏛 " + (TYPES[c.organisation.type] || "Organisation")));
+      if (c.organisation.website) {
+        orgLine.appendChild(document.createTextNode(" "));
+        orgLine.appendChild(el("a", { href: c.organisation.website, target: "_blank", rel: "noopener nofollow ugc" }, c.organisation.website.replace(/^https?:\/\//, "")));
+      }
+      body.appendChild(orgLine);
+      if (c.organisation.team.length) {
+        var team = el("div", { class: "org-team" });
+        team.appendChild(el("h3", {}, "The team"));
+        var ul = el("ul");
+        c.organisation.team.forEach(function (m) {
+          var li = el("li");
+          if (m.username) li.appendChild(el("a", { href: "/u/" + encodeURIComponent(m.username) }, m.name));
+          else li.appendChild(el("strong", {}, m.name));
+          if (m.role) li.appendChild(el("span", { class: "muted" }, " · " + m.role));
+          ul.appendChild(li);
+        });
+        team.appendChild(ul);
+        body.appendChild(team);
+      }
     }
     if (c.bio) {
       var prose = el("div", { class: "prose work-body" });

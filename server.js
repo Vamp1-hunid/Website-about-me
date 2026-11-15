@@ -88,6 +88,7 @@ api.use("/hub", require("./src/routes/hub"));
 api.use("/collabs", require("./src/routes/collabs"));
 api.use("/notifications", require("./src/routes/notifications"));
 api.use("/chat", require("./src/routes/chat"));
+api.use("/premium", require("./src/routes/premium"));
 api.use("/help", require("./src/routes/help"));
 api.use(require("./src/routes/business"));
 api.use(require("./src/routes/search"));
@@ -265,6 +266,7 @@ migrate()
       console.log("Website running on http://localhost:" + PORT);
     });
     require("./src/publishing").start();
+    require("./src/rankings").start();
   })
   .catch(function (error) {
     console.error("Could not prepare the database:", error);

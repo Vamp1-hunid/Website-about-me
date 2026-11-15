@@ -144,6 +144,11 @@
     return problems;
   }
 
+  function genderValue() {
+    var picked = form.querySelector("input[name='gender']:checked");
+    return picked ? picked.value : "unspecified";
+  }
+
   function ageOf(isoDate) {
     var p = isoDate.split("-").map(Number);
     var now = new Date();
@@ -230,7 +235,7 @@
         });
       } else if (googlePending) {
         var done = await MW.api("/account/google-complete", { method: "POST", json: { username: value("username"), acceptTerms: !termsStep || termsStep.hidden,
-          birthDate: value("birthDate"), country: value("country"), marketing: document.getElementById("marketing").checked } });
+          birthDate: value("birthDate"), country: value("country"), marketing: document.getElementById("marketing").checked, gender: genderValue() } });
         window.location.href = MW.safeNext(done.next, next);
         return;
       } else {
@@ -238,7 +243,7 @@
           method: "POST",
           json: { username: value("username"), displayName: value("displayName"), email: value("email"), password: value("password"),
             acceptTerms: !termsStep || termsStep.hidden, birthDate: value("birthDate"), country: value("country"),
-            marketing: document.getElementById("marketing").checked }
+            marketing: document.getElementById("marketing").checked, gender: genderValue() }
         });
       }
       window.location.href = next;

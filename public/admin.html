@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Caveat:wght@500;700&family=Chakra+Petch:wght@400;600;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=12">
+  <link rel="stylesheet" href="/css/styles.css?v=14">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -83,7 +83,7 @@
         <button role="tab" type="button" data-tab="users" aria-selected="false">Manage users</button>
         <button role="tab" type="button" data-tab="inbox" aria-selected="false">Inbox <span class="tab-badge" id="inbox-badge" hidden></span></button>
         <button role="tab" type="button" data-tab="announce" aria-selected="false">Announcements</button>
-        <button role="tab" type="button" data-tab="features" aria-selected="false">Features</button>
+        <button role="tab" type="button" data-tab="features" aria-selected="false">Site features</button>
         <button role="tab" type="button" data-tab="settings" aria-selected="false">Settings</button>
         <button role="tab" type="button" data-tab="chapterhive" aria-selected="false" data-admin-only>Chapterhive <span class="tab-badge" id="mod-badge" hidden></span></button>
         <button role="tab" type="button" data-tab="profile" aria-selected="false" data-studio-only hidden>Profile</button>
@@ -138,7 +138,17 @@
                     <option value="anime">Anime &amp; animation</option>
                     <option value="film">Live action film</option>
                     <option value="series">Series episode</option>
+                    <option value="trailer">Trailer or teaser</option>
                     <option value="meme">Meme</option>
+                  </optgroup>
+                  <optgroup label="Books">
+                    <option value="novel">Novel or novella</option>
+                    <option value="storybook">Storybook / picture book</option>
+                    <option value="educational">Educational book or guide</option>
+                  </optgroup>
+                  <optgroup label="Music &amp; poetry">
+                    <option value="song">Song, lyrics or music</option>
+                    <option value="poetry">Poetry</option>
                   </optgroup>
                   <optgroup label="Words">
                     <option value="writing">Story or writing</option>
@@ -188,6 +198,32 @@
             <div class="form-row">
               <label for="tags">Tags <span class="muted">(comma separated, e.g. aldenmere, sketch)</span></label>
               <input type="text" id="tags" name="tags" maxlength="400">
+            </div>
+            <div class="form-row">
+              <span class="label">Genres <span class="muted">(up to 3, helps people find it when browsing)</span></span>
+              <div class="genre-picks" id="genre-picks">
+                <label><input type="checkbox" value="fantasy"><span>Fantasy</span></label>
+                <label><input type="checkbox" value="scifi"><span>Sci-fi</span></label>
+                <label><input type="checkbox" value="horror"><span>Horror</span></label>
+                <label><input type="checkbox" value="mystery"><span>Mystery</span></label>
+                <label><input type="checkbox" value="romance"><span>Romance</span></label>
+                <label><input type="checkbox" value="comedy"><span>Comedy</span></label>
+                <label><input type="checkbox" value="drama"><span>Drama</span></label>
+                <label><input type="checkbox" value="action"><span>Action</span></label>
+                <label><input type="checkbox" value="adventure"><span>Adventure</span></label>
+                <label><input type="checkbox" value="thriller"><span>Thriller</span></label>
+                <label><input type="checkbox" value="slice-of-life"><span>Slice of life</span></label>
+                <label><input type="checkbox" value="historical"><span>Historical</span></label>
+                <label><input type="checkbox" value="children"><span>Children's</span></label>
+                <label><input type="checkbox" value="young-adult"><span>Young adult</span></label>
+                <label><input type="checkbox" value="education"><span>Education</span></label>
+                <label><input type="checkbox" value="science"><span>Science</span></label>
+                <label><input type="checkbox" value="self-help"><span>Self-help</span></label>
+                <label><input type="checkbox" value="faith"><span>Faith</span></label>
+                <label><input type="checkbox" value="poetry"><span>Poetry</span></label>
+                <label><input type="checkbox" value="music"><span>Music</span></label>
+              </div>
+              <p class="error" id="genres-error"></p>
             </div>
 
             <div class="form-row">
@@ -567,9 +603,9 @@
 
       <!-- ===== Features (version control: test new things before everyone gets them) ===== -->
       <section class="panel dash-panel" role="tabpanel" data-panel="features" aria-label="Features" hidden>
-        <p class="node-label">Lab // feature switches</p>
-        <h2>Features</h2>
-        <p class="muted">Try new features live before ordinary users see them. <strong>Only me</strong>: just you. <strong>Beta testers</strong>: you plus members you mark as testers in Manage users. <strong>Everyone</strong>: all visitors. <strong>Off</strong>: nobody. Changes take effect within about 15 seconds.</p>
+        <p class="node-label">Control room // site features</p>
+        <h2>Site features</h2>
+        <p class="muted">Switch any part of the site on or off. <strong>Live</strong>: everyone can use it. <strong>Queued</strong>: hidden from the public while you (and any beta testers you mark in Manage users) try it out; give it a launch time and it goes live for everyone automatically. <strong>Suspended</strong>: switched off for everyone, for example to pause activity. Changes take effect within about 15 seconds.</p>
         <div id="flag-list"></div>
       </section>
 

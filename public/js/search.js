@@ -16,7 +16,7 @@
   var type = new URLSearchParams(window.location.search).get("type") || "all";
   var FILTERS = MW.isHub
     ? [["all", "Everything"], ["accounts", "Accounts"], ["posts", "Posts"], ["episodes", "Episodes & series"], ["films", "Films"],
-       ["art", "Art"], ["writing", "Writing"], ["stories", "Stories"], ["characters", "Characters"], ["news", "News"]]
+       ["art", "Art"], ["writing", "Writing"], ["books", "Books"], ["music", "Music"], ["stories", "Stories"], ["characters", "Characters"], ["news", "News"]]
     : [["all", "Everything"], ["posts", "Works"], ["episodes", "Episodes"], ["art", "Art"], ["writing", "Writing"],
        ["stories", "Stories"], ["characters", "Characters"], ["products", "Products"]];
   if (!FILTERS.some(function (f) { return f[0] === type; })) type = "all";
@@ -109,7 +109,7 @@
         c.appendChild(cg);
       }
       if (data.works.length) {
-        var w = section(type === "episodes" ? "Episodes & series" : type === "films" ? "Films" : type === "art" ? "Art" : type === "writing" ? "Writing" : "Posts", "Results // posts");
+        var w = section(type === "episodes" ? "Episodes & series" : type === "films" ? "Films" : type === "art" ? "Art" : type === "writing" ? "Writing" : type === "books" ? "Books" : type === "music" ? "Songs & music" : "Posts", "Results // posts");
         var wg = el("div", { class: "works-grid" });
         MW.renderWorks(wg, data.works);
         w.appendChild(wg);

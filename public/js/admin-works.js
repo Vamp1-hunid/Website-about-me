@@ -2,6 +2,15 @@
 // Dashboard: the Compose tab (write and upload a work, with a live preview) and the Works tab.
 
 (function () {
+  // Genre checkboxes on the compose form (up to three).
+  function genreBoxes() { return Array.prototype.slice.call(document.querySelectorAll("#genre-picks input[type='checkbox']")); }
+  function getGenres() { return genreBoxes().filter(function (b) { return b.checked; }).map(function (b) { return b.value; }); }
+  function setGenres(list) { genreBoxes().forEach(function (b) { b.checked = list.indexOf(b.value) !== -1; }); }
+  document.addEventListener("change", function (event) {
+    if (!event.target.closest || !event.target.closest("#genre-picks")) return;
+    if (getGenres().length > 3) { event.target.checked = false; if (window.MW) window.MW.toast("Pick up to 3 genres.", true); }
+  });
+
   "use strict";
 
   var MW = window.MW;
@@ -191,6 +200,7 @@
       field("seriesOrder").value = post.seriesOrder === null || post.seriesOrder === undefined ? "" : post.seriesOrder;
       field("summary").value = post.summary;
       field("tags").value = (post.tags || []).join(", ");
+      setGenres(post.genres || []);
       field("font").value = post.font || "theme";
       body.value = post.body;
       media.load(post.media);
@@ -295,6 +305,7 @@
       seriesOrder: field("seriesOrder").value,
       summary: field("summary").value,
       tags: field("tags").value,
+      genres: getGenres(),
       font: field("font").value,
       body: body.value,
       published: vis.published,

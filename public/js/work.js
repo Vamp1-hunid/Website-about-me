@@ -173,6 +173,7 @@
       var share = el("button", { class: "btn btn-ghost btn-small", type: "button" }, "💬 Share in chat");
       share.addEventListener("click", function () { openShare(info); });
       actions.appendChild(share);
+      if (window.location.hash === "#share") setTimeout(function () { openShare(info); share.scrollIntoView({ block: "center" }); }, 50);
     }
     if (post.isMine) {
       var editHref = !MW.isHub && user && user.role === "admin" ? "/admin?edit=" + post.id : "/hub/studio?edit=" + post.id;
@@ -560,7 +561,9 @@
     }
 
     var form = document.getElementById("comment-form");
-    if (user) {
+    if (user && !MW.feature("comments")) {
+      list.appendChild(el("li", { class: "muted" }, "Comments are paused for now."));
+    } else if (user) {
       form.hidden = false;
       form.addEventListener("submit", async function (event) {
         event.preventDefault();

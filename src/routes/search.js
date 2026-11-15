@@ -10,6 +10,7 @@ const { VISIBLE, SELECT_POST, toPost, BANDITOS_ONLY } = require("./posts");
 const { CHAR_VISIBLE } = require("./stories");
 
 const router = express.Router();
+const flagsLib = require("../flags");
 
 const searchLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -27,14 +28,16 @@ const TYPES = {
   episodes: ["series", "anime"],
   films: ["film"],
   art: ["art", "story-art", "comedy", "meme"],
-  writing: ["writing", "thoughts"],
+  writing: ["writing", "thoughts", "novel", "poetry"],
+  books: ["novel", "storybook", "educational"],
+  music: ["song"],
   stories: [],
   characters: [],
   news: [],
   products: []
 };
 
-router.get("/search", searchLimiter, async function (req, res) {
+router.get("/search", flagsLib.requireFlag("search", { adminAlways: true }), searchLimiter, async function (req, res) {
   const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 80) : "";
   const hub = req.query.site === "hub";
   const type = Object.prototype.hasOwnProperty.call(TYPES, req.query.type) ? req.query.type : "all";
@@ -101,7 +104,7 @@ router.get("/search", searchLimiter, async function (req, res) {
         );
       }
     }
-    if (want("news")) {
+    if (want("news") && await flagsLib.isOn("updates", req)) {
       news = await db.query(
         `${SELECT_POST} WHERE ${VISIBLE} AND p.category = 'news' AND (p.title ILIKE $1 OR p.summary ILIKE $1 OR p.body ILIKE $1)
           ORDER BY p.created_at DESC LIMIT 12`,
@@ -189,7 +192,7 @@ async function readSupport() {
 // GET /api/support -> what the button shows (nothing at all while it's switched off)
 router.get("/support", async function (req, res) {
   const support = await readSupport();
-  if (!support.enabled || !support.methods.length) return res.json({ enabled: false });
+  if (!support.enabled || !support.methods.length || !(await flagsLib.isOn("donations", req))) return res.json({ enabled: false });
   res.json(support);
 });
 

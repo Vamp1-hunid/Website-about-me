@@ -15,9 +15,11 @@ const rateLimit = require("express-rate-limit");
 const db = require("../db");
 const storage = require("../storage");
 const { requireLogin, requireCreator } = require("../auth");
+const { requireFlag } = require("../flags");
 const { mailEnabled, sendMail } = require("../mail");
 
 const router = express.Router();
+router.use(requireFlag("collabs", { adminAlways: true }));
 
 // The drop-down list. "other" lets the creator describe it in their own words.
 const ROLES = [

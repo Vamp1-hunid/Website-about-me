@@ -80,6 +80,7 @@
           MW.mailEnabled = Boolean(data.mailEnabled);
           MW.creator = data.creator || null;
           MW.features = data.features || [];
+          MW.featureNotices = data.featureNotices || {};
           MW.account = data;
           return data.user;
         })
@@ -91,6 +92,28 @@
   // Is a feature switched on for this visitor? (Admin → Features decides who sees what.)
   MW.features = [];
   MW.feature = function (key) { return MW.features.indexOf(key) !== -1; };
+  MW.featureNotices = {};
+  // A feature that's off but shown with a friendly notice ("Coming soon" / "Under maintenance"), or null.
+  MW.featureNotice = function (key) {
+    if (MW.feature(key)) return null;
+    var n = MW.featureNotices[key];
+    if (!n) return null;
+    return {
+      kind: n.notice,
+      badge: n.notice === "maintenance" ? "Under maintenance" : "Coming soon",
+      text: n.notice === "maintenance"
+        ? n.label + " is under maintenance right now. We're working on it, please check back soon."
+        : n.label + " is coming soon" + (n.launchAt ? ": it opens " + MW.formatDateTime(n.launchAt) : "") + ". Stay tuned!"
+    };
+  };
+  // Turns a link for a switched-off feature into a "Coming soon" / "Under maintenance" one.
+  MW.markNotice = function (link, notice) {
+    if (!link || link.classList.contains("is-notice")) return;
+    link.classList.add("is-notice", "notice-" + notice.kind);
+    link.setAttribute("aria-disabled", "true");
+    link.appendChild(MW.el("span", { class: "notice-badge" }, notice.badge));
+    link.addEventListener("click", function (event) { event.preventDefault(); MW.toast(notice.text); });
+  };
 
   // A small green dot for people who are online (and haven't hidden it).
   MW.onlineDot = function (online) {
@@ -128,7 +151,8 @@
 
   MW.categoryName = function (category) {
     return { "story-art": "Story art", anime: "Anime works", writing: "Writing", updates: "Update", news: "News",
-      art: "Art", comedy: "Comedy", film: "Live action film", series: "Series", meme: "Meme", thoughts: "Thoughts", poll: "Poll" }[category] || category;
+      art: "Art", comedy: "Comedy", film: "Live action film", series: "Series", meme: "Meme", thoughts: "Thoughts", poll: "Poll",
+      novel: "Novel", storybook: "Storybook", educational: "Educational", poetry: "Poetry", song: "Song & music", trailer: "Trailer" }[category] || category;
   };
 
   // "2026-11-20T15:00:00Z" -> "20 Nov 2026, 17:00" (in the visitor's own time zone)
@@ -263,6 +287,11 @@
     }
 
     // Chat: a speech-bubble link with the number of unread conversations.
+    if (MW.isHub && MW.featureNotice && MW.featureNotice("chat")) {
+      var soonChat = el("a", { class: "btn btn-ghost btn-small chat-link-btn", href: "/hub/chat", title: "Chat" }, "💬");
+      soonChat.addEventListener("click", function (event) { event.preventDefault(); MW.toast(MW.featureNotice("chat").text); });
+      area.appendChild(soonChat);
+    }
     if (MW.isHub && MW.feature && MW.feature("chat")) {
       var chatLink = el("a", { class: "btn btn-ghost btn-small chat-link-btn", href: "/hub/chat", title: "Chat", "aria-label": "Chat" }, "💬");
       area.appendChild(chatLink);
@@ -328,6 +357,16 @@
     container.hidden = !links.length;
   };
 
+  // Top-creator badges (👑 #1 on Chapterhive, 📚 Top 5 in Books ...). compact: icons only, label on hover.
+  MW.badges = function (list, compact) {
+    var box = el("span", { class: "rank-badges" + (compact ? " is-compact" : "") });
+    (list || []).forEach(function (b) {
+      var s = el("span", { class: "rank-badge tier-" + b.tier, title: b.label }, compact ? b.icon : b.icon + " " + b.label);
+      box.appendChild(s);
+    });
+    return box;
+  };
+
   // A "create an account" box shown wherever a visitor hits something reserved for members.
   MW.guestGate = function (message) {
     var box = el("div", { class: "guest-gate", role: "note" });
@@ -338,6 +377,27 @@
     box.appendChild(actions);
     return box;
   };
+
+  // Pages that belong to a switchable feature. While it's off, the page shows a friendly notice instead.
+  var PAGE_FEATURES = { "/hub/chat": "chat", "/hub/collabs": "collabs", "/hub/premium": "premium", "/hub/sponsor": "sponsor_page",
+    "/hub/apply": "creator_applications", "/hub/search": "search", "/search": "search", "/hub/feed": "follows", "/hub/news": "updates", "/hub/top": "rankings" };
+  function gatePage() {
+    var path = window.location.pathname.replace(/\/$/, "");
+    var key = PAGE_FEATURES[path] || (path.indexOf("/hub/collabs/") === 0 ? "collabs" : null);
+    if (!key || MW.feature(key)) return;
+    var main = document.getElementById("main");
+    if (!main) return;
+    var notice = MW.featureNotice(key);
+    var panel = el("section", { class: "panel feature-notice notice-" + (notice ? notice.kind : "off") });
+    panel.appendChild(el("p", { class: "feature-notice-icon", "aria-hidden": "true" }, notice && notice.kind === "maintenance" ? "🛠️" : notice ? "🐝" : "🔒"));
+    panel.appendChild(el("h1", {}, notice ? notice.badge : "Not available right now"));
+    panel.appendChild(el("p", { class: "lead" }, notice ? notice.text : "This part of the site is switched off for now. Please check back later."));
+    var back = el("p");
+    back.appendChild(el("a", { class: "btn", href: MW.isHub ? "/hub" : "/" }, "Back to the home page"));
+    panel.appendChild(back);
+    main.textContent = "";
+    main.appendChild(panel);
+  }
 
   function buildMenu() {
     var header = document.querySelector(".site-header");
@@ -354,12 +414,12 @@
     menu.appendChild(search);
 
     var groups = MW.isHub ? [
-      ["Chapterhive", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following", true], ["/hub/news", "News & updates"]]],
-      ["Create", [["/hub/collabs", "Collab board", true], ["/hub/collabs#suggest", "Suggestion box", true], ["/hub/apply", "Become a creator", true], ["/legal/content-rules", "Content Rules"]]],
-      ["More", [["/help", "Help & FAQ"], ["/hub/sponsor", "Sponsor & business"], ["/", "God's Banditos"], ["/contact", "Contact"], ["/legal/terms", "Terms"]]]
+      ["Chapterhive", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following", true], ["/hub/news", "News & updates", false, "updates"], ["/hub/top", "Top creators", false, "rankings"]]],
+      ["Create", [["/hub/collabs", "Collab board", true, "collabs"], ["/hub/collabs#suggest", "Suggestion box", true, "suggestion_box"], ["/hub/apply", "Become a creator", true, "creator_applications"], ["/legal/content-rules", "Content Rules"]]],
+      ["More", [["/help", "Help & FAQ"], ["/hub/premium", "Premium", false, "premium"], ["/hub/sponsor", "Sponsor & business", false, "sponsor_page"], ["/", "God's Banditos"], ["/contact", "Contact"], ["/legal/terms", "Terms"]]]
     ] : [
       ["Explore", [["/", "Home"], ["/gallery", "All works"], ["/gallery?category=story-art", "Story art"],
-        ["/gallery?category=anime", "Anime works"], ["/gallery?category=writing", "Writing"], ["/gallery?category=updates", "Updates"]]],
+        ["/gallery?category=anime", "Anime works"], ["/gallery?category=writing", "Writing"], ["/gallery?category=updates", "Updates", false, "updates"]]],
       ["Stories", [["/stories", "All stories"], ["/gallery?section=concept-art", "Concept art"]]],
       ["Studio", [["/products", "More products by us"], ["/creator", "Meet the creator"], ["/contact", "Contact"], ["/help", "Help & FAQ"], ["/hub", "Chapterhive ↗"]]]
     ];
@@ -371,6 +431,7 @@
       group[1].forEach(function (item) {
         var li = el("li");
         if (item[2]) li.setAttribute("data-members", "");
+        if (item[3]) li.setAttribute("data-feature", item[3]);
         li.appendChild(el("a", { href: item[0] }, item[1]));
         ul.appendChild(li);
       });
@@ -389,6 +450,27 @@
 
     MW.me().then(function (user) {
       var ul = account.querySelector("ul");
+      // Switched-off site features (Admin → Site features) disappear from the menu and navigation.
+      // Or, if the admin chose so, they stay visible with a "Coming soon" / "Under maintenance" badge.
+      menu.querySelectorAll("[data-feature]").forEach(function (li) {
+        var key = li.getAttribute("data-feature");
+        if (MW.feature(key)) return;
+        var notice = MW.featureNotice(key);
+        if (notice) MW.markNotice(li.querySelector("a"), notice); else li.remove();
+      });
+      var navFeatures = { collabs: "collabs", apply: "creator_applications", sponsor: "sponsor_page", news: "updates", updates: "updates", feed: "follows", top: "rankings" };
+      Object.keys(navFeatures).forEach(function (nav) {
+        if (!MW.feature(navFeatures[nav])) {
+          var notice = MW.featureNotice(navFeatures[nav]);
+          document.querySelectorAll(".site-nav a[data-nav='" + nav + "']").forEach(function (a) {
+            if (notice) MW.markNotice(a, notice); else a.remove();
+          });
+        }
+      });
+      if (!MW.feature("search") && !MW.featureNotice("search")) {
+        document.querySelectorAll(".header-search, .menu-search").forEach(function (f) { f.hidden = true; });
+      }
+      gatePage();
       // Visitors without an account: members-only links are hidden and replaced by one join prompt.
       if (!user) {
         document.querySelectorAll(".site-nav a[data-nav='feed'], .site-nav a[data-nav='collabs'], .site-nav a[data-nav='apply']")
@@ -418,6 +500,7 @@
       var isCreator = user && (user.role === "admin" || (MW.creator && MW.creator.status === "approved"));
       if (user) items.splice(1, 0, ["/hub/feed", "Following feed"]);
       if (user && MW.feature && MW.feature("chat")) items.splice(1, 0, ["/hub/chat", "Chat"]);
+      else if (user && MW.featureNotice("chat")) items.splice(1, 0, ["/hub/chat", "Chat", "chat"]);
       if (isCreator) {
         items.unshift(["/hub/studio#profile", "Creator profile settings"]);
         items.unshift(["/hub/studio#collabs", "My collab requests"]);
@@ -431,7 +514,9 @@
       }
       items.forEach(function (item) {
         var li = el("li");
-        li.appendChild(el("a", { href: item[0] }, item[1]));
+        var a = el("a", { href: item[0] }, item[1]);
+        li.appendChild(a);
+        if (typeof item[2] === "string" && MW.featureNotice(item[2])) MW.markNotice(a, MW.featureNotice(item[2]));
         ul.appendChild(li);
       });
       if (user && MW.feature("streaks") && MW.account && MW.account.streak) {

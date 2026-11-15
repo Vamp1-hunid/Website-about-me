@@ -364,7 +364,8 @@ UPDATE posts SET notified_at = COALESCE(notified_at, NOW()) WHERE notified_at IS
 ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_category_check;
 ALTER TABLE posts ADD CONSTRAINT posts_category_check CHECK (category IN (
   'story-art', 'anime', 'writing', 'updates', 'news',
-  'art', 'comedy', 'film', 'series', 'meme', 'thoughts', 'poll'));
+  'art', 'comedy', 'film', 'series', 'meme', 'thoughts', 'poll',
+  'novel', 'storybook', 'educational', 'poetry', 'song', 'trailer'));
 
 -- Polls and questionnaires attached to a post (questions, options, when results show).
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS form JSONB;
@@ -457,3 +458,68 @@ CREATE TABLE IF NOT EXISTS chat_blocks (
 );
 ALTER TABLE reports DROP CONSTRAINT IF EXISTS reports_target_type_check;
 ALTER TABLE reports ADD CONSTRAINT reports_target_type_check CHECK (target_type IN ('post', 'comment', 'creator', 'collab', 'message'));
+
+-- v8: account plans (Premium is queued: hidden until the "premium" feature flag is switched on).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS plan VARCHAR(10) NOT NULL DEFAULT 'free';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_until TIMESTAMPTZ;
+DO $$ BEGIN
+  ALTER TABLE users ADD CONSTRAINT users_plan_check CHECK (plan IN ('free', 'premium'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- A premium creator's page style: theme, accent colour and wallpaper picture.
+ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS page_theme VARCHAR(20);
+ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS page_accent VARCHAR(7);
+ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS page_wallpaper_url TEXT;
+ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS page_wallpaper_public_id TEXT;
+-- People who asked to hear when Premium launches.
+CREATE TABLE IF NOT EXISTS premium_waitlist (
+  user_id    INTEGER PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- v8: site features can be scheduled to launch for everyone at a set time,
+-- and are grouped on the admin "Site features" tab.
+ALTER TABLE feature_flags ADD COLUMN IF NOT EXISTS launch_at TIMESTAMPTZ;
+ALTER TABLE feature_flags ADD COLUMN IF NOT EXISTS grp VARCHAR(30) NOT NULL DEFAULT 'Extras';
+
+-- v8: genres for browsing (horror, sci-fi, romance, education ...). A post can have up to three.
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS genres VARCHAR(20)[] NOT NULL DEFAULT '{}';
+CREATE INDEX IF NOT EXISTS posts_genres_idx ON posts USING GIN (genres);
+
+-- v9: what visitors see while a feature isn't live for them: hide it, or show it with a friendly notice.
+ALTER TABLE feature_flags ADD COLUMN IF NOT EXISTS display VARCHAR(12) NOT NULL DEFAULT 'hide';
+DO $$ BEGIN
+  ALTER TABLE feature_flags ADD CONSTRAINT feature_flags_display_check CHECK (display IN ('hide', 'soon', 'maintenance'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- v9: creator rankings. Recalculated regularly from the last 30 days of activity.
+-- scope: 'overall' (top 10 across everything) or a shelf ('books', 'comics', ...) for the top 5 there.
+CREATE TABLE IF NOT EXISTS creator_ranks (
+  user_id     INTEGER     NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  scope       VARCHAR(20) NOT NULL,
+  rank        INTEGER     NOT NULL,
+  score       INTEGER     NOT NULL DEFAULT 0,
+  computed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, scope)
+);
+CREATE INDEX IF NOT EXISTS creator_ranks_scope_idx ON creator_ranks (scope, rank);
+
+-- v10: gender (private, optional "prefer not to say") and organisation accounts.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS gender VARCHAR(12);
+DO $$ BEGIN
+  ALTER TABLE users ADD CONSTRAINT users_gender_check CHECK (gender IS NULL OR gender IN ('male', 'female', 'unspecified'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS account_type VARCHAR(12) NOT NULL DEFAULT 'person';
+DO $$ BEGIN
+  ALTER TABLE users ADD CONSTRAINT users_account_type_check CHECK (account_type IN ('person', 'organisation'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- Organisation / group accounts: one shared account run by a named contact person, with a public team list.
+CREATE TABLE IF NOT EXISTS organisations (
+  user_id      INTEGER PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+  org_name     VARCHAR(100) NOT NULL,
+  org_type     VARCHAR(20)  NOT NULL,
+  website      VARCHAR(300) NOT NULL DEFAULT '',
+  contact_name VARCHAR(80)  NOT NULL,
+  contact_role VARCHAR(80)  NOT NULL DEFAULT '',
+  team         JSONB        NOT NULL DEFAULT '[]',
+  created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);

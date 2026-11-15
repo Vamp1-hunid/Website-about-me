@@ -17,6 +17,9 @@ const rateLimit = require("express-rate-limit");
 const db = require("../db");
 const storage = require("../storage");
 const { requireLogin } = require("../auth");
+const { requireFlag, isOn: isFlagOn } = require("../flags");
+const { planOf } = require("../plans");
+const rankings = require("../rankings");
 const { resolveMedia } = require("../media");
 const { VISIBLE, SELECT_POST, toPost } = require("./posts");
 const { CHAR_VISIBLE } = require("./stories");
@@ -24,7 +27,7 @@ const { CHAR_VISIBLE } = require("./stories");
 const router = express.Router();
 
 const HANDLE_PATTERN = /^[a-z0-9](?:[a-z0-9_-]{1,28}[a-z0-9])$/;
-const KINDS = ["manga", "comics", "animation", "illustration", "stories", "comedy", "film", "series", "photography", "music", "memes", "poetry"];
+const KINDS = ["manga", "comics", "animation", "illustration", "stories", "comedy", "film", "series", "photography", "music", "memes", "poetry", "novels", "storybooks", "education", "songwriting"];
 const RESERVED = ["admin", "hub", "studio", "apply", "feed", "news", "creators", "settings", "chapterhive", "afterframe", "support", "help", "legal", "api"];
 
 const applyLimiter = rateLimit({
@@ -69,14 +72,16 @@ function toCreatorCard(row) {
     works: row.works || 0,
     featured: row.featured,
     isBanditos: row.role === "admin",
-    online: !!row.online
+    online: !!row.online,
+    badges: rankings.badgesFrom(row.ranks)
   };
 }
 
 const CREATOR_SQL = `
-  SELECT cp.*, u.username AS account_username, u.avatar_url, u.role, u.created_at AS joined, u.streak_count,
+  SELECT cp.*, u.username AS account_username, u.plan, u.plan_until, u.avatar_url, u.role, u.created_at AS joined, u.streak_count,
     (u.show_online AND u.last_seen_at > NOW() - INTERVAL '5 minutes') AS online,
     (SELECT COUNT(*) FROM follows f WHERE f.creator_id = cp.user_id)::int AS followers,
+    (SELECT json_agg(json_build_object('scope', cr.scope, 'rank', cr.rank)) FROM creator_ranks cr WHERE cr.user_id = cp.user_id) AS ranks,
     (SELECT COUNT(*) FROM posts p WHERE p.user_id = cp.user_id AND p.category <> 'news' AND ${VISIBLE})::int AS works
   FROM creator_profiles cp JOIN users u ON u.id = cp.user_id`;
 
@@ -89,7 +94,8 @@ router.get("/home", async function (req, res) {
   const latest = await db.query(
     `${SELECT_POST} WHERE ${VISIBLE} AND p.category NOT IN ('news', 'updates') ORDER BY p.created_at DESC LIMIT 12`
   );
-  const news = await db.query(
+  const updatesOn = (req.session.user && req.session.user.role === "admin") || await isFlagOn("updates", req);
+  const news = !updatesOn ? { rows: [] } : await db.query(
     `${SELECT_POST} WHERE ${VISIBLE} AND p.category = 'news' ORDER BY p.created_at DESC LIMIT 6`
   );
   const stats = await db.query(
@@ -159,10 +165,20 @@ router.get("/creators/:handle", async function (req, res) {
     [row.user_id]
   );
   const card = toCreatorCard(row);
+  const premiumOn = await isFlagOn("premium", req);
+  // Organisation / group accounts show what kind of group they are and who's in the team.
+  const orgRow = (await db.query("SELECT org_type, website, team FROM organisations WHERE user_id = $1", [row.user_id])).rows[0];
   res.json({
     creator: Object.assign(card, {
       userId: row.user_id,
       username: row.account_username,
+      organisation: orgRow ? { type: orgRow.org_type, website: orgRow.website, team: orgRow.team || [] } : null,
+      // Premium creators' page style (only shown while the Premium feature is on for this visitor).
+      premium: premiumOn && planOf(row).customPage,
+      pageStyle: premiumOn && (planOf(row).customPage || row.role === "admin") && (row.page_theme || row.page_accent || row.page_wallpaper_url) ? {
+        theme: row.page_theme || "hive", accent: row.page_accent || null,
+        wallpaperUrl: storage.displayUrl(row.page_wallpaper_url, "image") || null
+      } : null,
       bio: row.bio,
       links: parseLinks(row.links),
       bannerUrl: storage.displayUrl(row.banner_url, "image") || null,
@@ -212,8 +228,8 @@ async function followRoute(req, res) {
   }
   res.json({ following: req.method === "POST", followers: count.rows[0].n });
 }
-router.post("/creators/:handle/follow", requireLogin, followRoute);
-router.delete("/creators/:handle/follow", requireLogin, followRoute);
+router.post("/creators/:handle/follow", requireLogin, requireFlag("follows"), followRoute);
+router.delete("/creators/:handle/follow", requireLogin, requireFlag("follows"), followRoute);
 
 // GET /api/hub/feed?page=  (also marks the feed as seen)
 router.get("/feed", requireLogin, async function (req, res) {
@@ -275,7 +291,8 @@ function toMyProfile(row) {
   return {
     handle: row.handle, name: row.name, tagline: row.tagline, bio: row.bio, kinds: row.kinds,
     links: parseLinks(row.links), bannerUrl: storage.thumbnailUrl(row.banner_url) || null,
-    status: row.status, reviewNote: row.review_note, canWriteNews: row.can_write_news, application: row.application
+    status: row.status, reviewNote: row.review_note, canWriteNews: row.can_write_news, application: row.application,
+    pageStyle: { theme: row.page_theme || "hive", accent: row.page_accent || "", wallpaperUrl: storage.thumbnailUrl(row.page_wallpaper_url) || null }
   };
 }
 
@@ -284,7 +301,7 @@ router.get("/me", requireLogin, async function (req, res) {
 });
 
 // POST /api/hub/apply { handle, name, tagline, kinds[], application, links[], agree }
-router.post("/apply", requireLogin, applyLimiter, async function (req, res) {
+router.post("/apply", requireLogin, requireFlag("creator_applications"), applyLimiter, async function (req, res) {
   const existing = await myProfile(req.session.user.id);
   if (existing && (existing.status === "approved" || existing.status === "suspended")) {
     return res.status(400).json({ error: existing.status === "approved" ? "You're already an approved creator." : "This account can't apply right now." });
@@ -381,6 +398,28 @@ router.get("/studio/overview", requireLogin, async function (req, res) {
   res.json(Object.assign(rows[0], {
     upcoming: next.rows.map(function (r) { return { title: r.title, slug: r.slug, publishAt: r.publish_at }; })
   }));
+});
+
+/* ---------- Top creators ---------- */
+
+// GET /api/hub/top -> top 10 overall and top 5 per shelf, with badges
+router.get("/top", requireFlag("rankings", { adminAlways: true }), async function (req, res) {
+  const rows = await rankings.leaderboard();
+  const boards = {};
+  rows.forEach(function (r) {
+    (boards[r.scope] = boards[r.scope] || []).push({
+      rank: r.rank, score: r.score, handle: r.handle, name: r.name, tagline: r.tagline,
+      avatarUrl: storage.avatarUrl(r.avatar_url) || null, badge: rankings.badgeFor(r.scope, r.rank)
+    });
+  });
+  res.json({ boards: boards, names: rankings.SCOPE_NAMES, updatedAt: rows[0] ? rows[0].computed_at : null });
+});
+
+// POST /api/hub/top/refresh (admin) -> recalculate now
+router.post("/top/refresh", requireLogin, async function (req, res) {
+  if (req.session.user.role !== "admin") return res.status(403).json({ error: "Only the admin can do that." });
+  await rankings.refresh();
+  res.json({ ok: true });
 });
 
 /* ---------- Reports ---------- */

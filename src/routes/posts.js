@@ -20,7 +20,7 @@ router.param("id", function (req, res, next, value) {
   next();
 });
 
-const CATEGORIES = ["story-art", "anime", "writing", "updates", "news", "art", "comedy", "film", "series", "meme", "thoughts", "poll"];
+const CATEGORIES = ["story-art", "anime", "writing", "updates", "news", "art", "comedy", "film", "series", "meme", "thoughts", "poll", "novel", "storybook", "educational", "poetry", "song", "trailer"];
 const NEEDS_VISUAL = ["story-art", "anime", "art", "meme"];
 const SECTIONS = ["main", "concept-art"];
 const FONTS = ["theme", "serif", "typewriter", "handwritten", "clean"];
@@ -33,8 +33,26 @@ const VISIBLE = "(p.published AND p.review_status = 'approved' AND (p.publish_at
 // God's Banditos shows only the admin's own works; Chapterhive (/hub) shows every creator's.
 const BANDITOS_ONLY = "p.user_id IN (SELECT id FROM users WHERE role = 'admin')";
 const SORTS = ["new", "old", "popular", "series"];
+
+// Browsing on the Chapterhive dashboard: shelves (groups of categories) and genres.
+const SHELVES = {
+  books: ["novel", "storybook", "educational"],
+  comics: ["story-art"],
+  art: ["art", "meme"],
+  video: ["anime", "film", "series", "trailer"],
+  trailers: ["trailer"],
+  series: ["series", "anime"],
+  music: ["song", "poetry"],
+  writing: ["writing", "thoughts", "poetry", "novel"],
+  comedy: ["comedy", "meme"]
+};
+const GENRES = ["fantasy", "scifi", "horror", "mystery", "romance", "comedy", "drama", "action", "adventure", "thriller",
+  "slice-of-life", "historical", "children", "young-adult", "education", "science", "self-help", "faith", "poetry", "music"];
 const PAGE_SIZE = 12;
 const MAX_MEDIA = 80;
+const plans = require("../plans");
+const rankings = require("../rankings");
+const { requireFlag, isOn: flagIsOn } = require("../flags");
 const MAX_TAGS = 12;
 
 const commentLimiter = rateLimit({
@@ -103,11 +121,13 @@ function toPost(row, full) {
     hasForm: Boolean(row.form),
     imageUrl: full ? storage.displayUrl(row.image_url, "image") : storage.thumbnailUrl(row.image_url),
     tags: row.tags || [],
+    genres: row.genres || [],
     creator: row.creator_handle ? {
       handle: row.creator_handle,
       name: row.creator_name,
       avatarUrl: storage.avatarUrl(row.creator_avatar) || null,
-      isBanditos: row.owner_role === "admin"
+      isBanditos: row.owner_role === "admin",
+      badges: rankings.badgesFrom(row.creator_ranks)
     } : null,
     series: row.series_id ? { id: row.series_id, slug: row.series_slug, title: row.series_title } : null,
     seriesOrder: row.series_order,
@@ -154,12 +174,42 @@ const SELECT_POST = `
     (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)::int AS comments,
     (SELECT COUNT(*) FROM post_media m WHERE m.post_id = p.id AND m.role = 'page' AND m.kind <> 'document')::int AS media_count,
     EXISTS (SELECT 1 FROM post_media m WHERE m.post_id = p.id AND m.kind = 'video') AS has_video,
-    EXISTS (SELECT 1 FROM post_media m WHERE m.post_id = p.id AND m.kind = 'audio') AS has_audio
+    EXISTS (SELECT 1 FROM post_media m WHERE m.post_id = p.id AND m.kind = 'audio') AS has_audio,
+    (SELECT json_agg(json_build_object('scope', cr.scope, 'rank', cr.rank)) FROM creator_ranks cr WHERE cr.user_id = p.user_id) AS creator_ranks
   FROM posts p LEFT JOIN series s ON s.id = p.series_id
     LEFT JOIN users ou ON ou.id = p.user_id
     LEFT JOIN creator_profiles cp ON cp.user_id = p.user_id`;
 
 /* ---------- Reading ---------- */
+
+// For the home feed: the first picture of each post, its first video (members only: streaming
+// needs an account) and the viewer's like / save state.
+async function addFeedExtras(rows, me) {
+  const ids = rows.map(function (r) { return r.id; });
+  const out = rows.map(function (row) { return toPost(row, false); });
+  if (!ids.length) return out;
+  const media = await db.query(
+    `SELECT DISTINCT ON (post_id, kind) post_id, kind, url FROM post_media
+      WHERE post_id = ANY ($1::int[]) AND kind IN ('image', 'video') ORDER BY post_id, kind, (role = 'cover') DESC, position`, [ids]);
+  let liked = new Set(), saved = new Set();
+  if (me) {
+    const l = await db.query("SELECT post_id FROM likes WHERE user_id = $1 AND post_id = ANY ($2::int[])", [me.id, ids]);
+    const f = await db.query("SELECT post_id FROM favourites WHERE user_id = $1 AND post_id = ANY ($2::int[])", [me.id, ids]);
+    liked = new Set(l.rows.map(function (r) { return r.post_id; }));
+    saved = new Set(f.rows.map(function (r) { return r.post_id; }));
+  }
+  out.forEach(function (post) {
+    const mine = media.rows.filter(function (m) { return m.post_id === post.id; });
+    const img = mine.find(function (m) { return m.kind === "image"; });
+    const vid = mine.find(function (m) { return m.kind === "video"; });
+    post.feedImage = img ? storage.displayUrl(img.url, "image") : post.imageUrl;
+    post.feedPoster = vid ? storage.posterUrl(vid.url) : null;
+    post.feedVideo = vid && me ? storage.displayUrl(vid.url, "video") : null;
+    post.liked = liked.has(post.id);
+    post.favourited = saved.has(post.id);
+  });
+  return out;
+}
 
 // GET /api/posts?category=anime&q=fire&tag=sketch&series=a-year-to-burn&sort=popular&page=1
 router.get("/", async function (req, res) {
@@ -201,6 +251,9 @@ router.get("/", async function (req, res) {
     values.push(section);
     where.push("p.section = $" + values.length);
   }
+  // News & updates switched off (Admin → Site features): update posts are hidden from everyone but you.
+  const updatesOn = me && me.role === "admin" ? true : await flagIsOn("updates", req);
+  if (!updatesOn && !showDrafts) where.push("p.category NOT IN ('news', 'updates')");
   if (category) {
     values.push(category);
     where.push("p.category = $" + values.length);
@@ -210,6 +263,15 @@ router.get("/", async function (req, res) {
   if (tag) {
     values.push(tag);
     where.push("$" + values.length + " = ANY (p.tags)");
+  }
+  // ?shelf=books  (a group of categories)   ?genre=horror  (chosen genre, or a matching tag)
+  if (!category && SHELVES[req.query.shelf]) {
+    values.push(SHELVES[req.query.shelf]);
+    where.push("p.category = ANY ($" + values.length + "::text[])");
+  }
+  if (GENRES.includes(req.query.genre)) {
+    values.push(req.query.genre);
+    where.push("($" + values.length + "::varchar = ANY (p.genres) OR $" + values.length + "::varchar = ANY (p.tags))");
   }
   if (seriesSlug) {
     values.push(seriesSlug);
@@ -222,9 +284,18 @@ router.get("/", async function (req, res) {
     where.push(`(p.title ILIKE ${n} OR p.summary ILIKE ${n} OR p.logline ILIKE ${n} OR array_to_string(p.tags, ' ') ILIKE ${n} OR s.title ILIKE ${n})`);
   }
   const whereSql = where.length ? "WHERE " + where.join(" AND ") : "";
+  // ?feed=1: the scrolling home feed also needs a picture/video to show and whether I liked or saved each post.
+  const feedExtras = req.query.feed === "1" && !showDrafts;
 
+  // Home feed priority: top creators' posts are shown as if they were posted a little later,
+  // so they stay near the top longer (#1: +36h, top 3: +24h, rest of top 10 / top 5 in a shelf: +12h).
+  const boost = feedExtras && (await flagIsOn("rankings", req))
+    ? `(p.created_at + COALESCE((SELECT MAX(CASE WHEN cr.scope = 'overall' AND cr.rank = 1 THEN INTERVAL '36 hours'
+          WHEN cr.scope = 'overall' AND cr.rank <= 3 THEN INTERVAL '24 hours' ELSE INTERVAL '12 hours' END)
+          FROM creator_ranks cr WHERE cr.user_id = p.user_id), INTERVAL '0'))`
+    : "p.created_at";
   const orderSql = {
-    new: "p.created_at DESC, p.id DESC",
+    new: boost + " DESC, p.id DESC",
     old: "p.created_at ASC, p.id ASC",
     popular: "likes DESC, comments DESC, p.created_at DESC",
     series: "p.series_order ASC NULLS LAST, p.created_at ASC"
@@ -245,7 +316,7 @@ router.get("/", async function (req, res) {
   );
 
   res.json({
-    posts: rows.map(function (row) { return toPost(row, false); }),
+    posts: feedExtras ? await addFeedExtras(rows, me) : rows.map(function (row) { return toPost(row, false); }),
     page: page,
     pages: Math.max(1, Math.ceil(total.rows[0].n / PAGE_SIZE)),
     total: total.rows[0].n,
@@ -322,6 +393,9 @@ router.get("/:slug", async function (req, res) {
   );
 
   const row = rows[0];
+  if (row && ["news", "updates"].includes(row.category) && !isAdmin && row.user_id !== userId && !(await flagIsOn("updates", req))) {
+    return res.status(503).json({ error: "News & updates are paused for now. Please check back soon.", feature: "updates" });
+  }
   // Drafts, scheduled works and works of suspended creators: only their owner (and the admin) can open them.
   if (!row || (!row.visible && !isAdmin && row.user_id !== userId)) {
     return res.status(404).json({ error: "That work could not be found." });
@@ -401,6 +475,7 @@ async function validatePost(body, req) {
     form: null,
     publishAt: parsePublishAt(body.publishAt),
     tags: cleanTags(body.tags),
+    genres: (Array.isArray(body.genres) ? body.genres : []).filter(function (g, i, all) { return GENRES.includes(g) && all.indexOf(g) === i; }).slice(0, 3),
     seriesId: optionalInt(body.seriesId, 1, 999999999),
     seriesOrder: optionalInt(body.seriesOrder, 0, 100000)
   };
@@ -470,8 +545,11 @@ async function savePost(req, res, existingRow) {
   const existingMedia = existingRow
     ? (await db.query("SELECT * FROM post_media WHERE post_id = $1", [existingRow.id])).rows
     : [];
+  // How many files fit in one post depends on the account's plan (Premium allows more).
+  const planRow = (await db.query("SELECT plan, plan_until, role FROM users WHERE id = $1", [req.session.user.id])).rows[0];
+  const maxMedia = planRow && planRow.role === "admin" ? Math.max(MAX_MEDIA, plans.PLANS.premium.maxMediaPerPost) : plans.planOf(planRow).maxMediaPerPost;
   const media = resolveMedia(req.body.media, existingMedia, {
-    roles: ["page", "cover"], kinds: ["image", "video", "audio", "document"], max: MAX_MEDIA
+    roles: ["page", "cover"], kinds: ["image", "video", "audio", "document"], max: maxMedia
   });
   if (media.problem) {
     problems.push({ field: "media", message: media.problem });
@@ -529,6 +607,7 @@ async function savePost(req, res, existingRow) {
       );
       postId = inserted.rows[0].id;
     }
+    await client.query("UPDATE posts SET genres = $1 WHERE id = $2", [values.genres, postId]);
     for (let i = 0; i < media.items.length; i++) {
       const m = media.items[i];
       if (m.id) {
@@ -574,12 +653,12 @@ async function savePost(req, res, existingRow) {
 }
 
 // POST /api/posts  (JSON: title, category, summary, body, published, tags, seriesId, seriesOrder, media[])
-router.post("/", requireCreator, function (req, res) {
+router.post("/", requireCreator, requireFlag("creating", { adminAlways: true }), function (req, res) {
   return savePost(req, res, null);
 });
 
 // PUT /api/posts/:id  (same fields)
-router.put("/:id", requireCreator, async function (req, res) {
+router.put("/:id", requireCreator, requireFlag("creating", { adminAlways: true }), async function (req, res) {
   const existing = await db.query("SELECT * FROM posts WHERE id = $1 AND user_id = $2", [Number(req.params.id), req.session.user.id]);
   if (!existing.rows.length) {
     return res.status(404).json({ error: "That work could not be found." });
@@ -633,10 +712,10 @@ function toggleRoute(table, column) {
   };
 }
 
-router.post("/:id/like", requireLogin, toggleRoute("likes", "liked"));
-router.delete("/:id/like", requireLogin, toggleRoute("likes", "liked"));
-router.post("/:id/favourite", requireLogin, toggleRoute("favourites", "favourited"));
-router.delete("/:id/favourite", requireLogin, toggleRoute("favourites", "favourited"));
+router.post("/:id/like", requireLogin, requireFlag("likes"), toggleRoute("likes", "liked"));
+router.delete("/:id/like", requireLogin, requireFlag("likes"), toggleRoute("likes", "liked"));
+router.post("/:id/favourite", requireLogin, requireFlag("likes"), toggleRoute("favourites", "favourited"));
+router.delete("/:id/favourite", requireLogin, requireFlag("likes"), toggleRoute("favourites", "favourited"));
 
 /* ---------- Comments ---------- */
 
@@ -679,7 +758,7 @@ router.get("/:id/comments", async function (req, res) {
 });
 
 // POST /api/posts/:id/comments  { body, parentId? }
-router.post("/:id/comments", requireLogin, commentLimiter, async function (req, res) {
+router.post("/:id/comments", requireLogin, requireFlag("comments"), commentLimiter, async function (req, res) {
   const id = Number(req.params.id);
   const body = cleanText(req.body.body);
   if (!body || body.length > 1000) {
@@ -828,6 +907,8 @@ router.get("/:id/results", async function (req, res) {
 });
 
 module.exports = router;
+module.exports.GENRES = GENRES;
+module.exports.SHELVES = SHELVES;
 module.exports.cleanForm = cleanForm;
 module.exports.toComment = toComment;
 module.exports.COMMENT_SELECT = COMMENT_SELECT;
