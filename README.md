@@ -122,6 +122,32 @@ and pictures with the 🖼 button. The **Formatting help** link in Compose shows
 - Everything visitors type is shown as plain text, never as HTML. Works' formatting is turned into page elements by `js/markup.js` without ever using HTML, and links must start with `https://`.
 - Scheduled works and drafts are hidden everywhere (lists, search, sitemap, comments) until their time comes.
 
+## Version 5: reviews, bell, feature switches and more
+
+**Rules that are always on**
+- **Usernames** must be unique (not case-sensitive) and names like *admin*, *support*, *official* or *afterframe* are reserved. The Join page checks while you type.
+- **Terms first:** joining is two steps. People tick the Terms, Privacy Policy, Content Rules (including the no-advertising rule) and age boxes before they can choose a username. First-time Google sign-ins go through the same step before any account is created.
+- **Every creator post is reviewed.** It waits in **Dashboard → Reviews** until you approve it (with a friendly message) or decline it (with a ready-made warning, or your own words). The creator gets the message in their bell and by email. Your own posts skip the queue.
+- **No advertising without approval:** added to the Terms, Content Rules and Creator Agreement.
+- **Manage users** (Dashboard): search members, view their scheduled or pending posts, suspend for a number of days, ban, reactivate, or make them a beta tester. Suspended and banned people are signed out and can't log in.
+- **Welcome messages** for every new account (member, creator, admin), shown once as a card.
+
+**Features you switch on in Dashboard → Features**
+Each new feature starts as **Only me**, so you can try it on the live site first. Change it to **Beta testers** or **Everyone** when you're happy. Off hides it from everyone.
+- Notification bell: new posts from people you follow, new followers, follower milestones, streaks, review results, trending posts and your announcements (Dashboard → Announcements).
+- Online status (green dot, members can hide it in Account settings) and daily streaks.
+- Polls and questionnaires in Compose, with results bars on the work page.
+- Quick tips under the header, and the Help & FAQ page with the ? help assistant.
+- Suggestion box (collab board, studio Collabs tab, Help page) → your Inbox.
+- Sponsor & business page at /hub/sponsor (edit it in Dashboard → Settings) → business enquiries land in your Inbox.
+- "Fund the heist" on Afterframe pages too.
+
+**Other changes**
+- Contact moved from the Mulenga Mwamba page to its own God's Banditos page at /contact.
+- Afterframe now welcomes all kinds of creative work: art, comics, animation, live action films, series, comedy, writing, memes, polls and personal posts.
+
+**Optional: AI answers in the help assistant.** Without anything set up, the assistant answers from the FAQ for free. To let it write answers with AI, add `AI_API_KEY` (an Anthropic API key) on Render. `AI_MODEL` can change the model. It still only uses the FAQ as its knowledge.
+
 ## How it is built
 
 - **Server:** Node.js + Express (`server.js`, `src/`)

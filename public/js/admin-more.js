@@ -375,17 +375,27 @@
   /* =================== Inbox =================== */
 
   var inboxPage = 1;
+  var inboxKind = "";
+  document.querySelectorAll("#inbox-filters [data-kind]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      inboxKind = b.getAttribute("data-kind");
+      document.querySelectorAll("#inbox-filters [data-kind]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      loadInbox(1);
+    });
+  });
   async function loadInbox(page) {
     inboxPage = page;
     var list = field("inbox-list");
     try {
-      var data = await MW.api("/admin/messages?page=" + page);
+      var data = await MW.api("/admin/messages?page=" + page + (inboxKind ? "&kind=" + inboxKind : ""));
       list.textContent = "";
       if (!data.messages.length) list.appendChild(el("li", { class: "muted" }, "No messages yet."));
       data.messages.forEach(function (m) {
         var li = el("li", { class: "comment message" + (m.read ? "" : " is-unread") });
         var header = el("header");
-        header.appendChild(el("span", { class: "who" }, m.name));
+        var kindLabel = { business: "Business", suggestion: "Suggestion" }[m.kind] || "Contact";
+        header.appendChild(el("span", { class: "inbox-kind is-" + (m.kind || "contact") }, kindLabel));
+        header.appendChild(el("span", { class: "who" }, m.name + (m.company ? " · " + m.company : "")));
         header.appendChild(el("a", { href: "mailto:" + m.email + "?subject=" + encodeURIComponent("Re: " + m.subject) }, m.email));
         header.appendChild(el("span", { class: "sticker" }, m.subject));
         header.appendChild(el("time", { datetime: m.createdAt }, MW.formatDateTime(m.createdAt)));

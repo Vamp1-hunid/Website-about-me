@@ -194,9 +194,8 @@ CREATE TABLE IF NOT EXISTS character_media (
 CREATE INDEX IF NOT EXISTS character_media_idx ON character_media (character_id, position);
 
 -- Updates: news and announcements, posted from the dashboard like any other work.
-ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_category_check;
-ALTER TABLE posts ADD CONSTRAINT posts_category_check
-  CHECK (category IN ('story-art', 'anime', 'writing', 'updates'));
+-- (The list of allowed categories is set once, in the Version 5 section below. Re-applying an
+-- older, shorter list here would fail on restart once posts in newer categories exist.)
 
 -- The font a work's text is shown in: theme, serif, typewriter, handwritten or clean.
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS font VARCHAR(20) NOT NULL DEFAULT 'theme';
@@ -242,9 +241,8 @@ ALTER TABLE characters ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users
 CREATE INDEX IF NOT EXISTS posts_user_idx ON posts (user_id, created_at DESC);
 
 -- Anime updates are posts in the 'news' category (shown on Afterframe only).
-ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_category_check;
-ALTER TABLE posts ADD CONSTRAINT posts_category_check
-  CHECK (category IN ('story-art', 'anime', 'writing', 'updates', 'news'));
+-- (The list of allowed categories is set once, in the Version 5 section below. Re-applying an
+-- older, shorter list here would fail on restart once posts in newer categories exist.)
 
 -- A creator's public profile on Afterframe. status: pending -> approved (or rejected / suspended).
 CREATE TABLE IF NOT EXISTS creator_profiles (
@@ -329,3 +327,89 @@ CREATE TABLE IF NOT EXISTS collab_replies (
 
 ALTER TABLE reports DROP CONSTRAINT IF EXISTS reports_target_type_check;
 ALTER TABLE reports ADD CONSTRAINT reports_target_type_check CHECK (target_type IN ('post', 'comment', 'creator', 'collab'));
+
+-- ===== Version 5 =====
+
+-- Account standing: banned accounts can't log in; suspended ones can't until suspended_until.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(10) NOT NULL DEFAULT 'active';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_until TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS status_reason VARCHAR(500) NOT NULL DEFAULT '';
+DO $$ BEGIN
+  ALTER TABLE users ADD CONSTRAINT users_status_check CHECK (status IN ('active', 'suspended', 'banned'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- Presence, streaks and beta testing.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS show_online BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_best INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_day DATE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_beta BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS announcements_seen_at TIMESTAMPTZ;
+
+-- Review: works by creators other than the admin wait for approval before going public.
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS review_status VARCHAR(10) NOT NULL DEFAULT 'approved';
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS review_note VARCHAR(1500) NOT NULL DEFAULT '';
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS notified_at TIMESTAMPTZ;
+DO $$ BEGIN
+  ALTER TABLE posts ADD CONSTRAINT posts_review_check CHECK (review_status IN ('approved', 'pending', 'declined'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+CREATE INDEX IF NOT EXISTS posts_review_idx ON posts (review_status, submitted_at);
+-- Works that were already public before version 5 don't send "new post" notifications now.
+UPDATE posts SET notified_at = COALESCE(notified_at, NOW()) WHERE notified_at IS NULL AND created_at < NOW() - INTERVAL '1 minute';
+
+-- Afterframe is for every kind of creative post.
+ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_category_check;
+ALTER TABLE posts ADD CONSTRAINT posts_category_check CHECK (category IN (
+  'story-art', 'anime', 'writing', 'updates', 'news',
+  'art', 'comedy', 'film', 'series', 'meme', 'thoughts', 'poll'));
+
+-- Polls and questionnaires attached to a post (questions, options, when results show).
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS form JSONB;
+CREATE TABLE IF NOT EXISTS form_responses (
+  post_id    INTEGER     NOT NULL REFERENCES posts (id) ON DELETE CASCADE,
+  user_id    INTEGER     NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  answers    JSONB       NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (post_id, user_id)
+);
+
+-- The notification bell.
+CREATE TABLE IF NOT EXISTS notifications (
+  id         SERIAL PRIMARY KEY,
+  user_id    INTEGER      NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  type       VARCHAR(20)  NOT NULL,
+  title      VARCHAR(160) NOT NULL,
+  body       VARCHAR(1500) NOT NULL DEFAULT '',
+  link       VARCHAR(300) NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  read_at    TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS notifications_user_idx ON notifications (user_id, created_at DESC);
+
+-- Announcements from the admin, shown in everyone's bell (one row, not one per user).
+CREATE TABLE IF NOT EXISTS announcements (
+  id         SERIAL PRIMARY KEY,
+  title      VARCHAR(160) NOT NULL,
+  body       VARCHAR(2000) NOT NULL DEFAULT '',
+  link       VARCHAR(300) NOT NULL DEFAULT '',
+  audience   VARCHAR(10)  NOT NULL DEFAULT 'all' CHECK (audience IN ('all', 'creators')),
+  created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+-- Feature flags: try features on the live site before everyone gets them.
+-- audience: off | admin (only you) | beta (you + beta testers) | everyone
+CREATE TABLE IF NOT EXISTS feature_flags (
+  key         VARCHAR(40)  PRIMARY KEY,
+  label       VARCHAR(80)  NOT NULL,
+  description VARCHAR(300) NOT NULL DEFAULT '',
+  audience    VARCHAR(10)  NOT NULL DEFAULT 'admin' CHECK (audience IN ('off', 'admin', 'beta', 'everyone')),
+  updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+-- The admin inbox now holds contact messages, suggestions and business enquiries.
+ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS kind VARCHAR(12) NOT NULL DEFAULT 'contact';
+ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS company VARCHAR(120) NOT NULL DEFAULT '';
+ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users (id) ON DELETE SET NULL;

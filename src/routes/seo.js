@@ -42,7 +42,7 @@ router.get("/robots.txt", function (req, res) {
 
 router.get("/sitemap.xml", async function (req, res) {
   const base = siteUrl(req);
-  const live = "p.published AND (p.publish_at IS NULL OR p.publish_at <= NOW()) AND cp.status = 'approved'";
+  const live = "p.published AND p.review_status = 'approved' AND (p.publish_at IS NULL OR p.publish_at <= NOW()) AND cp.status = 'approved'";
   const posts = await db.query(
     `SELECT p.slug, p.updated_at, p.category, u.role FROM posts p
        JOIN users u ON u.id = p.user_id JOIN creator_profiles cp ON cp.user_id = p.user_id
@@ -69,7 +69,7 @@ router.get("/sitemap.xml", async function (req, res) {
   const newest = posts.rows.length ? posts.rows[0].updated_at : now;
 
   const fixed = [
-    ["/", "1.0"], ["/gallery", "0.9"], ["/stories", "0.8"], ["/creator", "0.9"], ["/products", "0.6"],
+    ["/", "1.0"], ["/gallery", "0.9"], ["/stories", "0.8"], ["/creator", "0.9"], ["/products", "0.6"], ["/contact", "0.6"], ["/help", "0.5"], ["/hub/sponsor", "0.5"],
     ["/gallery?category=story-art", "0.6"], ["/gallery?category=anime", "0.6"], ["/gallery?category=writing", "0.6"],
     ["/gallery?category=updates", "0.5"], ["/hub", "1.0"], ["/hub/creators", "0.8"], ["/hub/news", "0.8"], ["/hub/collabs", "0.7"],
     ["/legal/terms", "0.2"], ["/legal/privacy", "0.2"], ["/legal/creator-agreement", "0.2"], ["/legal/content-rules", "0.2"]

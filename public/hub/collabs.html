@@ -54,6 +54,7 @@
     <a href="/hub/news" data-nav="news">Anime updates</a>
     <a href="/hub/collabs" data-nav="collabs">Collabs</a>
     <a href="/hub/apply" data-nav="apply">Become a creator</a>
+    <a href="/hub/sponsor" data-nav="sponsor">Sponsor</a>
     <a href="/">God's Banditos</a>
   </nav>
 
@@ -83,17 +84,25 @@
       <ul id="collab-list" class="collab-list" aria-live="polite"><li class="loading">Loading&hellip;</li></ul>
       <nav class="pager" aria-label="Pages"><a id="kprev" class="btn btn-ghost btn-small" hidden>Newer</a><span id="kpage"></span><a id="knext" class="btn btn-ghost btn-small" hidden>Older</a></nav>
     </section>
+    <section class="panel" id="suggest" aria-labelledby="suggest-title" hidden>
+      <p class="node-label">Suggestion box</p>
+      <h2 id="suggest-title">Got an idea for Afterframe?</h2>
+      <p class="muted">Features you'd like, things that don't work, new categories: it goes straight to the owner's inbox.</p>
+      <div id="suggest-box"></div>
+    </section>
   </main>
 
   <footer class="site-footer">
     <p class="footer-brand"><img src="/images/afterframe-mark.svg" alt="" width="28" height="28"> &copy; 2026 Afterframe &middot; a <a href="/">God's Banditos</a> production</p>
-    <p><a href="/legal/terms">Terms</a> &middot; <a href="/legal/privacy">Privacy</a> &middot; <a href="/legal/creator-agreement">Creator Agreement</a> &middot; <a href="/legal/content-rules">Content Rules</a> &middot; <a href="/creator#contact">Contact</a></p>
+    <p><a href="/legal/terms">Terms</a> &middot; <a href="/legal/privacy">Privacy</a> &middot; <a href="/legal/creator-agreement">Creator Agreement</a> &middot; <a href="/legal/content-rules">Content Rules</a> &middot; <a href="/contact">Contact</a></p>
   </footer>
 
   <script src="/js/api.js" defer></script>
   <script src="/js/script.js" defer></script>
   <script src="/js/markup.js" defer></script>
   <script src="/js/hub.js" defer></script>
+  <script src="/js/suggest.js" defer></script>
   <script src="/js/hub-collabs.js" defer></script>
+  <script src="/js/suggest-init.js" defer></script>
 </body>
 </html>

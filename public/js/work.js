@@ -179,6 +179,7 @@
       renderHeader(info);
       renderBody(info, false);
       renderDocuments(info);
+      if (post.form && MW.renderPoll) MW.renderPoll(info, post);
       layout.appendChild(info);
       article.appendChild(layout);
     } else {
@@ -189,6 +190,7 @@
       if (media.length) article.appendChild(MW.renderMedia(media, post.title));
       renderBody(article, true);
       renderDocuments(article);
+      if (post.form && MW.renderPoll) MW.renderPoll(article, post);
     }
 
     renderNav();
@@ -299,6 +301,7 @@
     var header = el("header");
     header.appendChild(MW.avatar(comment.author));
     var who = el("a", { class: "who", href: "/u/" + encodeURIComponent(comment.author.username) }, comment.author.displayName);
+    who.appendChild(MW.onlineDot(comment.author.online));
     if (user && !comment.canEdit && MW.reportLink) {
       var rep = MW.reportLink("comment", comment.id, "Report");
       rep.classList.add("comment-report");

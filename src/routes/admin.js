@@ -11,7 +11,7 @@ const cloudinary = require("cloudinary").v2;
 const db = require("../db");
 const { requireAdmin, requireCreator } = require("../auth");
 const storage = require("../storage");
-const { mailEnabled, mailProvider } = require("../mail");
+const { mailEnabled, mailProvider, sendMail } = require("../mail");
 const { googleEnabled } = require("./google");
 const { toComment, COMMENT_SELECT, uniqueSlug, VISIBLE } = require("./posts");
 const { resolveMedia, parsePublishAt, statusOf, deleteAll } = require("../media");
@@ -446,6 +446,7 @@ router.get("/overview", async function (req, res) {
        (SELECT COUNT(*) FROM creator_profiles WHERE status = 'pending')::int        AS "pendingCreators",
        (SELECT COUNT(*) FROM creator_profiles WHERE status = 'approved')::int       AS creators,
        (SELECT COUNT(*) FROM reports WHERE status = 'open')::int                    AS "openReports",
+       (SELECT COUNT(*) FROM posts WHERE published AND review_status = 'pending')::int AS "pendingReviews",
        (SELECT COUNT(*) FROM follows WHERE creator_id = $1)::int                     AS followers,
        (SELECT COUNT(*) FROM products)::int                                         AS products,
        (SELECT COUNT(*) FROM users WHERE role = 'member')::int                      AS members,
@@ -469,14 +470,15 @@ router.get("/overview", async function (req, res) {
 router.get("/messages", async function (req, res) {
   const page = Math.min(10000, Math.max(1, parseInt(req.query.page, 10) || 1));
   const size = 20;
-  const total = await db.query("SELECT COUNT(*)::int AS n FROM contact_messages");
+  const kind = ["contact", "suggestion", "business"].includes(req.query.kind) ? req.query.kind : null;
+  const total = await db.query("SELECT COUNT(*)::int AS n FROM contact_messages WHERE ($1::text IS NULL OR kind = $1)", [kind]);
   const { rows } = await db.query(
-    "SELECT * FROM contact_messages ORDER BY created_at DESC LIMIT $1 OFFSET $2",
-    [size, (page - 1) * size]
+    "SELECT * FROM contact_messages WHERE ($3::text IS NULL OR kind = $3) ORDER BY created_at DESC LIMIT $1 OFFSET $2",
+    [size, (page - 1) * size, kind]
   );
   res.json({
     messages: rows.map(function (r) {
-      return { id: r.id, name: r.name, email: r.email, subject: r.subject, message: r.message,
+      return { id: r.id, name: r.name, email: r.email, subject: r.subject, message: r.message, kind: r.kind, company: r.company,
         emailed: r.emailed, read: Boolean(r.read_at), createdAt: r.created_at };
     }),
     page: page,
@@ -586,7 +588,7 @@ router.get("/support", async function (req, res) {
 
 /* ---------- Afterframe moderation: creator applications and reports ---------- */
 
-const { sendMail, mailEnabled: canEmail } = require("../mail");
+const canEmail = mailEnabled;
 
 function toCreatorAdmin(row) {
   return {
@@ -633,6 +635,10 @@ router.post("/creators/:id/review", async function (req, res) {
   );
   const row = rows[0];
   if (!row) return res.status(404).json({ error: "That creator could not be found." });
+  const users = require("../users");
+  const { notify } = require("../notify");
+  if (status === "approved") await users.welcome(row.user_id, "creator");
+  else if (status === "rejected") await notify(row.user_id, { type: "creator", title: "Your creator application", body: note || "We couldn't approve your creator profile this time. You're welcome to update it and apply again.", link: "/hub/apply" });
 
   // Tell them by email when they're approved or turned down (if email is set up and they gave one).
   let emailed = false;
@@ -691,6 +697,289 @@ router.post("/reports/:id", async function (req, res) {
     [status, Number(req.params.id)]
   );
   res.json({ ok: true });
+});
+
+/* ---------- Reviews: every creator's post waits for approval ---------- */
+
+const { notify } = require("../notify");
+const flagsLib = require("../flags");
+const publishing = require("../publishing");
+
+// Ready-made messages. {name} and {title} are filled in.
+const REVIEW_TEMPLATES = {
+  approve: [
+    ["great", "Love it!", "Great work, {name}! \"{title}\" is now live on Afterframe. Can't wait to see what you make next. 🎬"],
+    ["welcome-first", "First post", "Your first post is live, {name}! Welcome to the lineup: we're excited to have you on Afterframe."],
+    ["keep-going", "Keep going", "\"{title}\" is live. Your style keeps getting stronger, so keep it coming!"],
+    ["featured-worthy", "Standout piece", "This one really stands out, {name}. \"{title}\" is live, and it might find its way onto the home page."]
+  ],
+  decline: [
+    ["advertising", "Unapproved advertising", "Hi {name}, \"{title}\" wasn't published because it advertises a product, service or sponsor. Advertising (including sponsors) needs approval from the Afterframe team first. Remove the promotion, or contact us to ask for approval, then submit it again."],
+    ["copyright", "Not your work / copyright", "Hi {name}, \"{title}\" wasn't published because it appears to include work you don't own the rights to. Only post work you created or have permission to share, and credit fan works clearly."],
+    ["explicit", "Sexual or graphic content", "Hi {name}, \"{title}\" wasn't published because it includes sexual or overly graphic content, which the Content Rules don't allow. Please edit it and submit it again."],
+    ["hate", "Hate, harassment or bullying", "Hi {name}, \"{title}\" wasn't published because it targets or demeans people. Afterframe doesn't allow hate or harassment. Repeated posts like this can lead to suspension."],
+    ["spam", "Spam or low effort", "Hi {name}, \"{title}\" wasn't published because it looks like spam or a repeated post. Share something original and it'll be reviewed again."],
+    ["spoilers", "Unmarked spoilers", "Hi {name}, \"{title}\" includes spoilers in the title or cover. Add a spoiler warning and keep the cover spoiler-free, then submit it again."],
+    ["quality", "Needs a fix", "Hi {name}, \"{title}\" is almost there, but something needs fixing (for example a missing file, a broken link or a mislabelled category). Have a look and submit it again."]
+  ]
+};
+
+function fillTemplate(text, post) {
+  return text.replace(/\{name\}/g, post.creator_name || "there").replace(/\{title\}/g, post.title);
+}
+
+router.get("/review-templates", function (req, res) {
+  const shape = function (list) { return list.map(function (t) { return { key: t[0], label: t[1], text: t[2] }; }); };
+  res.json({ approve: shape(REVIEW_TEMPLATES.approve), decline: shape(REVIEW_TEMPLATES.decline) });
+});
+
+// GET /api/admin/reviews?status=pending|declined  -> posts waiting (oldest first)
+router.get("/reviews", async function (req, res) {
+  const status = req.query.status === "declined" ? "declined" : "pending";
+  const { rows } = await db.query(
+    `SELECT p.id, p.slug, p.title, p.category, p.logline, p.summary, p.body, p.image_url, p.submitted_at, p.publish_at,
+            p.review_note, p.form IS NOT NULL AS has_form, cp.handle, cp.name AS creator_name,
+            (SELECT COUNT(*) FROM post_media m WHERE m.post_id = p.id)::int AS files,
+            (SELECT COUNT(*) FROM posts x WHERE x.user_id = p.user_id AND x.review_status = 'approved' AND x.published)::int AS approved_before
+       FROM posts p JOIN creator_profiles cp ON cp.user_id = p.user_id
+      WHERE p.review_status = $1 AND p.published
+      ORDER BY p.submitted_at ASC NULLS LAST LIMIT 100`,
+    [status]
+  );
+  res.json({
+    reviews: rows.map(function (r) {
+      return {
+        id: r.id, slug: r.slug, title: r.title, category: r.category, logline: r.logline, summary: r.summary,
+        excerpt: String(r.body || "").slice(0, 400), imageUrl: storage.thumbnailUrl(r.image_url) || null,
+        submittedAt: r.submitted_at, publishAt: r.publish_at, files: r.files, hasForm: r.has_form, reviewNote: r.review_note,
+        firstPost: r.approved_before === 0, creator: { handle: r.handle, name: r.creator_name }
+      };
+    })
+  });
+});
+
+// POST /api/admin/reviews/:id { decision: "approve"|"decline", template, message }
+router.post("/reviews/:id", async function (req, res) {
+  const decision = req.body.decision === "decline" ? "decline" : req.body.decision === "approve" ? "approve" : null;
+  if (!decision) return res.status(400).json({ error: "Choose approve or decline." });
+  const { rows } = await db.query(
+    `SELECT p.id, p.slug, p.title, p.user_id, cp.name AS creator_name, u.email
+       FROM posts p JOIN creator_profiles cp ON cp.user_id = p.user_id JOIN users u ON u.id = p.user_id
+      WHERE p.id = $1 AND p.review_status IN ('pending', 'declined')`,
+    [Number(req.params.id)]
+  );
+  const post = rows[0];
+  if (!post) return res.status(404).json({ error: "That post isn't waiting for review." });
+
+  const list = REVIEW_TEMPLATES[decision];
+  const template = list.find(function (t) { return t[0] === req.body.template; });
+  let message = typeof req.body.message === "string" ? req.body.message.trim().slice(0, 1500) : "";
+  if (!message && template) message = fillTemplate(template[2], post);
+  if (!message && decision === "decline") return res.status(400).json({ error: "Choose a reason or write a message for the creator." });
+  if (!message) message = fillTemplate(REVIEW_TEMPLATES.approve[0][2], post);
+
+  await db.query(
+    "UPDATE posts SET review_status = $1, review_note = $2, reviewed_at = NOW() WHERE id = $3",
+    [decision === "approve" ? "approved" : "declined", message, post.id]
+  );
+  await notify(post.user_id, {
+    type: decision === "approve" ? "approved" : "declined",
+    title: decision === "approve" ? "✅ Approved: " + post.title : "Your post needs changes: " + post.title,
+    body: message,
+    link: decision === "approve" ? "/hub/w/" + encodeURIComponent(post.slug) : "/hub/studio?edit=" + post.id + "#compose"
+  });
+  if (post.email && mailEnabled()) {
+    sendMail(post.email, (decision === "approve" ? "Approved: " : "Changes needed: ") + post.title, message + "\n",
+      "<p>" + message.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>") + "</p>").catch(function () {});
+  }
+  if (decision === "approve") publishing.announceReady().catch(function () {});
+  res.json({ ok: true, status: decision === "approve" ? "approved" : "declined" });
+});
+
+/* ---------- Manage users ---------- */
+
+// GET /api/admin/users?q=&status=active|suspended|banned|beta|creators&page=
+router.get("/users", async function (req, res) {
+  const page = Math.min(1000, Math.max(1, parseInt(req.query.page, 10) || 1));
+  const size = 25;
+  const where = [];
+  const values = [];
+  const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 60) : "";
+  if (q) {
+    values.push("%" + q.replace(/[\\%_]/g, "\\$&") + "%");
+    where.push(`(u.username ILIKE $${values.length} OR u.display_name ILIKE $${values.length} OR u.email ILIKE $${values.length} OR cp.handle ILIKE $${values.length})`);
+  }
+  if (["active", "suspended", "banned"].includes(req.query.status)) {
+    values.push(req.query.status);
+    where.push("u.status = $" + values.length);
+  }
+  if (req.query.status === "beta") where.push("u.is_beta");
+  if (req.query.status === "creators") where.push("cp.status = 'approved'");
+  const whereSql = where.length ? " WHERE " + where.join(" AND ") : "";
+  const total = await db.query("SELECT COUNT(*)::int AS n FROM users u LEFT JOIN creator_profiles cp ON cp.user_id = u.id" + whereSql, values);
+  values.push(size, (page - 1) * size);
+  const { rows } = await db.query(
+    `SELECT u.id, u.username, u.display_name, u.email, u.role, u.status, u.suspended_until, u.status_reason, u.created_at,
+            u.last_seen_at, u.streak_count, u.is_beta, u.avatar_url, cp.handle, cp.status AS creator_status,
+            (SELECT COUNT(*) FROM posts p WHERE p.user_id = u.id)::int AS posts,
+            (SELECT COUNT(*) FROM posts p WHERE p.user_id = u.id AND p.published AND p.review_status = 'pending')::int AS pending,
+            (SELECT COUNT(*) FROM posts p WHERE p.user_id = u.id AND p.published AND p.publish_at > NOW())::int AS scheduled,
+            (SELECT COUNT(*) FROM follows f WHERE f.creator_id = u.id)::int AS followers
+       FROM users u LEFT JOIN creator_profiles cp ON cp.user_id = u.id
+       ${whereSql}
+      ORDER BY u.created_at DESC LIMIT $${values.length - 1} OFFSET $${values.length}`,
+    values
+  );
+  res.json({
+    users: rows.map(function (u) {
+      return {
+        id: u.id, username: u.username, displayName: u.display_name,
+        email: u.email ? u.email.replace(/^(.).*(@.*)$/, "$1…$2") : null,
+        role: u.role, status: u.status, suspendedUntil: u.suspended_until, statusReason: u.status_reason,
+        joined: u.created_at, lastSeen: u.last_seen_at, streak: u.streak_count, isBeta: u.is_beta,
+        avatarUrl: storage.avatarUrl(u.avatar_url) || null,
+        creator: u.handle ? { handle: u.handle, status: u.creator_status } : null,
+        posts: u.posts, pending: u.pending, scheduled: u.scheduled, followers: u.followers
+      };
+    }),
+    page: page, pages: Math.max(1, Math.ceil(total.rows[0].n / size)), total: total.rows[0].n
+  });
+});
+
+// GET /api/admin/users/:id/posts?filter=scheduled|pending|drafts|all
+router.get("/users/:id/posts", async function (req, res) {
+  const filter = req.query.filter;
+  let extra = "";
+  if (filter === "scheduled") extra = " AND p.published AND p.publish_at > NOW()";
+  if (filter === "pending") extra = " AND p.published AND p.review_status = 'pending'";
+  if (filter === "drafts") extra = " AND NOT p.published";
+  const { rows } = await db.query(
+    `SELECT p.id, p.slug, p.title, p.category, p.published, p.publish_at, p.review_status, p.created_at, p.image_url
+       FROM posts p WHERE p.user_id = $1${extra} ORDER BY p.created_at DESC LIMIT 100`,
+    [Number(req.params.id)]
+  );
+  res.json({
+    posts: rows.map(function (p) {
+      return { id: p.id, slug: p.slug, title: p.title, category: p.category, status: statusOf(p), publishAt: p.publish_at,
+        createdAt: p.created_at, imageUrl: storage.thumbnailUrl(p.image_url) || null };
+    })
+  });
+});
+
+// POST /api/admin/users/:id/standing { status: active|suspended|banned, days, reason }
+router.post("/users/:id/standing", async function (req, res) {
+  const status = ["active", "suspended", "banned"].includes(req.body.status) ? req.body.status : null;
+  if (!status) return res.status(400).json({ error: "Choose active, suspended or banned." });
+  const id = Number(req.params.id);
+  if (id === req.session.user.id) return res.status(400).json({ error: "You can't change your own account's standing." });
+  const days = Math.min(3650, Math.max(1, parseInt(req.body.days, 10) || 7));
+  const reason = typeof req.body.reason === "string" ? req.body.reason.trim().slice(0, 500) : "";
+  const { rows } = await db.query(
+    `UPDATE users SET status = $1::varchar, status_reason = $2,
+            suspended_until = CASE WHEN $1::varchar = 'suspended' THEN NOW() + ($3 || ' days')::interval ELSE NULL END
+      WHERE id = $4 AND role <> 'admin' RETURNING id, username, status, suspended_until`,
+    [status, status === "active" ? "" : reason, String(days), id]
+  );
+  if (!rows.length) return res.status(404).json({ error: "That account could not be found (or it's an admin)." });
+  if (status !== "active") {
+    // Sign them out everywhere right away.
+    await db.query("DELETE FROM user_sessions WHERE (sess -> 'user' ->> 'id')::int = $1", [id]);
+  } else {
+    await notify(id, { type: "info", title: "Your account is active again", body: "Welcome back. Please keep to the Content Rules.", link: "/legal/content-rules" });
+  }
+  res.json({ user: rows[0] });
+});
+
+// POST /api/admin/users/:id/beta { isBeta }
+router.post("/users/:id/beta", async function (req, res) {
+  const { rows } = await db.query("UPDATE users SET is_beta = $1 WHERE id = $2 RETURNING id, is_beta", [req.body.isBeta === true, Number(req.params.id)]);
+  if (!rows.length) return res.status(404).json({ error: "That account could not be found." });
+  if (rows[0].is_beta) {
+    await notify(rows[0].id, { type: "info", title: "You're a beta tester! 🧪", body: "You'll see some new features before everyone else. Tell us what you think through the suggestion box.", link: "/help" });
+  }
+  res.json({ isBeta: rows[0].is_beta });
+});
+
+/* ---------- Announcements (news from the admin, in everyone's bell) ---------- */
+
+router.get("/announcements", async function (req, res) {
+  const { rows } = await db.query("SELECT * FROM announcements ORDER BY created_at DESC LIMIT 50");
+  res.json({ announcements: rows });
+});
+
+router.post("/announcements", async function (req, res) {
+  const title = typeof req.body.title === "string" ? req.body.title.trim().slice(0, 160) : "";
+  const body = typeof req.body.body === "string" ? req.body.body.trim().slice(0, 2000) : "";
+  let link = typeof req.body.link === "string" ? req.body.link.trim().slice(0, 300) : "";
+  if (!title) return res.status(400).json({ error: "Give the announcement a title." });
+  if (link && !/^(\/[^\s]*|https:\/\/[^\s<>"]+)$/.test(link)) return res.status(400).json({ error: "Links must start with / or https://" });
+  const audience = req.body.audience === "creators" ? "creators" : "all";
+  const { rows } = await db.query(
+    "INSERT INTO announcements (title, body, link, audience) VALUES ($1, $2, $3, $4) RETURNING *",
+    [title, body, link, audience]
+  );
+  res.status(201).json({ announcement: rows[0] });
+});
+
+router.delete("/announcements/:id", async function (req, res) {
+  await db.query("DELETE FROM announcements WHERE id = $1", [Number(req.params.id)]);
+  res.json({ ok: true });
+});
+
+/* ---------- Feature flags ---------- */
+
+router.get("/flags", async function (req, res) {
+  res.json({ flags: await flagsLib.all() });
+});
+
+router.put("/flags/:key", async function (req, res) {
+  const audience = ["off", "admin", "beta", "everyone"].includes(req.body.audience) ? req.body.audience : null;
+  if (!audience) return res.status(400).json({ error: "Choose off, admin, beta or everyone." });
+  const flag = await flagsLib.setAudience(String(req.params.key).slice(0, 40), audience);
+  if (!flag) return res.status(404).json({ error: "Unknown feature." });
+  res.json({ flag: flag });
+});
+
+/* ---------- Sponsor page settings ---------- */
+
+const { readSponsor } = require("./business");
+
+router.get("/sponsor", async function (req, res) {
+  res.json({ sponsor: await readSponsor() });
+});
+
+router.put("/sponsor", async function (req, res) {
+  const b = req.body || {};
+  const t = function (v, max) { return typeof v === "string" ? v.trim().slice(0, max) : ""; };
+  const contact = b.contact || {};
+  const sponsor = {
+    headline: t(b.headline, 120) || "Partner with Afterframe",
+    pitch: t(b.pitch, 4000),
+    showStats: b.showStats !== false,
+    tiers: (Array.isArray(b.tiers) ? b.tiers.slice(0, 6) : []).map(function (x) {
+      return { name: t(x && x.name, 60), price: t(x && x.price, 40), perks: t(x && x.perks, 600) };
+    }).filter(function (x) { return x.name; }),
+    contact: {
+      name: t(contact.name, 80), role: t(contact.role, 80), email: t(contact.email, 254), phone: t(contact.phone, 30),
+      whatsapp: t(contact.whatsapp, 30), linkedin: t(contact.linkedin, 300), website: t(contact.website, 300)
+    }
+  };
+  if (sponsor.contact.email && !/^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]{2,}$/.test(sponsor.contact.email)) {
+    return res.status(400).json({ error: "The business email doesn't look right." });
+  }
+  for (const key of ["linkedin", "website"]) {
+    if (sponsor.contact[key] && !/^https:\/\/[^\s<>"]+$/i.test(sponsor.contact[key])) {
+      return res.status(400).json({ error: "Links must start with https://" });
+    }
+  }
+  if (sponsor.contact.whatsapp && !/^\+?[0-9 ]{9,16}$/.test(sponsor.contact.whatsapp)) {
+    return res.status(400).json({ error: "Enter the WhatsApp number with the country code, e.g. +260 97 123 4567." });
+  }
+  await db.query(
+    "INSERT INTO app_settings (key, value) VALUES ('sponsor', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+    [JSON.stringify(sponsor)]
+  );
+  res.json({ sponsor: sponsor });
 });
 
 /* ---------- Uploading media for works ---------- */

@@ -59,64 +59,80 @@
     <a href="/gallery?category=updates" data-nav="updates">Updates</a>
     <a href="/products" data-nav="products">More products</a>
     <a href="/creator" data-nav="creator">Creator</a>
-    <a href="/creator#contact">Contact</a>
+    <a href="/contact" data-nav="contact">Contact</a>
   </nav>
 
   <main id="main">
     <section class="panel narrow" aria-labelledby="register-title">
       <p class="node-label">Auth // new member</p>
       <h1 id="register-title" class="glitch">Join</h1>
-      <p class="muted">A free God's Banditos account lets you comment on, like and save works. You only need a username and a password.</p>
-      <div class="oauth" id="google-block" hidden>
-        <a class="btn btn-google" id="google-btn" href="/auth/google">
-          <span class="g-mark" aria-hidden="true">G</span> Continue with Google
-        </a>
-        <p class="muted form-hint">By continuing with Google you accept the <a href="/legal/terms">Terms</a> and <a href="/legal/privacy">Privacy Policy</a>.</p>
-        <p class="or-line"><span>or use a username</span></p>
-      </div>
-      <form id="register-form" novalidate>
-        <div class="form-row">
-          <label for="username">Username</label>
-          <input type="text" id="username" name="username" autocomplete="username" required
-                 autocapitalize="none" spellcheck="false" maxlength="30"
-                 aria-describedby="username-hint username-error">
-          <p class="muted" id="username-hint">3&ndash;30 characters: lowercase letters, numbers or _</p>
-          <p class="error" id="username-error"></p>
-        </div>
-        <div class="form-row">
-          <label for="displayName">Display name (optional)</label>
-          <input type="text" id="displayName" name="displayName" autocomplete="nickname" maxlength="60"
-                 aria-describedby="displayName-error">
-          <p class="error" id="displayName-error"></p>
-        </div>
-        <div class="form-row">
-          <label for="email">Email (optional)</label>
-          <input type="email" id="email" name="email" autocomplete="email" maxlength="254"
-                 aria-describedby="email-hint email-error">
-          <p class="muted" id="email-hint">Only used to send you a link if you forget your password. Never shown to anyone.</p>
-          <p class="error" id="email-error"></p>
-        </div>
-        <div class="form-row">
-          <label for="password">Password</label>
-          <input type="password" id="password" name="password" autocomplete="new-password" required
-                 aria-describedby="password-hint password-error">
-          <p class="muted" id="password-hint">At least 8 characters.</p>
-          <p class="error" id="password-error"></p>
-        </div>
-        <div class="form-row">
-          <label for="password2">Repeat password</label>
-          <input type="password" id="password2" name="password2" autocomplete="new-password" required
-                 aria-describedby="password2-error">
-          <p class="error" id="password2-error"></p>
-        </div>
-        <div class="check-row">
-          <input type="checkbox" id="acceptTerms" name="acceptTerms" aria-describedby="acceptTerms-error">
-          <label for="acceptTerms">I'm 13 or older and I accept the <a href="/legal/terms" target="_blank">Terms of Service</a> and <a href="/legal/privacy" target="_blank">Privacy Policy</a>.</label>
-        </div>
-        <p class="error" id="acceptTerms-error"></p>
-        <button type="submit">Create account</button>
-        <p class="feedback feedback-error" id="form-feedback" aria-live="polite"></p>
+      <p class="muted">A free account lets you comment, like, follow creators and get notifications. Creating one takes two quick steps.</p>
+
+      <!-- Step 1: the rules come first. No account is created until these are accepted. -->
+      <form id="terms-step" class="terms-step" novalidate aria-labelledby="terms-title">
+        <p class="node-label">Step 1 of 2</p>
+        <h2 id="terms-title">Agree to the rules</h2>
+        <p class="muted">Please read these before you join. They apply to God's Banditos and Afterframe.</p>
+        <label><input type="checkbox" name="t-terms" required> <span>I accept the <a href="/legal/terms" target="_blank">Terms of Service</a>.</span></label>
+        <label><input type="checkbox" name="t-privacy" required> <span>I've read the <a href="/legal/privacy" target="_blank">Privacy Policy</a>.</span></label>
+        <label><input type="checkbox" name="t-rules" required> <span>I'll follow the <a href="/legal/content-rules" target="_blank">Content Rules</a>, including: no advertising of products, services or sponsors without admin approval, and every post is reviewed before it goes public.</span></label>
+        <label><input type="checkbox" name="t-age" required> <span>I'm 13 or older (or I have a parent or guardian's permission where the law requires it).</span></label>
+        <p class="error" id="terms-error" aria-live="polite"></p>
+        <button type="submit">I agree, continue</button>
       </form>
+
+      <div id="details-step" hidden>
+        <p class="node-label">Step 2 of 2</p>
+        <div class="oauth" id="google-block" hidden>
+          <a class="btn btn-google" id="google-btn" href="/auth/google">
+            <span class="g-mark" aria-hidden="true">G</span> Continue with Google
+          </a>
+          <p class="or-line"><span>or use a username</span></p>
+        </div>
+        <p class="feedback" id="google-pending" hidden></p>
+        <form id="register-form" novalidate>
+          <div class="form-row">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" autocomplete="username" required
+                   autocapitalize="none" spellcheck="false" maxlength="30"
+                   aria-describedby="username-hint username-error">
+            <p class="muted username-hint" id="username-hint" aria-live="polite">3&ndash;30 characters: lowercase letters, numbers or _</p>
+            <p class="error" id="username-error"></p>
+          </div>
+          <div class="form-row" data-local>
+            <label for="displayName">Display name (optional)</label>
+            <input type="text" id="displayName" name="displayName" autocomplete="nickname" maxlength="60"
+                   aria-describedby="displayName-error">
+            <p class="error" id="displayName-error"></p>
+          </div>
+          <div class="form-row" data-local>
+            <label for="email">Email (optional)</label>
+            <input type="email" id="email" name="email" autocomplete="email" maxlength="254"
+                   aria-describedby="email-hint email-error">
+            <p class="muted" id="email-hint">Only used to send you a link if you forget your password. Never shown to anyone.</p>
+            <p class="error" id="email-error"></p>
+          </div>
+          <div class="form-row" data-local>
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" autocomplete="new-password" required
+                   aria-describedby="password-hint password-error">
+            <p class="muted" id="password-hint">At least 8 characters.</p>
+            <p class="error" id="password-error"></p>
+          </div>
+          <div class="form-row" data-local>
+            <label for="password2">Repeat password</label>
+            <input type="password" id="password2" name="password2" autocomplete="new-password" required
+                   aria-describedby="password2-error">
+            <p class="error" id="password2-error"></p>
+          </div>
+          <p class="error" id="acceptTerms-error"></p>
+          <div class="form-actions">
+            <button type="button" class="btn btn-ghost" id="back-to-terms">Back</button>
+            <button type="submit">Create account</button>
+          </div>
+          <p class="feedback feedback-error" id="form-feedback" aria-live="polite"></p>
+        </form>
+      </div>
       <p class="form-foot">Already a member? <a id="switch-link" href="/login">Log in</a>.</p>
     </section>
   </main>

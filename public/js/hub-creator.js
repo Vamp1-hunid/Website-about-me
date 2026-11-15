@@ -32,7 +32,9 @@
     var top = el("div", { class: "profile-top" });
     top.appendChild(MW.avatar({ avatarUrl: c.avatarUrl, displayName: c.name }, "big"));
     var names = el("div");
-    names.appendChild(el("h1", {}, c.name));
+    var h1 = el("h1", {}, c.name);
+    h1.appendChild(MW.onlineDot(c.online));
+    names.appendChild(h1);
     names.appendChild(el("p", { class: "mono muted" }, "@" + c.handle + (c.isBanditos ? " · Afterframe founder" : "")));
     top.appendChild(names);
     var actions = el("div", { class: "profile-actions" });

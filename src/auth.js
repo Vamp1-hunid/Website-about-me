@@ -49,6 +49,27 @@ async function requireCreator(req, res, next) {
   next();
 }
 
+// Runs on every API request from a logged-in person, at most once a minute each:
+// records that they're online, keeps their daily streak, and signs out banned or
+// suspended accounts straight away.
+async function trackActivity(req, res, next) {
+  const user = req.session && req.session.user;
+  if (!user) return next();
+  const now = Date.now();
+  if (req.session.touchedAt && now - req.session.touchedAt < 60000) return next();
+  req.session.touchedAt = now;
+  const users = require("./users");
+  const row = await users.touch(user.id);
+  const blocked = row ? users.standingProblem(row) : "Your account no longer exists.";
+  if (blocked) {
+    return req.session.destroy(function () {
+      res.clearCookie("mm.sid");
+      res.status(403).json({ error: blocked, signedOut: true });
+    });
+  }
+  next();
+}
+
 // Blocks form posts sent from other websites (cross-site request forgery).
 // Browsers always add an Origin header to cross-site POST/PUT/DELETE requests,
 // so if it is present it must match this site.
@@ -107,4 +128,4 @@ function safeNext(value, fallback) {
   return fallback || "/";
 }
 
-module.exports = { requireLogin, requireAdmin, requireCreator, sameOriginOnly, publicUser, startSession, safeNext };
+module.exports = { requireLogin, requireAdmin, requireCreator, trackActivity, sameOriginOnly, publicUser, startSession, safeNext };

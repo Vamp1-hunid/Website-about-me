@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact | God's Banditos</title>
+  <meta name="description" content="Get in touch with God's Banditos: questions, collaborations, commissions and feedback, plus our social media links.">
+  <meta name="author" content="Mulenga Mwamba">
+  <meta property="og:site_name" content="God's Banditos">
+  <meta property="og:title" content="Contact | God's Banditos">
+  <meta property="og:description" content="Get in touch with God's Banditos: questions, collaborations, commissions and feedback, plus our social media links.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://mulenga-mwamba-website.onrender.com/images/og-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#0b0a10">
+  <link rel="icon" href="/images/gods-banditos-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/images/gods-banditos-icon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Caveat:wght@500;700&family=Chakra+Petch:wght@400;600;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css?v=9">
+  <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
+  <script src="/js/theme-boot.js"></script>
+</head>
+<body data-page="contact">
+
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="God's Banditos, home">
+      <img class="brand-logo" src="/images/gods-banditos-icon.svg" alt="" width="36" height="36">
+      <span class="brand-text glitch">GOD'S <span class="brand-dim">BANDITOS</span></span>
+    </a>
+    <div class="header-actions">
+      <!-- Filled in by js/api.js: "Log in / Join", or your name, Profile and Log out -->
+      <div class="auth-area" id="auth-area"></div>
+      <!-- Search the whole site -->
+      <form class="header-search" action="/search" method="get" role="search">
+        <label class="sr-only" for="header-q">Search the site</label>
+        <input type="search" id="header-q" name="q" placeholder="Search&hellip;" maxlength="80" autocomplete="off">
+      </form>
+      <!-- Feature: the three-bar menu button opens the full site menu (all screen sizes) -->
+      <button id="menu-toggle" class="btn btn-ghost btn-small menu-toggle" type="button"
+              aria-expanded="false" aria-controls="site-menu" aria-label="Open menu">
+        <span class="bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
+      <!-- Feature: light and dark theme switch -->
+      <button id="theme-toggle" class="btn btn-ghost btn-small" type="button">Light mode</button>
+    </div>
+  </header>
+
+  <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+    <a href="/" data-nav="home">Home</a>
+    <a href="/gallery" data-nav="works">Works</a>
+    <a href="/stories" data-nav="stories">Stories</a>
+    <a href="/gallery?category=updates" data-nav="updates">Updates</a>
+    <a href="/products" data-nav="products">More products</a>
+    <a href="/creator" data-nav="creator">Creator</a>
+    <a href="/contact" data-nav="contact">Contact</a>
+  </nav>
+
+  <main id="main">
+    <section id="contact" class="panel" aria-labelledby="contact-title">
+      <p class="node-label">God's Banditos // transmission</p>
+      <h1 id="contact-title" class="glitch" data-decode>Contact God's Banditos</h1>
+      <p class="lead">Questions about the stories, commissions, collaborations or feedback on the site: send a message and it lands straight in our inbox.</p>
+      <p class="muted">Representing a company or thinking about investing? The <a href="/hub/sponsor">Sponsor &amp; business page</a> has the business contact details.</p>
+      <div class="contact-socials" id="contact-socials-box" hidden>
+        <p class="node-label">Find us online</p>
+        <div class="social-row" id="contact-socials"></div>
+      </div>
+      <p class="notice">Check your message first, then press Send: it goes straight to our inbox and we'll reply by email.</p>
+      <form id="contact-form" novalidate>
+        <div class="form-row">
+          <label for="name">Name</label>
+          <input type="text" id="name" name="name" autocomplete="name"
+                 required aria-describedby="name-error">
+          <p class="error" id="name-error"></p>
+        </div>
+
+        <div class="form-row">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" autocomplete="email"
+                 required aria-describedby="email-error">
+          <p class="error" id="email-error"></p>
+        </div>
+
+        <div class="form-row">
+          <label for="topic">Topic</label>
+          <select id="topic" name="topic">
+            <option value="general">General enquiry</option>
+            <option value="collaboration">Collaboration</option>
+            <option value="feedback">Feedback on this site</option>
+            <option value="support">Supporting your work (bank details etc.)</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="message">Message</label>
+          <textarea id="message" name="message" rows="5"
+                    required aria-describedby="message-error"></textarea>
+          <p class="error" id="message-error"></p>
+        </div>
+
+        <!-- Hidden from people; bots fill it in, which marks their message as spam. -->
+        <div class="hp-field" aria-hidden="true">
+          <label for="website">Leave this empty</label>
+          <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+        </div>
+
+        <button type="submit">Check my message</button>
+      </form>
+
+      <p class="feedback" id="form-feedback" aria-live="polite"></p>
+
+      <div id="preview" class="preview" hidden>
+        <h3>Validated preview</h3>
+        <p id="preview-note">The details below passed validation in this browser. Nothing has been sent yet.</p>
+        <dl>
+          <dt>Name</dt>
+          <dd id="preview-name"></dd>
+          <dt>Email</dt>
+          <dd id="preview-email"></dd>
+          <dt>Topic</dt>
+          <dd id="preview-topic"></dd>
+          <dt>Message</dt>
+          <dd id="preview-message"></dd>
+        </dl>
+        <div class="hero-actions">
+          <button type="button" id="send-message">Send message</button>
+          <button type="button" id="edit-message" class="btn btn-ghost">Edit</button>
+        </div>
+        <p class="feedback" id="send-feedback" aria-live="polite"></p>
+      </div>
+    </section>
+  </main>
+
+
+  <footer class="site-footer">
+    <p class="footer-brand"><img src="/images/gods-banditos-icon.svg" alt="" width="28" height="28"> &copy; 2026 God's Banditos &middot; created by <a href="/creator">Mulenga Mwamba</a></p>
+    <p><a href="https://github.com/Vamp1-hunid/Website-about-me">View source on GitHub</a> &middot; <a href="https://developer.mozilla.org/en-US/docs/Learn" target="_blank" rel="noopener">MDN Web Docs (external)</a></p>
+    <p>Last updated: 15 November 2026</p>
+  </footer>
+
+    <script src="/js/api.js" defer></script>
+  <script src="/js/script.js" defer></script>
+  <script src="/js/fx.js" defer></script>
+  <script src="/js/flair.js" defer></script>
+</body>
+</html>

@@ -63,7 +63,7 @@ function sendPage(req, res, file, meta) {
   res.type("html").send(html);
 }
 
-const VISIBLE_POST = "p.published AND (p.publish_at IS NULL OR p.publish_at <= NOW()) AND cp.status = 'approved'";
+const VISIBLE_POST = "p.published AND p.review_status = 'approved' AND (p.publish_at IS NULL OR p.publish_at <= NOW()) AND cp.status = 'approved'";
 
 async function findPost(slug) {
   const { rows } = await db.query(

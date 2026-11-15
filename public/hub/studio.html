@@ -54,6 +54,7 @@
     <a href="/hub/news" data-nav="news">Anime updates</a>
     <a href="/hub/collabs" data-nav="collabs">Collabs</a>
     <a href="/hub/apply" data-nav="apply">Become a creator</a>
+    <a href="/hub/sponsor" data-nav="sponsor">Sponsor</a>
     <a href="/">God's Banditos</a>
   </nav>
 
@@ -124,11 +125,26 @@
               <div class="form-row">
                 <label for="category">Category</label>
                 <select id="category" name="category" aria-describedby="category-error">
-                  <option value="story-art">Story art</option>
-                  <option value="anime">Anime works</option>
-                  <option value="writing">Writing</option>
-                  <option value="updates">God's Banditos update</option>
-                  <option value="news">Anime update (Afterframe news)</option>
+                  <optgroup label="Pictures &amp; video">
+                    <option value="art">Art &amp; illustration</option>
+                    <option value="story-art">Story art / comics / manga</option>
+                    <option value="anime">Anime &amp; animation</option>
+                    <option value="film">Live action film</option>
+                    <option value="series">Series episode</option>
+                    <option value="meme">Meme</option>
+                  </optgroup>
+                  <optgroup label="Words">
+                    <option value="writing">Story or writing</option>
+                    <option value="comedy">Comedy</option>
+                    <option value="thoughts">Thoughts &amp; feelings</option>
+                  </optgroup>
+                  <optgroup label="Interactive">
+                    <option value="poll">Poll or questionnaire</option>
+                  </optgroup>
+                  <optgroup label="News">
+                    <option value="updates">God's Banditos update</option>
+                    <option value="news">Anime update (Afterframe news)</option>
+                  </optgroup>
                 </select>
                 <p class="error" id="category-error"></p>
               </div>
@@ -150,6 +166,13 @@
                 <p class="error" id="seriesOrder-error"></p>
               </div>
             </div>
+            <details class="form-row" id="form-builder-wrap" hidden>
+              <summary>Add a poll or questionnaire</summary>
+              <p class="muted">Ask your audience something. Polls have one question; questionnaires can have several, including written answers.</p>
+              <div id="form-builder"></div>
+              <p class="error" id="form-error"></p>
+            </details>
+            <p class="notice" id="review-note" hidden>Every post is reviewed by the team before it goes public. Advertising products, services or sponsors needs admin approval.</p>
             <div class="form-row">
               <label for="summary">Short description <span class="muted">(shown on cards)</span></label>
               <input type="text" id="summary" name="summary" maxlength="300" aria-describedby="summary-error">
@@ -233,6 +256,8 @@
           <button type="button" class="btn btn-ghost btn-small" data-status="live" aria-pressed="false">Live</button>
           <button type="button" class="btn btn-ghost btn-small" data-status="scheduled" aria-pressed="false">Scheduled</button>
           <button type="button" class="btn btn-ghost btn-small" data-status="draft" aria-pressed="false">Drafts</button>
+          <button type="button" class="btn btn-ghost btn-small" data-status="pending" aria-pressed="false">In review</button>
+          <button type="button" class="btn btn-ghost btn-small" data-status="declined" aria-pressed="false">Needs changes</button>
         </div>
         <ul id="admin-list" class="admin-list" aria-live="polite"></ul>
         <nav class="pager" aria-label="Pages">
@@ -618,6 +643,11 @@
           <h2>Your requests</h2>
           <ul id="my-collabs" class="admin-list"></ul>
           <p><a href="/hub/collabs" class="mono">Browse the collab board &rarr;</a></p>
+          <section id="suggest" class="pad-top" aria-labelledby="studio-suggest-title" hidden>
+            <h3 id="studio-suggest-title">Suggestion box</h3>
+            <p class="muted">Ideas for the studio or the platform go straight to the owner's inbox.</p>
+            <div id="suggest-box"></div>
+          </section>
         </div>
       </section>
       <!-- ===== Creator profile (studio) ===== -->
@@ -646,9 +676,15 @@
               <label><input type="checkbox" value="manga"><span>Manga</span></label>
               <label><input type="checkbox" value="comics"><span>Comics</span></label>
               <label><input type="checkbox" value="animation"><span>Animation</span></label>
-              <label><input type="checkbox" value="stories"><span>Stories</span></label>
-              <label><input type="checkbox" value="illustration"><span>Illustration</span></label>
+              <label><input type="checkbox" value="illustration"><span>Art &amp; illustration</span></label>
+              <label><input type="checkbox" value="stories"><span>Stories &amp; writing</span></label>
+              <label><input type="checkbox" value="comedy"><span>Comedy</span></label>
+              <label><input type="checkbox" value="film"><span>Live action film</span></label>
+              <label><input type="checkbox" value="series"><span>Series</span></label>
+              <label><input type="checkbox" value="photography"><span>Photography</span></label>
               <label><input type="checkbox" value="music"><span>Music</span></label>
+              <label><input type="checkbox" value="memes"><span>Memes</span></label>
+              <label><input type="checkbox" value="poetry"><span>Poetry</span></label>
             </div>
           </fieldset>
           <div class="form-row">
@@ -701,7 +737,7 @@
 
   <footer class="site-footer">
     <p class="footer-brand"><img src="/images/afterframe-mark.svg" alt="" width="28" height="28"> &copy; 2026 Afterframe &middot; a <a href="/">God's Banditos</a> production</p>
-    <p><a href="/legal/terms">Terms</a> &middot; <a href="/legal/privacy">Privacy</a> &middot; <a href="/legal/creator-agreement">Creator Agreement</a> &middot; <a href="/legal/content-rules">Content Rules</a> &middot; <a href="/creator#contact">Contact</a></p>
+    <p><a href="/legal/terms">Terms</a> &middot; <a href="/legal/privacy">Privacy</a> &middot; <a href="/legal/creator-agreement">Creator Agreement</a> &middot; <a href="/legal/content-rules">Content Rules</a> &middot; <a href="/contact">Contact</a></p>
   </footer>
 
   <script src="/js/api.js" defer></script>
@@ -709,9 +745,12 @@
   <script src="/js/markup.js" defer></script>
   <script src="/js/hub.js" defer></script>
   <script src="/js/admin.js" defer></script>
+  <script src="/js/form-builder.js" defer></script>
   <script src="/js/admin-works.js" defer></script>
   <script src="/js/admin-stories.js" defer></script>
   <script src="/js/admin-more.js" defer></script>
   <script src="/js/admin-collabs.js" defer></script>
+  <script src="/js/suggest.js" defer></script>
+  <script src="/js/suggest-init.js" defer></script>
 </body>
 </html>

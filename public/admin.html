@@ -59,7 +59,7 @@
     <a href="/gallery?category=updates" data-nav="updates">Updates</a>
     <a href="/products" data-nav="products">More products</a>
     <a href="/creator" data-nav="creator">Creator</a>
-    <a href="/creator#contact">Contact</a>
+    <a href="/contact" data-nav="contact">Contact</a>
   </nav>
 
   <main id="main" class="admin-main">
@@ -79,7 +79,11 @@
         <button role="tab" type="button" data-tab="drafts" aria-selected="false">Drafts &amp; scheduled</button>
         <button role="tab" type="button" data-tab="products" aria-selected="false">Products</button>
         <button role="tab" type="button" data-tab="comments" aria-selected="false">Comments</button>
+        <button role="tab" type="button" data-tab="reviews" aria-selected="false">Reviews <span class="tab-badge" id="review-badge" hidden></span></button>
+        <button role="tab" type="button" data-tab="users" aria-selected="false">Manage users</button>
         <button role="tab" type="button" data-tab="inbox" aria-selected="false">Inbox <span class="tab-badge" id="inbox-badge" hidden></span></button>
+        <button role="tab" type="button" data-tab="announce" aria-selected="false">Announcements</button>
+        <button role="tab" type="button" data-tab="features" aria-selected="false">Features</button>
         <button role="tab" type="button" data-tab="settings" aria-selected="false">Settings</button>
         <button role="tab" type="button" data-tab="afterframe" aria-selected="false" data-admin-only>Afterframe <span class="tab-badge" id="mod-badge" hidden></span></button>
         <button role="tab" type="button" data-tab="profile" aria-selected="false" data-studio-only hidden>Profile</button>
@@ -128,11 +132,26 @@
               <div class="form-row">
                 <label for="category">Category</label>
                 <select id="category" name="category" aria-describedby="category-error">
-                  <option value="story-art">Story art</option>
-                  <option value="anime">Anime works</option>
-                  <option value="writing">Writing</option>
-                  <option value="updates">God's Banditos update</option>
-                  <option value="news">Anime update (Afterframe news)</option>
+                  <optgroup label="Pictures &amp; video">
+                    <option value="art">Art &amp; illustration</option>
+                    <option value="story-art">Story art / comics / manga</option>
+                    <option value="anime">Anime &amp; animation</option>
+                    <option value="film">Live action film</option>
+                    <option value="series">Series episode</option>
+                    <option value="meme">Meme</option>
+                  </optgroup>
+                  <optgroup label="Words">
+                    <option value="writing">Story or writing</option>
+                    <option value="comedy">Comedy</option>
+                    <option value="thoughts">Thoughts &amp; feelings</option>
+                  </optgroup>
+                  <optgroup label="Interactive">
+                    <option value="poll">Poll or questionnaire</option>
+                  </optgroup>
+                  <optgroup label="News">
+                    <option value="updates">God's Banditos update</option>
+                    <option value="news">Anime update (Afterframe news)</option>
+                  </optgroup>
                 </select>
                 <p class="error" id="category-error"></p>
               </div>
@@ -154,6 +173,13 @@
                 <p class="error" id="seriesOrder-error"></p>
               </div>
             </div>
+            <details class="form-row" id="form-builder-wrap" hidden>
+              <summary>Add a poll or questionnaire</summary>
+              <p class="muted">Ask your audience something. Polls have one question; questionnaires can have several, including written answers.</p>
+              <div id="form-builder"></div>
+              <p class="error" id="form-error"></p>
+            </details>
+            <p class="notice" id="review-note" hidden>Every post is reviewed by the team before it goes public. Advertising products, services or sponsors needs admin approval.</p>
             <div class="form-row">
               <label for="summary">Short description <span class="muted">(shown on cards)</span></label>
               <input type="text" id="summary" name="summary" maxlength="300" aria-describedby="summary-error">
@@ -237,6 +263,8 @@
           <button type="button" class="btn btn-ghost btn-small" data-status="live" aria-pressed="false">Live</button>
           <button type="button" class="btn btn-ghost btn-small" data-status="scheduled" aria-pressed="false">Scheduled</button>
           <button type="button" class="btn btn-ghost btn-small" data-status="draft" aria-pressed="false">Drafts</button>
+          <button type="button" class="btn btn-ghost btn-small" data-status="pending" aria-pressed="false">In review</button>
+          <button type="button" class="btn btn-ghost btn-small" data-status="declined" aria-pressed="false">Needs changes</button>
         </div>
         <ul id="admin-list" class="admin-list" aria-live="polite"></ul>
         <nav class="pager" aria-label="Pages">
@@ -470,13 +498,79 @@
       <section class="panel dash-panel" role="tabpanel" data-panel="inbox" aria-label="Inbox" hidden>
         <p class="node-label">Comms // contact form</p>
         <h2>Inbox</h2>
-        <p class="muted" id="inbox-note">Messages people send with the contact form.</p>
+        <p class="muted" id="inbox-note">Contact messages, business enquiries from the Sponsor page and suggestions from the suggestion box.</p>
+        <div class="filter-row" id="inbox-filters" role="group" aria-label="Show">
+          <button type="button" class="btn btn-ghost btn-small" data-kind="" aria-pressed="true">Everything</button>
+          <button type="button" class="btn btn-ghost btn-small" data-kind="contact" aria-pressed="false">Contact</button>
+          <button type="button" class="btn btn-ghost btn-small" data-kind="business" aria-pressed="false">Business</button>
+          <button type="button" class="btn btn-ghost btn-small" data-kind="suggestion" aria-pressed="false">Suggestions</button>
+        </div>
         <ol id="inbox-list" class="comments"></ol>
         <nav class="pager" aria-label="Pages">
           <button id="inbox-prev" class="btn btn-ghost btn-small" type="button" hidden>Newer</button>
           <span id="inbox-page"></span>
           <button id="inbox-next" class="btn btn-ghost btn-small" type="button" hidden>Older</button>
         </nav>
+      </section>
+
+
+      <!-- ===== Reviews: every creator post waits here before it goes public ===== -->
+      <section class="panel dash-panel" role="tabpanel" data-panel="reviews" aria-label="Reviews" hidden>
+        <p class="node-label">Moderation // review queue</p>
+        <h2>Posts waiting for review</h2>
+        <p class="muted">Approve with a friendly message, or decline with a ready-made warning (or your own words). The creator gets your message in their bell and by email.</p>
+        <div class="filter-row" id="review-filters" role="group" aria-label="Show">
+          <button type="button" class="btn btn-ghost btn-small" data-rstatus="pending" aria-pressed="true">Waiting</button>
+          <button type="button" class="btn btn-ghost btn-small" data-rstatus="declined" aria-pressed="false">Declined</button>
+        </div>
+        <div id="review-list"></div>
+      </section>
+
+      <!-- ===== Manage users ===== -->
+      <section class="panel dash-panel" role="tabpanel" data-panel="users" aria-label="Manage users" hidden>
+        <p class="node-label">Moderation // members</p>
+        <h2>Manage users</h2>
+        <form id="user-search" class="gallery-tools" role="search">
+          <div class="form-row"><label for="us-q">Search</label><input type="search" id="us-q" placeholder="Username, name, email or handle" maxlength="60"></div>
+          <div class="form-row"><label for="us-status">Show</label>
+            <select id="us-status"><option value="">Everyone</option><option value="creators">Creators</option><option value="active">Active</option><option value="suspended">Suspended</option><option value="banned">Banned</option><option value="beta">Beta testers</option></select></div>
+          <button type="submit" class="btn-small">Search</button>
+        </form>
+        <div id="user-list" class="admin-list"></div>
+        <nav class="pager" aria-label="Pages">
+          <button id="users-prev" class="btn btn-ghost btn-small" type="button" hidden>Previous</button>
+          <span id="users-page"></span>
+          <button id="users-next" class="btn btn-ghost btn-small" type="button" hidden>Next</button>
+        </nav>
+      </section>
+
+      <!-- ===== Announcements (news from the admin, shown in everyone's bell) ===== -->
+      <section class="dash-panel dash-two" role="tabpanel" data-panel="announce" aria-label="Announcements" hidden>
+        <div class="panel">
+          <p class="node-label">Broadcast // news</p>
+          <h2>Send an announcement</h2>
+          <p class="muted">Appears in the notification bell of every member (or only creators).</p>
+          <form id="announce-form" novalidate>
+            <div class="form-row"><label for="an-title">Title</label><input type="text" id="an-title" maxlength="120" required></div>
+            <div class="form-row"><label for="an-body">Message</label><textarea id="an-body" rows="4" maxlength="1000"></textarea></div>
+            <div class="form-row"><label for="an-link">Link (optional)</label><input type="text" id="an-link" maxlength="300" placeholder="/hub/news or https://…"></div>
+            <div class="form-row"><label for="an-audience">Who</label><select id="an-audience"><option value="all">Everyone</option><option value="creators">Creators only</option></select></div>
+            <button type="submit">Send announcement</button>
+            <p class="feedback" id="an-feedback" aria-live="polite"></p>
+          </form>
+        </div>
+        <div class="panel">
+          <h2>Recent announcements</h2>
+          <ul id="announce-list" class="admin-list"></ul>
+        </div>
+      </section>
+
+      <!-- ===== Features (version control: test new things before everyone gets them) ===== -->
+      <section class="panel dash-panel" role="tabpanel" data-panel="features" aria-label="Features" hidden>
+        <p class="node-label">Lab // feature switches</p>
+        <h2>Features</h2>
+        <p class="muted">Try new features live before ordinary users see them. <strong>Only me</strong>: just you. <strong>Beta testers</strong>: you plus members you mark as testers in Manage users. <strong>Everyone</strong>: all visitors. <strong>Off</strong>: nobody. Changes take effect within about 15 seconds.</p>
+        <div id="flag-list"></div>
       </section>
 
       <!-- ===== Settings ===== -->
@@ -523,6 +617,30 @@
                 <li><strong>Bank transfer</strong>: leave the details empty and visitors will ask for them through the contact form, so your account number isn't public. Or type the details if you're happy for anyone to see them.</li>
               </ul>
             </details>
+          </form>
+        </div>
+
+        <div class="panel">
+          <p class="node-label">Settings // sponsor page</p>
+          <h2>Sponsor &amp; business page</h2>
+          <p class="muted">What companies and investors see at <a href="/hub/sponsor">/hub/sponsor</a>. Switch the page on in Features. Only fill in contact details you're happy to make public.</p>
+          <form id="sponsor-form" novalidate>
+            <div class="form-row"><label for="sp-headline-in">Headline</label><input type="text" id="sp-headline-in" maxlength="120"></div>
+            <div class="form-row"><label for="sp-pitch-in">Pitch</label><textarea id="sp-pitch-in" rows="4" maxlength="4000"></textarea></div>
+            <label class="check-row"><input type="checkbox" id="sp-stats-in"> <span>Show live numbers (creators, members, works, follows)</span></label>
+            <fieldset class="form-row"><legend>Ways to work with you (leave empty for the defaults)</legend><ol id="sp-tiers-in" class="support-methods"></ol>
+              <button type="button" class="btn btn-ghost btn-small" id="sp-tier-add">＋ Add an option</button></fieldset>
+            <fieldset class="form-row"><legend>Business contact</legend>
+              <div class="form-row"><label for="spc-name">Name</label><input type="text" id="spc-name" maxlength="80"></div>
+              <div class="form-row"><label for="spc-role">Role</label><input type="text" id="spc-role" maxlength="80" placeholder="Founder"></div>
+              <div class="form-row"><label for="spc-email">Business email</label><input id="spc-email" type="email" maxlength="254"></div>
+              <div class="form-row"><label for="spc-phone">Phone</label><input type="text" id="spc-phone" maxlength="30"></div>
+              <div class="form-row"><label for="spc-whatsapp">WhatsApp number</label><input type="text" id="spc-whatsapp" maxlength="30" placeholder="+260…"></div>
+              <div class="form-row"><label for="spc-linkedin">LinkedIn (https://…)</label><input type="text" id="spc-linkedin" maxlength="300"></div>
+              <div class="form-row"><label for="spc-website">Website (https://…)</label><input type="text" id="spc-website" maxlength="300"></div>
+            </fieldset>
+            <button type="submit">Save sponsor page</button>
+            <p class="feedback" id="sp-feedback" aria-live="polite"></p>
           </form>
         </div>
 
@@ -651,9 +769,11 @@
   <script src="/js/flair.js" defer></script>
   <script src="/js/markup.js" defer></script>
   <script src="/js/admin.js" defer></script>
+  <script src="/js/form-builder.js" defer></script>
   <script src="/js/admin-works.js" defer></script>
   <script src="/js/admin-stories.js" defer></script>
   <script src="/js/admin-more.js" defer></script>
   <script src="/js/admin-moderation.js" defer></script>
+  <script src="/js/admin-v5.js" defer></script>
 </body>
 </html>

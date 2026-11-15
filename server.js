@@ -76,6 +76,8 @@ app.use(
 
 const api = express.Router();
 api.use(sameOriginOnly);
+// Online status, streaks and ban checks for logged-in people.
+api.use(require("./src/auth").trackActivity);
 api.use("/account", require("./src/routes/account"));
 api.use("/posts", require("./src/routes/posts"));
 api.use("/comments", require("./src/routes/comments"));
@@ -84,6 +86,9 @@ api.use("/contact", require("./src/routes/contact"));
 api.use("/stories", require("./src/routes/stories"));
 api.use("/hub", require("./src/routes/hub"));
 api.use("/collabs", require("./src/routes/collabs"));
+api.use("/notifications", require("./src/routes/notifications"));
+api.use("/help", require("./src/routes/help"));
+api.use(require("./src/routes/business"));
 api.use(require("./src/routes/search"));
 api.use("/admin", require("./src/routes/admin"));
 api.get("/health", function (req, res) {
@@ -252,6 +257,7 @@ migrate()
     app.listen(PORT, function () {
       console.log("Website running on http://localhost:" + PORT);
     });
+    require("./src/publishing").start();
   })
   .catch(function (error) {
     console.error("Could not prepare the database:", error);

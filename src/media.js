@@ -55,9 +55,11 @@ function parsePublishAt(value) {
   return date;
 }
 
-// "draft", "scheduled" or "live"
+// "draft", "pending" (waiting for review), "declined", "scheduled" or "live"
 function statusOf(row) {
   if (!row.published) return "draft";
+  if (row.review_status === "pending") return "pending";
+  if (row.review_status === "declined") return "declined";
   if (row.publish_at && new Date(row.publish_at) > new Date()) return "scheduled";
   return "live";
 }
