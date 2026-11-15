@@ -10,7 +10,9 @@
   var el = MW.el;
 
   var SHELVES = [
-    ["", "Everything", "✦"],
+    ["", "For you", "✦"],
+    ["trailers", "Trailers", "🎞️", null],
+    ["series", "Series", "📺", [["", "All series"], ["series", "Live action series"], ["anime", "Animation"]]],
     ["books", "Books", "📚", [["", "All books"], ["novel", "Novels"], ["storybook", "Storybooks"], ["educational", "Educational"]]],
     ["comics", "Comics & manga", "💥", null],
     ["art", "Art", "🎨", [["", "All art"], ["art", "Art & illustration"], ["meme", "Memes"]]],
@@ -25,7 +27,11 @@
     ["young-adult", "Young adult"], ["education", "Education"], ["science", "Science"], ["self-help", "Self-help"],
     ["faith", "Faith"], ["poetry", "Poetry"], ["music", "Music"]];
 
-  var state = { shelf: "", category: "", genre: "", sort: "new", page: 1 };
+  var state = { shelf: "", category: "", genre: "", sort: "new", page: 1, view: "feed" };
+  try { state.view = localStorage.getItem("ch-home-view") === "grid" ? "grid" : "feed"; } catch (e) { /* ignore */ }
+  var user = null;
+  var loading = false;
+  var lastPage = false;
   var shelvesBox = document.getElementById("browse-shelves");
   var catsBox = document.getElementById("browse-cats");
   var genresBox = document.getElementById("browse-genres");
@@ -69,10 +75,13 @@
       genresBox.appendChild(chip(g[1], g[0] === state.genre, function () { state.genre = g[0]; state.page = 1; refresh(); }));
     });
     sortSel.value = state.sort;
+    var active = (state.category ? 1 : 0) + (state.genre ? 1 : 0);
+    var ftb = document.getElementById("feed-filters-toggle");
+    if (ftb) ftb.textContent = "⚙ Filters" + (active ? " (" + active + ")" : "");
   }
 
   function query() {
-    var q = new URLSearchParams({ site: "hub", sort: state.sort, page: String(state.page) });
+    var q = new URLSearchParams({ site: "hub", sort: state.sort, page: String(state.page), feed: "1" });
     if (state.category) q.set("category", state.category);
     else if (state.shelf) q.set("shelf", state.shelf);
     if (state.genre) q.set("genre", state.genre);
@@ -90,22 +99,59 @@
   }
 
   function load(append) {
-    if (!append) { results.textContent = ""; summary.textContent = "Loading…"; }
+    if (loading) return;
+    loading = true;
+    if (!append) { results.textContent = ""; summary.textContent = "Loading…"; lastPage = false; }
+    results.className = state.view === "grid" ? "works-grid" : "feed-list";
     more.disabled = true;
     MW.api("/posts?" + query().toString()).then(function (d) {
       if (!append) results.textContent = "";
-      summary.textContent = describe(d.total || 0);
+      var filtered = state.shelf || state.category || state.genre;
+      summary.textContent = filtered ? describe(d.total || 0) : "";
       if (!d.posts.length && !append) {
-        results.appendChild(el("p", { class: "empty" }, "Nothing here yet. Try another genre, or be the first to post one!"));
+        results.appendChild(el("p", { class: "empty" }, "Nothing here yet. Try another filter, or be the first to post one!"));
+      } else if (state.view === "grid") {
+        d.posts.forEach(function (p) { results.appendChild(MW.workCard(p)); });
       } else {
-        var holder = el("div");
-        MW.renderWorks(holder, d.posts);
-        while (holder.firstChild) results.appendChild(holder.firstChild);
+        d.posts.forEach(function (p) { results.appendChild(MW.feedCard(p, user)); });
       }
-      more.hidden = d.page >= d.pages;
+      lastPage = d.page >= d.pages;
+      more.hidden = lastPage;
       more.disabled = false;
-    }).catch(function (e) { summary.textContent = e.message; });
+      if (lastPage && d.posts.length && append) results.appendChild(el("p", { class: "feed-end muted" }, "You're all caught up ✦"));
+    }).catch(function (e) { summary.textContent = e.message; })
+      .then(function () { loading = false; });
   }
+
+  // Endless scroll: the next page loads as you near the bottom.
+  var sentinel = document.getElementById("feed-sentinel");
+  if (sentinel && "IntersectionObserver" in window) {
+    new IntersectionObserver(function (entries) {
+      if (entries[0].isIntersecting && !loading && !lastPage && results.children.length) { state.page += 1; load(true); }
+    }, { rootMargin: "800px 0px" }).observe(sentinel);
+  }
+
+  // Feed / grid switch (remembered on this device)
+  var vf = document.getElementById("view-feed"), vg = document.getElementById("view-grid");
+  function paintView() {
+    vf.classList.toggle("is-active", state.view === "feed"); vf.setAttribute("aria-pressed", String(state.view === "feed"));
+    vg.classList.toggle("is-active", state.view === "grid"); vg.setAttribute("aria-pressed", String(state.view === "grid"));
+  }
+  [[vf, "feed"], [vg, "grid"]].forEach(function (pair) {
+    pair[0].addEventListener("click", function () {
+      state.view = pair[1]; state.page = 1;
+      try { localStorage.setItem("ch-home-view", state.view); } catch (e) { /* ignore */ }
+      paintView(); load(false);
+    });
+  });
+  paintView();
+
+  // Filters drawer (type and genre)
+  var ft = document.getElementById("feed-filters-toggle"), fbox = document.getElementById("feed-filters");
+  ft.addEventListener("click", function () {
+    fbox.hidden = !fbox.hidden;
+    ft.setAttribute("aria-expanded", String(!fbox.hidden));
+  });
 
   function refresh() {
     drawControls();
@@ -120,6 +166,6 @@
   more.addEventListener("click", function () { state.page += 1; load(true); });
 
   drawControls();
-  load(false);
-  if (hash) document.getElementById("browse").scrollIntoView();
+  if (state.genre || state.category) { fbox.hidden = false; ft.setAttribute("aria-expanded", "true"); }
+  MW.me().then(function (u) { user = u; load(false); });
 })();

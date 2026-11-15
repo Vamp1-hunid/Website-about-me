@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=14">
-  <link rel="stylesheet" href="/css/chapterhive.css?v=5">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=7">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -50,6 +50,7 @@
   <nav id="site-nav" class="site-nav" aria-label="Main navigation">
     <a href="/hub" data-nav="hub">Home</a>
     <a href="/hub/creators" data-nav="creators">Creators</a>
+    <a href="/hub/top" data-nav="top">Top creators</a>
     <a href="/hub/feed" data-nav="feed">Following</a>
     <a href="/hub/news" data-nav="news">News &amp; updates</a>
     <a href="/hub/collabs" data-nav="collabs">Collabs</a>
@@ -57,63 +58,62 @@
     <a href="/hub/sponsor" data-nav="sponsor">Sponsor</a>
   </nav>
 
-  <main id="main">
-    <section class="panel af-hero film-edge" aria-labelledby="hero-title">
-      <p class="node-label">Fresh from the hive</p>
-      <h1 id="hero-title">Every creator adds a chapter.</h1>
-      <p class="lead">Chapterhive is a safe, welcoming home for creators of every kind: novelists and poets, storybook and educational authors, songwriters and musicians, artists, manga and comic makers, animators, filmmakers, comedians, or anyone with a few words about how they feel. Every voice gets its chapter and its credit. Follow the creators you love, catch new work the moment it drops, and keep up with the latest news.</p>
-      <div class="hero-actions">
-        <a class="btn" href="#browse">Browse the hive</a>
-        <a class="btn btn-ghost" href="/hub/creators">Explore creators</a>
-      </div>
-      <div class="af-stats" id="hub-stats" aria-live="polite"></div>
-    </section>
+  <main id="main" class="home-main">
+    <div class="home-layout">
+      <section class="feed" id="browse" aria-labelledby="browse-title">
+        <!-- Creator "stories" strip, like the circles at the top of Instagram. -->
+        <div class="story-strip" aria-label="Creators"><div id="home-stories" class="story-row"></div></div>
+        <div class="feed-head">
+          <h1 id="browse-title" class="sr-only">Chapterhive feed</h1>
+          <div class="browse-shelves" role="tablist" aria-label="What do you feel like?" id="browse-shelves"></div>
+          <div class="feed-tools">
+            <button type="button" class="chip" id="feed-filters-toggle" aria-expanded="false" aria-controls="feed-filters">⚙ Filters</button>
+            <label class="browse-sort"><span class="sr-only">Sort by</span>
+              <select id="browse-sort"><option value="new">Newest</option><option value="popular">Most liked</option><option value="old">Oldest</option></select>
+            </label>
+            <div class="view-toggle" role="group" aria-label="Layout">
+              <button type="button" class="chip is-active" id="view-feed" aria-pressed="true" title="Scroll feed">▤ Feed</button>
+              <button type="button" class="chip" id="view-grid" aria-pressed="false" title="Grid">▦ Grid</button>
+            </div>
+          </div>
+          <div id="feed-filters" class="feed-filters" hidden>
+            <div class="browse-cats" id="browse-cats" aria-label="Type"></div>
+            <div class="browse-genres" id="browse-genres" aria-label="Genre"></div>
+          </div>
+          <p class="mono muted" id="browse-summary" aria-live="polite"></p>
+        </div>
+        <div id="browse-results" class="feed-list"></div>
+        <div id="feed-sentinel" class="feed-sentinel" aria-hidden="true"></div>
+        <div class="hero-actions"><button type="button" class="btn btn-ghost" id="browse-more" hidden>Show more</button></div>
+      </section>
 
-    <section class="panel" id="following-panel" aria-labelledby="following-title" hidden>
-      <div class="af-section-head">
-        <h2 id="following-title">New from creators you follow</h2>
-        <a href="/hub/feed" class="mono">Open your feed &rarr;</a>
-      </div>
-      <div id="home-following" class="works-grid"></div>
-    </section>
-
-    <section class="panel" aria-labelledby="creators-title">
-      <div class="af-section-head">
-        <h2 id="creators-title">Featured creators</h2>
-        <a href="/hub/creators" class="mono">All creators &rarr;</a>
-      </div>
-      <div id="home-creators" class="creator-grid"><p class="loading">Loading&hellip;</p></div>
-    </section>
-
-    <section class="panel" aria-labelledby="latest-title">
-      <div class="af-section-head">
-        <h2 id="latest-title">Latest releases</h2>
-      </div>
-      <div id="home-latest" class="works-grid"></div>
-    </section>
-
-    <section class="panel" aria-labelledby="news-title">
-      <div class="af-section-head">
-        <h2 id="news-title">News &amp; updates</h2>
-        <a href="/hub/news" class="mono">All updates &rarr;</a>
-      </div>
-      <div id="home-news" class="news-list"></div>
-    </section>
-
-    <section class="panel browse" id="browse" aria-labelledby="browse-title">
-      <div class="af-section-head">
-        <h2 id="browse-title">Browse the hive</h2>
-        <label class="browse-sort"><span class="sr-only">Sort by</span>
-          <select id="browse-sort"><option value="new">Newest</option><option value="popular">Most liked</option><option value="old">Oldest</option></select>
-        </label>
-      </div>
-      <div class="browse-shelves" role="tablist" aria-label="What do you feel like?" id="browse-shelves"></div>
-      <div class="browse-cats" id="browse-cats" aria-label="Type"></div>
-      <div class="browse-genres" id="browse-genres" aria-label="Genre"></div>
-      <p class="mono muted" id="browse-summary" aria-live="polite"></p>
-      <div id="browse-results" class="works-grid"></div>
-      <div class="hero-actions"><button type="button" class="btn btn-ghost" id="browse-more" hidden>Show more</button></div>
-    </section>
+      <aside class="home-aside" aria-label="About Chapterhive">
+        <section class="panel af-hero aside-hero" aria-labelledby="hero-title">
+          <p class="node-label">Fresh from the hive</p>
+          <h2 id="hero-title">Every creator adds a chapter.</h2>
+          <p class="muted">A safe, welcoming home for creators of every kind: novelists and poets, storybook and educational authors, songwriters and musicians, artists, manga and comic makers, animators, filmmakers and comedians. Every voice gets its chapter and its credit.</p>
+          <div class="hero-actions">
+            <a class="btn btn-small" href="/hub/creators">Explore creators</a>
+            <a class="btn btn-ghost btn-small" href="/hub/apply" data-nav-apply>Become a creator</a>
+          </div>
+          <div class="af-stats" id="hub-stats" aria-live="polite"></div>
+        </section>
+        <section class="panel" aria-labelledby="news-title">
+          <div class="af-section-head">
+            <h2 id="news-title">News &amp; updates</h2>
+            <a href="/hub/news" class="mono">All &rarr;</a>
+          </div>
+          <div id="home-news" class="news-list"></div>
+        </section>
+        <section class="panel" aria-labelledby="creators-title">
+          <div class="af-section-head">
+            <h2 id="creators-title">Featured creators</h2>
+            <a href="/hub/creators" class="mono">All &rarr;</a>
+          </div>
+          <div id="home-creators" class="creator-list-compact"><p class="loading">Loading&hellip;</p></div>
+        </section>
+      </aside>
+    </div>
   </main>
 
   <footer class="site-footer">
@@ -126,6 +126,7 @@
   <script src="/js/works-grid.js" defer></script>
   <script src="/js/hub.js" defer></script>
   <script src="/js/hub-home.js" defer></script>
+  <script src="/js/feed-card.js" defer></script>
   <script src="/js/hub-browse.js" defer></script>
 </body>
 </html>

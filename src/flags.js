@@ -19,6 +19,7 @@ const DEFAULTS = [
   ["follows", "Following creators", "Members can follow creators and get their posts in the Following feed.", "everyone", "Accounts & community"],
   ["notifications", "Notification bell", "Bell with new posts from people you follow, new followers, milestones, trending and announcements.", "admin", "Accounts & community"],
   ["streaks", "Online streaks", "Counts the days in a row someone visits, shown on their profile and the menu.", "admin", "Accounts & community"],
+  ["rankings", "Top creators & badges", "Ranks the most popular creators (top 10 overall, top 5 per shelf), gives them badges and boosts their posts in the home feed.", "everyone", "Accounts & community"],
   ["online_status", "Online status", "Green dot on creators and members who are online (they can turn it off).", "admin", "Accounts & community"],
   // Creating
   ["creating", "Create (posting)", "Creators can publish and edit posts. Switch off to pause all new posts except yours.", "everyone", "Creating"],

@@ -27,7 +27,11 @@
     var meta = el("div", { class: "meta" });
     if (post.logline) meta.appendChild(el("p", { class: "logline" }, post.logline));
     meta.appendChild(el("h3", {}, post.title));
-    if (MW.isHub && post.creator) meta.appendChild(el("p", { class: "card-creator" }, "by " + post.creator.name));
+    if (MW.isHub && post.creator) {
+      var by = el("p", { class: "card-creator" }, "by " + post.creator.name);
+      if (post.creator.badges && post.creator.badges.length) by.appendChild(MW.badges(post.creator.badges, true));
+      meta.appendChild(by);
+    }
     if (post.series) {
       var chapter = post.seriesOrder !== null && post.seriesOrder !== undefined ? " · Ch. " + post.seriesOrder : "";
       meta.appendChild(el("p", { class: "mono muted card-series" }, post.series.title + chapter));

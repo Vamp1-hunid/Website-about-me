@@ -27,6 +27,7 @@
     var h3 = el("h3", {}, c.name);
     h3.appendChild(MW.onlineDot(c.online));
     body.appendChild(h3);
+    if (c.badges && c.badges.length) body.appendChild(MW.badges(c.badges.slice(0, 2)));
     body.appendChild(el("p", { class: "mono muted" }, "@" + c.handle + " · " + c.followers + (c.followers === 1 ? " follower" : " followers")));
     if (c.tagline) body.appendChild(el("p", {}, c.tagline));
     if (c.kinds && c.kinds.length) {

@@ -45,6 +45,11 @@
     h1.appendChild(MW.onlineDot(c.online));
     names.appendChild(h1);
     if (c.premium) names.appendChild(el("span", { class: "premium-badge" }, "✦ Premium"));
+    if (c.badges && c.badges.length) {
+      var bl = el("p");
+      bl.appendChild(MW.badges(c.badges));
+      names.appendChild(bl);
+    }
     names.appendChild(el("p", { class: "mono muted" }, "@" + c.handle + (c.isBanditos ? " · Chapterhive founder" : "")));
     top.appendChild(names);
     var actions = el("div", { class: "profile-actions" });

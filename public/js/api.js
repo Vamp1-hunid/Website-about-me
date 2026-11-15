@@ -152,7 +152,7 @@
   MW.categoryName = function (category) {
     return { "story-art": "Story art", anime: "Anime works", writing: "Writing", updates: "Update", news: "News",
       art: "Art", comedy: "Comedy", film: "Live action film", series: "Series", meme: "Meme", thoughts: "Thoughts", poll: "Poll",
-      novel: "Novel", storybook: "Storybook", educational: "Educational", poetry: "Poetry", song: "Song & music" }[category] || category;
+      novel: "Novel", storybook: "Storybook", educational: "Educational", poetry: "Poetry", song: "Song & music", trailer: "Trailer" }[category] || category;
   };
 
   // "2026-11-20T15:00:00Z" -> "20 Nov 2026, 17:00" (in the visitor's own time zone)
@@ -357,6 +357,16 @@
     container.hidden = !links.length;
   };
 
+  // Top-creator badges (👑 #1 on Chapterhive, 📚 Top 5 in Books ...). compact: icons only, label on hover.
+  MW.badges = function (list, compact) {
+    var box = el("span", { class: "rank-badges" + (compact ? " is-compact" : "") });
+    (list || []).forEach(function (b) {
+      var s = el("span", { class: "rank-badge tier-" + b.tier, title: b.label }, compact ? b.icon : b.icon + " " + b.label);
+      box.appendChild(s);
+    });
+    return box;
+  };
+
   // A "create an account" box shown wherever a visitor hits something reserved for members.
   MW.guestGate = function (message) {
     var box = el("div", { class: "guest-gate", role: "note" });
@@ -370,7 +380,7 @@
 
   // Pages that belong to a switchable feature. While it's off, the page shows a friendly notice instead.
   var PAGE_FEATURES = { "/hub/chat": "chat", "/hub/collabs": "collabs", "/hub/premium": "premium", "/hub/sponsor": "sponsor_page",
-    "/hub/apply": "creator_applications", "/hub/search": "search", "/search": "search", "/hub/feed": "follows", "/hub/news": "updates" };
+    "/hub/apply": "creator_applications", "/hub/search": "search", "/search": "search", "/hub/feed": "follows", "/hub/news": "updates", "/hub/top": "rankings" };
   function gatePage() {
     var path = window.location.pathname.replace(/\/$/, "");
     var key = PAGE_FEATURES[path] || (path.indexOf("/hub/collabs/") === 0 ? "collabs" : null);
@@ -404,7 +414,7 @@
     menu.appendChild(search);
 
     var groups = MW.isHub ? [
-      ["Chapterhive", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following", true], ["/hub/news", "News & updates", false, "updates"]]],
+      ["Chapterhive", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following", true], ["/hub/news", "News & updates", false, "updates"], ["/hub/top", "Top creators", false, "rankings"]]],
       ["Create", [["/hub/collabs", "Collab board", true, "collabs"], ["/hub/collabs#suggest", "Suggestion box", true, "suggestion_box"], ["/hub/apply", "Become a creator", true, "creator_applications"], ["/legal/content-rules", "Content Rules"]]],
       ["More", [["/help", "Help & FAQ"], ["/hub/premium", "Premium", false, "premium"], ["/hub/sponsor", "Sponsor & business", false, "sponsor_page"], ["/", "God's Banditos"], ["/contact", "Contact"], ["/legal/terms", "Terms"]]]
     ] : [
@@ -448,7 +458,7 @@
         var notice = MW.featureNotice(key);
         if (notice) MW.markNotice(li.querySelector("a"), notice); else li.remove();
       });
-      var navFeatures = { collabs: "collabs", apply: "creator_applications", sponsor: "sponsor_page", news: "updates", updates: "updates", feed: "follows" };
+      var navFeatures = { collabs: "collabs", apply: "creator_applications", sponsor: "sponsor_page", news: "updates", updates: "updates", feed: "follows", top: "rankings" };
       Object.keys(navFeatures).forEach(function (nav) {
         if (!MW.feature(navFeatures[nav])) {
           var notice = MW.featureNotice(navFeatures[nav]);

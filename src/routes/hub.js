@@ -19,6 +19,7 @@ const storage = require("../storage");
 const { requireLogin } = require("../auth");
 const { requireFlag, isOn: isFlagOn } = require("../flags");
 const { planOf } = require("../plans");
+const rankings = require("../rankings");
 const { resolveMedia } = require("../media");
 const { VISIBLE, SELECT_POST, toPost } = require("./posts");
 const { CHAR_VISIBLE } = require("./stories");
@@ -71,7 +72,8 @@ function toCreatorCard(row) {
     works: row.works || 0,
     featured: row.featured,
     isBanditos: row.role === "admin",
-    online: !!row.online
+    online: !!row.online,
+    badges: rankings.badgesFrom(row.ranks)
   };
 }
 
@@ -79,6 +81,7 @@ const CREATOR_SQL = `
   SELECT cp.*, u.username AS account_username, u.plan, u.plan_until, u.avatar_url, u.role, u.created_at AS joined, u.streak_count,
     (u.show_online AND u.last_seen_at > NOW() - INTERVAL '5 minutes') AS online,
     (SELECT COUNT(*) FROM follows f WHERE f.creator_id = cp.user_id)::int AS followers,
+    (SELECT json_agg(json_build_object('scope', cr.scope, 'rank', cr.rank)) FROM creator_ranks cr WHERE cr.user_id = cp.user_id) AS ranks,
     (SELECT COUNT(*) FROM posts p WHERE p.user_id = cp.user_id AND p.category <> 'news' AND ${VISIBLE})::int AS works
   FROM creator_profiles cp JOIN users u ON u.id = cp.user_id`;
 
@@ -392,6 +395,28 @@ router.get("/studio/overview", requireLogin, async function (req, res) {
   res.json(Object.assign(rows[0], {
     upcoming: next.rows.map(function (r) { return { title: r.title, slug: r.slug, publishAt: r.publish_at }; })
   }));
+});
+
+/* ---------- Top creators ---------- */
+
+// GET /api/hub/top -> top 10 overall and top 5 per shelf, with badges
+router.get("/top", requireFlag("rankings", { adminAlways: true }), async function (req, res) {
+  const rows = await rankings.leaderboard();
+  const boards = {};
+  rows.forEach(function (r) {
+    (boards[r.scope] = boards[r.scope] || []).push({
+      rank: r.rank, score: r.score, handle: r.handle, name: r.name, tagline: r.tagline,
+      avatarUrl: storage.avatarUrl(r.avatar_url) || null, badge: rankings.badgeFor(r.scope, r.rank)
+    });
+  });
+  res.json({ boards: boards, names: rankings.SCOPE_NAMES, updatedAt: rows[0] ? rows[0].computed_at : null });
+});
+
+// POST /api/hub/top/refresh (admin) -> recalculate now
+router.post("/top/refresh", requireLogin, async function (req, res) {
+  if (req.session.user.role !== "admin") return res.status(403).json({ error: "Only the admin can do that." });
+  await rankings.refresh();
+  res.json({ ok: true });
 });
 
 /* ---------- Reports ---------- */

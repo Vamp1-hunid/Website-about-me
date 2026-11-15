@@ -20,7 +20,7 @@ router.param("id", function (req, res, next, value) {
   next();
 });
 
-const CATEGORIES = ["story-art", "anime", "writing", "updates", "news", "art", "comedy", "film", "series", "meme", "thoughts", "poll", "novel", "storybook", "educational", "poetry", "song"];
+const CATEGORIES = ["story-art", "anime", "writing", "updates", "news", "art", "comedy", "film", "series", "meme", "thoughts", "poll", "novel", "storybook", "educational", "poetry", "song", "trailer"];
 const NEEDS_VISUAL = ["story-art", "anime", "art", "meme"];
 const SECTIONS = ["main", "concept-art"];
 const FONTS = ["theme", "serif", "typewriter", "handwritten", "clean"];
@@ -39,7 +39,9 @@ const SHELVES = {
   books: ["novel", "storybook", "educational"],
   comics: ["story-art"],
   art: ["art", "meme"],
-  video: ["anime", "film", "series"],
+  video: ["anime", "film", "series", "trailer"],
+  trailers: ["trailer"],
+  series: ["series", "anime"],
   music: ["song", "poetry"],
   writing: ["writing", "thoughts", "poetry", "novel"],
   comedy: ["comedy", "meme"]
@@ -49,6 +51,7 @@ const GENRES = ["fantasy", "scifi", "horror", "mystery", "romance", "comedy", "d
 const PAGE_SIZE = 12;
 const MAX_MEDIA = 80;
 const plans = require("../plans");
+const rankings = require("../rankings");
 const { requireFlag, isOn: flagIsOn } = require("../flags");
 const MAX_TAGS = 12;
 
@@ -123,7 +126,8 @@ function toPost(row, full) {
       handle: row.creator_handle,
       name: row.creator_name,
       avatarUrl: storage.avatarUrl(row.creator_avatar) || null,
-      isBanditos: row.owner_role === "admin"
+      isBanditos: row.owner_role === "admin",
+      badges: rankings.badgesFrom(row.creator_ranks)
     } : null,
     series: row.series_id ? { id: row.series_id, slug: row.series_slug, title: row.series_title } : null,
     seriesOrder: row.series_order,
@@ -170,12 +174,42 @@ const SELECT_POST = `
     (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)::int AS comments,
     (SELECT COUNT(*) FROM post_media m WHERE m.post_id = p.id AND m.role = 'page' AND m.kind <> 'document')::int AS media_count,
     EXISTS (SELECT 1 FROM post_media m WHERE m.post_id = p.id AND m.kind = 'video') AS has_video,
-    EXISTS (SELECT 1 FROM post_media m WHERE m.post_id = p.id AND m.kind = 'audio') AS has_audio
+    EXISTS (SELECT 1 FROM post_media m WHERE m.post_id = p.id AND m.kind = 'audio') AS has_audio,
+    (SELECT json_agg(json_build_object('scope', cr.scope, 'rank', cr.rank)) FROM creator_ranks cr WHERE cr.user_id = p.user_id) AS creator_ranks
   FROM posts p LEFT JOIN series s ON s.id = p.series_id
     LEFT JOIN users ou ON ou.id = p.user_id
     LEFT JOIN creator_profiles cp ON cp.user_id = p.user_id`;
 
 /* ---------- Reading ---------- */
+
+// For the home feed: the first picture of each post, its first video (members only: streaming
+// needs an account) and the viewer's like / save state.
+async function addFeedExtras(rows, me) {
+  const ids = rows.map(function (r) { return r.id; });
+  const out = rows.map(function (row) { return toPost(row, false); });
+  if (!ids.length) return out;
+  const media = await db.query(
+    `SELECT DISTINCT ON (post_id, kind) post_id, kind, url FROM post_media
+      WHERE post_id = ANY ($1::int[]) AND kind IN ('image', 'video') ORDER BY post_id, kind, (role = 'cover') DESC, position`, [ids]);
+  let liked = new Set(), saved = new Set();
+  if (me) {
+    const l = await db.query("SELECT post_id FROM likes WHERE user_id = $1 AND post_id = ANY ($2::int[])", [me.id, ids]);
+    const f = await db.query("SELECT post_id FROM favourites WHERE user_id = $1 AND post_id = ANY ($2::int[])", [me.id, ids]);
+    liked = new Set(l.rows.map(function (r) { return r.post_id; }));
+    saved = new Set(f.rows.map(function (r) { return r.post_id; }));
+  }
+  out.forEach(function (post) {
+    const mine = media.rows.filter(function (m) { return m.post_id === post.id; });
+    const img = mine.find(function (m) { return m.kind === "image"; });
+    const vid = mine.find(function (m) { return m.kind === "video"; });
+    post.feedImage = img ? storage.displayUrl(img.url, "image") : post.imageUrl;
+    post.feedPoster = vid ? storage.posterUrl(vid.url) : null;
+    post.feedVideo = vid && me ? storage.displayUrl(vid.url, "video") : null;
+    post.liked = liked.has(post.id);
+    post.favourited = saved.has(post.id);
+  });
+  return out;
+}
 
 // GET /api/posts?category=anime&q=fire&tag=sketch&series=a-year-to-burn&sort=popular&page=1
 router.get("/", async function (req, res) {
@@ -250,9 +284,18 @@ router.get("/", async function (req, res) {
     where.push(`(p.title ILIKE ${n} OR p.summary ILIKE ${n} OR p.logline ILIKE ${n} OR array_to_string(p.tags, ' ') ILIKE ${n} OR s.title ILIKE ${n})`);
   }
   const whereSql = where.length ? "WHERE " + where.join(" AND ") : "";
+  // ?feed=1: the scrolling home feed also needs a picture/video to show and whether I liked or saved each post.
+  const feedExtras = req.query.feed === "1" && !showDrafts;
 
+  // Home feed priority: top creators' posts are shown as if they were posted a little later,
+  // so they stay near the top longer (#1: +36h, top 3: +24h, rest of top 10 / top 5 in a shelf: +12h).
+  const boost = feedExtras && (await flagIsOn("rankings", req))
+    ? `(p.created_at + COALESCE((SELECT MAX(CASE WHEN cr.scope = 'overall' AND cr.rank = 1 THEN INTERVAL '36 hours'
+          WHEN cr.scope = 'overall' AND cr.rank <= 3 THEN INTERVAL '24 hours' ELSE INTERVAL '12 hours' END)
+          FROM creator_ranks cr WHERE cr.user_id = p.user_id), INTERVAL '0'))`
+    : "p.created_at";
   const orderSql = {
-    new: "p.created_at DESC, p.id DESC",
+    new: boost + " DESC, p.id DESC",
     old: "p.created_at ASC, p.id ASC",
     popular: "likes DESC, comments DESC, p.created_at DESC",
     series: "p.series_order ASC NULLS LAST, p.created_at ASC"
@@ -273,7 +316,7 @@ router.get("/", async function (req, res) {
   );
 
   res.json({
-    posts: rows.map(function (row) { return toPost(row, false); }),
+    posts: feedExtras ? await addFeedExtras(rows, me) : rows.map(function (row) { return toPost(row, false); }),
     page: page,
     pages: Math.max(1, Math.ceil(total.rows[0].n / PAGE_SIZE)),
     total: total.rows[0].n,

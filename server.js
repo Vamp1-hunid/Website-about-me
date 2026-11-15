@@ -266,6 +266,7 @@ migrate()
       console.log("Website running on http://localhost:" + PORT);
     });
     require("./src/publishing").start();
+    require("./src/rankings").start();
   })
   .catch(function (error) {
     console.error("Could not prepare the database:", error);

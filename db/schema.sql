@@ -365,7 +365,7 @@ ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_category_check;
 ALTER TABLE posts ADD CONSTRAINT posts_category_check CHECK (category IN (
   'story-art', 'anime', 'writing', 'updates', 'news',
   'art', 'comedy', 'film', 'series', 'meme', 'thoughts', 'poll',
-  'novel', 'storybook', 'educational', 'poetry', 'song'));
+  'novel', 'storybook', 'educational', 'poetry', 'song', 'trailer'));
 
 -- Polls and questionnaires attached to a post (questions, options, when results show).
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS form JSONB;
@@ -490,3 +490,15 @@ ALTER TABLE feature_flags ADD COLUMN IF NOT EXISTS display VARCHAR(12) NOT NULL 
 DO $$ BEGIN
   ALTER TABLE feature_flags ADD CONSTRAINT feature_flags_display_check CHECK (display IN ('hide', 'soon', 'maintenance'));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- v9: creator rankings. Recalculated regularly from the last 30 days of activity.
+-- scope: 'overall' (top 10 across everything) or a shelf ('books', 'comics', ...) for the top 5 there.
+CREATE TABLE IF NOT EXISTS creator_ranks (
+  user_id     INTEGER     NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  scope       VARCHAR(20) NOT NULL,
+  rank        INTEGER     NOT NULL,
+  score       INTEGER     NOT NULL DEFAULT 0,
+  computed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, scope)
+);
+CREATE INDEX IF NOT EXISTS creator_ranks_scope_idx ON creator_ranks (scope, rank);

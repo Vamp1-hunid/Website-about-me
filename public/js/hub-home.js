@@ -16,8 +16,46 @@
     var creators = document.getElementById("home-creators");
     creators.textContent = "";
     if (!data.creators.length) creators.appendChild(el("p", { class: "empty" }, "The first creators are joining now."));
-    data.creators.forEach(function (c) { creators.appendChild(MW.creatorCard(c)); });
-    MW.renderWorks(document.getElementById("home-latest"), data.latest, "No releases yet. Check back soon.");
+    data.creators.forEach(function (c) {
+      var a = el("a", { class: "compact-creator", href: "/hub/c/" + encodeURIComponent(c.handle) });
+      var pic = el("span", { class: "feed-avatar" });
+      if (c.avatarUrl) pic.appendChild(el("img", { src: c.avatarUrl, alt: "", loading: "lazy" })); else pic.textContent = (c.name || "?").charAt(0);
+      a.appendChild(pic);
+      var t = el("span", { class: "feed-names" });
+      var cn = el("strong", {}, c.name);
+      if (c.badges && c.badges.length) cn.appendChild(MW.badges(c.badges, true));
+      t.appendChild(cn);
+      t.appendChild(el("span", { class: "muted" }, c.tagline || "@" + c.handle));
+      a.appendChild(t);
+      creators.appendChild(a);
+    });
+    // Stories strip: creator circles across the top (newest posters first), like Instagram.
+    var stories = document.getElementById("home-stories");
+    if (stories) {
+      stories.textContent = "";
+      var seen = {};
+      var ring = [];
+      (data.latest || []).forEach(function (p) {
+        if (p.creator && !seen[p.creator.handle]) { seen[p.creator.handle] = 1; ring.push({ handle: p.creator.handle, name: p.creator.name, avatarUrl: p.creator.avatarUrl, fresh: true }); }
+      });
+      data.creators.forEach(function (c) { if (!seen[c.handle]) { seen[c.handle] = 1; ring.push({ handle: c.handle, name: c.name, avatarUrl: c.avatarUrl }); } });
+      ring.slice(0, 20).forEach(function (c) {
+        var a = el("a", { class: "story" + (c.fresh ? " is-fresh" : ""), href: "/hub/c/" + encodeURIComponent(c.handle), title: c.name + (c.fresh ? " posted recently" : "") });
+        var circle = el("span", { class: "story-ring" });
+        var pic = el("span", { class: "story-pic" });
+        if (c.avatarUrl) pic.appendChild(el("img", { src: c.avatarUrl, alt: "" })); else pic.textContent = (c.name || "?").charAt(0);
+        circle.appendChild(pic);
+        a.appendChild(circle);
+        a.appendChild(el("span", { class: "story-name" }, c.name));
+        stories.appendChild(a);
+      });
+      var more = el("a", { class: "story story-more", href: "/hub/creators" });
+      var moreRing = el("span", { class: "story-ring" });
+      moreRing.appendChild(el("span", { class: "story-pic" }, "＋"));
+      more.appendChild(moreRing);
+      more.appendChild(el("span", { class: "story-name" }, "Discover"));
+      stories.appendChild(more);
+    }
     var news = document.getElementById("home-news");
     news.textContent = "";
     if (!data.news.length) news.appendChild(el("p", { class: "empty" }, "No news yet."));
@@ -40,8 +78,10 @@
       var posts = [].concat.apply([], lists.map(function (l) { return l.posts; }))
         .sort(function (a, b) { return new Date(b.createdAt) - new Date(a.createdAt); }).slice(0, 6);
       if (!posts.length) return;
+      var fp = document.getElementById("following-panel");
+      if (!fp) return;
       MW.renderWorks(document.getElementById("home-following"), posts);
-      document.getElementById("following-panel").hidden = false;
+      fp.hidden = false;
     }).catch(function () {});
   });
 })();
