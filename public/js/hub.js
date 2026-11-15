@@ -1,5 +1,5 @@
 // js/hub.js
-// Afterframe building blocks shared by every /hub page:
+// Chapterhive building blocks shared by every /hub page:
 //   MW.creatorCard()   a creator in a list
 //   MW.followButton()  follow / unfollow
 //   MW.byline()        "by <creator>" with a follow button (work, story and character pages)
@@ -104,7 +104,7 @@
       dialog = el("dialog", { class: "report-dialog", "aria-labelledby": "report-title" });
       var form = el("form", { novalidate: "" });
       form.appendChild(el("h2", { id: "report-title" }, "Report"));
-      form.appendChild(el("p", { class: "muted" }, "Reports are private. The Afterframe team reviews them against the Content Rules."));
+      form.appendChild(el("p", { class: "muted" }, "Reports are private. The Chapterhive team reviews them against the Content Rules."));
       var set = el("fieldset");
       set.appendChild(el("legend", { class: "label" }, "What's wrong?"));
       REASONS.forEach(function (r, i) {
@@ -136,7 +136,7 @@
             reason: form.querySelector("input[name='reason']:checked").value, details: details.value
           } });
           dialog.close();
-          MW.toast("Thanks. The report was sent to the Afterframe team.");
+          MW.toast("Thanks. The report was sent to the Chapterhive team.");
         } catch (error) {
           feedback.className = "feedback feedback-error";
           feedback.textContent = error.message;

@@ -1,4 +1,4 @@
-// js/hub-home.js  -  Afterframe home (/hub)
+// js/hub-home.js  -  Chapterhive home (/hub)
 (function () {
   "use strict";
   var MW = window.MW;

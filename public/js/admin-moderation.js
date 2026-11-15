@@ -1,5 +1,5 @@
 // js/admin-moderation.js
-// Dashboard -> Afterframe tab (site owner only): review creator applications and handle reports.
+// Dashboard -> Chapterhive tab (site owner only): review creator applications and handle reports.
 
 (function () {
   "use strict";
@@ -192,5 +192,5 @@
   }
 
   ADMIN.onReady(refreshBadge);
-  ADMIN.onShow("afterframe", function () { loadCreators(); loadReports(); });
+  ADMIN.onShow("chapterhive", function () { loadCreators(); loadReports(); });
 })();

@@ -13,7 +13,7 @@ const RESERVED = new Set([
   "staff", "team", "official", "support", "help", "helpdesk", "info", "contact", "security", "abuse", "billing",
   "sponsor", "sponsors", "owner", "founder", "ceo", "api", "www", "mail", "email", "noreply", "no_reply",
   "null", "undefined", "anonymous", "anon", "everyone", "here", "test", "testing",
-  "afterframe", "after_frame", "afterframe_official", "godsbanditos", "gods_banditos", "god_s_banditos", "banditos",
+  "chapterhive", "chapter_hive", "chapterhive_official", "afterframe", "after_frame", "godsbanditos", "gods_banditos", "god_s_banditos", "banditos",
   "mulenga", "mulenga_mwamba", "mwamba_official", "hub", "studio", "dashboard", "settings", "profile", "login",
   "register", "signup", "logout", "feed", "news", "creators", "collabs", "legal", "terms", "privacy"
 ]);
@@ -21,8 +21,8 @@ const RESERVED = new Set([
 function isReserved(name) {
   const plain = String(name || "").toLowerCase();
   if (RESERVED.has(plain)) return true;
-  // Also block obvious disguises such as "admin_123" or "official_afterframe".
-  return /^(admin|moderator|mod|staff|support|official)(_|\d|$)/.test(plain) || /(afterframe|godsbanditos|gods_banditos)/.test(plain);
+  // Also block obvious disguises such as "admin_123" or "official_chapterhive".
+  return /^(admin|moderator|mod|staff|support|official)(_|\d|$)/.test(plain) || /(chapterhive|chapter_hive|afterframe|godsbanditos|gods_banditos)/.test(plain);
 }
 
 // Returns null if the username can be used, otherwise a friendly reason.
@@ -53,13 +53,13 @@ function standingProblem(row) {
 
 const WELCOME = {
   member: {
-    title: "Welcome to Afterframe and God's Banditos! 🎬",
+    title: "Welcome to Chapterhive and God's Banditos! 🐝",
     body: "You can now like, save and comment, follow creators, answer polls and get new releases in your bell. " +
       "Tip: open Following to see posts from creators you follow. Want to publish your own work? Apply to become a creator.",
     link: "/help"
   },
   creator: {
-    title: "You're in: welcome to the Afterframe creator lineup! ✨",
+    title: "You're in: welcome to the Chapterhive creators! 🐝",
     body: "Your studio is ready. Post art, stories, comics, films, memes, polls or how you're feeling. " +
       "Every post is checked by the team before it goes public (usually quickly). Set up your profile banner and bio first so new followers know who you are.",
     link: "/hub/studio"
@@ -116,7 +116,7 @@ async function followerMilestone(creatorId, count) {
     title: count === 1 ? "🎉 Your first follower!" : "🎉 " + count.toLocaleString("en-GB") + " followers!",
     body: count === 1
       ? "Someone wants to see everything you make next. Keep going!"
-      : "You just reached " + count.toLocaleString("en-GB") + " followers on Afterframe. Congratulations!",
+      : "You just reached " + count.toLocaleString("en-GB") + " followers on Chapterhive. Congratulations!",
     link: "/hub/studio"
   });
 }

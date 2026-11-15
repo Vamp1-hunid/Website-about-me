@@ -16,7 +16,7 @@ async function migrate() {
   await require("./flags").ensureDefaults();
 }
 
-// Version 4 (Afterframe): every work, story and character has an owner. Anything made
+// Version 4 (Chapterhive): every work, story and character has an owner. Anything made
 // before that belongs to the admin, whose creator profile is "God's Banditos".
 async function assignOwnership() {
   const { rows } = await db.query("SELECT id, display_name FROM users WHERE role = 'admin' ORDER BY id LIMIT 1");

@@ -23,7 +23,7 @@
   Promise.all([MW.api("/hub/creators/" + encodeURIComponent(handle)), MW.me()]).then(function (results) {
     var data = results[0], user = results[1];
     var c = data.creator;
-    document.title = c.name + " (@" + c.handle + ") | Afterframe";
+    document.title = c.name + " (@" + c.handle + ") | Chapterhive";
     box.textContent = "";
     var banner = el("div", { class: "profile-banner" });
     if (c.bannerUrl) banner.style.backgroundImage = "url(\"" + c.bannerUrl.replace(/["\\]/g, "") + "\")";
@@ -35,7 +35,7 @@
     var h1 = el("h1", {}, c.name);
     h1.appendChild(MW.onlineDot(c.online));
     names.appendChild(h1);
-    names.appendChild(el("p", { class: "mono muted" }, "@" + c.handle + (c.isBanditos ? " · Afterframe founder" : "")));
+    names.appendChild(el("p", { class: "mono muted" }, "@" + c.handle + (c.isBanditos ? " · Chapterhive founder" : "")));
     top.appendChild(names);
     var actions = el("div", { class: "profile-actions" });
     var followers = el("strong", {}, String(c.followers));

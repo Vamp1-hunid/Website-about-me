@@ -231,7 +231,7 @@ CREATE TABLE IF NOT EXISTS products (
   updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 
--- ===== Version 4: Afterframe, the creator platform =====
+-- ===== Version 4: Chapterhive, the creator platform =====
 
 -- Who owns each work, story and character. Older rows are given to the admin
 -- (God's Banditos) by src/migrate.js once the admin account exists.
@@ -240,11 +240,11 @@ ALTER TABLE series     ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users
 ALTER TABLE characters ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users (id) ON DELETE CASCADE;
 CREATE INDEX IF NOT EXISTS posts_user_idx ON posts (user_id, created_at DESC);
 
--- Anime updates are posts in the 'news' category (shown on Afterframe only).
+-- Anime updates are posts in the 'news' category (shown on Chapterhive only).
 -- (The list of allowed categories is set once, in the Version 5 section below. Re-applying an
 -- older, shorter list here would fail on restart once posts in newer categories exist.)
 
--- A creator's public profile on Afterframe. status: pending -> approved (or rejected / suspended).
+-- A creator's public profile on Chapterhive. status: pending -> approved (or rejected / suspended).
 CREATE TABLE IF NOT EXISTS creator_profiles (
   user_id        INTEGER      PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
   handle         VARCHAR(30)  NOT NULL UNIQUE,
@@ -295,7 +295,7 @@ CREATE TABLE IF NOT EXISTS reports (
 );
 CREATE INDEX IF NOT EXISTS reports_status_idx ON reports (status, created_at DESC);
 
--- ===== Afterframe collabs: creators looking for each other =====
+-- ===== Chapterhive collabs: creators looking for each other =====
 -- looking_for / offering hold a role from the list in src/routes/collabs.js,
 -- or 'other' with the creator's own words in looking_for_other / offering_other.
 CREATE TABLE IF NOT EXISTS collab_posts (
@@ -360,7 +360,7 @@ CREATE INDEX IF NOT EXISTS posts_review_idx ON posts (review_status, submitted_a
 -- Works that were already public before version 5 don't send "new post" notifications now.
 UPDATE posts SET notified_at = COALESCE(notified_at, NOW()) WHERE notified_at IS NULL AND created_at < NOW() - INTERVAL '1 minute';
 
--- Afterframe is for every kind of creative post.
+-- Chapterhive is for every kind of creative post.
 ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_category_check;
 ALTER TABLE posts ADD CONSTRAINT posts_category_check CHECK (category IN (
   'story-art', 'anime', 'writing', 'updates', 'news',

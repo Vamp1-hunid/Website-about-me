@@ -20,7 +20,7 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// Only lets the request through for the admin or an approved Afterframe creator.
+// Only lets the request through for the admin or an approved Chapterhive creator.
 // Sets req.creator = { userId, handle, status, canWriteNews } and req.isAdmin.
 async function requireCreator(req, res, next) {
   if (!req.session.user) {
@@ -37,7 +37,7 @@ async function requireCreator(req, res, next) {
     return res.status(403).json({
       error: profile && profile.status === "pending"
         ? "Your creator application is still being reviewed."
-        : "Only approved Afterframe creators can do that. Apply at /hub/apply."
+        : "Only approved Chapterhive creators can do that. Apply at /hub/apply."
     });
   }
   req.creator = {

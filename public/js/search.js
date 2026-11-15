@@ -39,7 +39,7 @@
     document.getElementById("search-q").focus();
     return;
   }
-  document.title = "“" + q + "” | Search | " + (MW.isHub ? "Afterframe" : "God's Banditos");
+  document.title = "“" + q + "” | Search | " + (MW.isHub ? "Chapterhive" : "God's Banditos");
   summary.textContent = "Searching…";
 
   MW.api("/search?q=" + encodeURIComponent(q) + (MW.isHub ? "&site=hub" : ""))

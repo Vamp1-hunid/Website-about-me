@@ -138,7 +138,7 @@
   }
 
   function renderPost() {
-    document.title = post.title + (MW.isHub ? " | Afterframe" : " | God's Banditos");
+    document.title = post.title + (MW.isHub ? " | Chapterhive" : " | God's Banditos");
     if (MW.isHub) {
       var back = document.getElementById("back-link");
       if (back && post.category === "news") { back.href = "/hub/news"; back.textContent = "← Anime updates"; }

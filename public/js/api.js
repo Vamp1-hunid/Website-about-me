@@ -11,12 +11,12 @@
 
   var MW = (window.MW = window.MW || {});
 
-  // Which site this page belongs to: God's Banditos ("banditos") or Afterframe ("afterframe").
+  // Which site this page belongs to: God's Banditos ("banditos") or Chapterhive ("chapterhive").
   MW.brand = (document.body && document.body.getAttribute("data-brand")) || "banditos";
-  MW.isHub = MW.brand === "afterframe";
+  MW.isHub = MW.brand === "chapterhive";
 
-  // Where a work, story or character lives. On Afterframe everything opens in Afterframe's look;
-  // on God's Banditos, other creators' things open on Afterframe.
+  // Where a work, story or character lives. On Chapterhive everything opens in Chapterhive's look;
+  // on God's Banditos, other creators' things open on Chapterhive.
   MW.workUrl = function (post) {
     var slug = encodeURIComponent(post.slug);
     if (post.category === "news") return "/hub/news/" + slug;
@@ -324,14 +324,14 @@
     menu.appendChild(search);
 
     var groups = MW.isHub ? [
-      ["Afterframe", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following"], ["/hub/news", "Anime updates"]]],
+      ["Chapterhive", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following"], ["/hub/news", "Anime updates"]]],
       ["Create", [["/hub/collabs", "Collab board"], ["/hub/collabs#suggest", "Suggestion box"], ["/hub/apply", "Become a creator"], ["/legal/content-rules", "Content Rules"]]],
       ["More", [["/help", "Help & FAQ"], ["/hub/sponsor", "Sponsor & business"], ["/", "God's Banditos"], ["/contact", "Contact"], ["/legal/terms", "Terms"]]]
     ] : [
       ["Explore", [["/", "Home"], ["/gallery", "All works"], ["/gallery?category=story-art", "Story art"],
         ["/gallery?category=anime", "Anime works"], ["/gallery?category=writing", "Writing"], ["/gallery?category=updates", "Updates"]]],
       ["Stories", [["/stories", "All stories"], ["/gallery?section=concept-art", "Concept art"]]],
-      ["Studio", [["/products", "More products by us"], ["/creator", "Meet the creator"], ["/contact", "Contact"], ["/help", "Help & FAQ"], ["/hub", "Afterframe ↗"]]]
+      ["Studio", [["/products", "More products by us"], ["/creator", "Meet the creator"], ["/contact", "Contact"], ["/help", "Help & FAQ"], ["/hub", "Chapterhive ↗"]]]
     ];
     var grid = el("div", { class: "menu-grid" });
     groups.forEach(function (group) {
@@ -507,7 +507,7 @@
     if (window.location.hash === "#fund") open();
   }
 
-  // God's Banditos always shows the heist button; Afterframe shows it once the "hub_support" feature is on.
+  // God's Banditos always shows the heist button; Chapterhive shows it once the "hub_support" feature is on.
   MW.me().then(function () {
     if (!MW.isHub || MW.feature("hub_support")) MW.api("/support").then(buildSupport).catch(function () {});
   });

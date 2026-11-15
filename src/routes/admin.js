@@ -17,7 +17,7 @@ const { toComment, COMMENT_SELECT, uniqueSlug, VISIBLE } = require("./posts");
 const { resolveMedia, parsePublishAt, statusOf, deleteAll } = require("../media");
 
 const router = express.Router();
-// Stories, characters and uploads are open to approved Afterframe creators (each sees only their own);
+// Stories, characters and uploads are open to approved Chapterhive creators (each sees only their own);
 // everything else here is for the admin only.
 router.use(function (req, res, next) {
   if (/^\/(series|characters|media|import-document)(\/|$)/.test(req.path)) return requireCreator(req, res, next);
@@ -586,7 +586,7 @@ router.get("/support", async function (req, res) {
   res.json({ support: await readSupport() });
 });
 
-/* ---------- Afterframe moderation: creator applications and reports ---------- */
+/* ---------- Chapterhive moderation: creator applications and reports ---------- */
 
 const canEmail = mailEnabled;
 
@@ -646,12 +646,12 @@ router.post("/creators/:id/review", async function (req, res) {
     const site = (process.env.PUBLIC_URL || req.protocol + "://" + req.get("host")).replace(/\/+$/, "");
     const approved = status === "approved";
     const text = approved
-      ? "Hi " + row.display_name + ",\n\nYour Afterframe creator profile (@" + row.handle + ") has been approved.\n\n" +
+      ? "Hi " + row.display_name + ",\n\nYour Chapterhive creator profile (@" + row.handle + ") has been approved.\n\n" +
         "Open your studio to publish your first work: " + site + "/hub/studio\n" + (note ? "\nNote from the team: " + note + "\n" : "")
-      : "Hi " + row.display_name + ",\n\nThanks for applying to be an Afterframe creator. We can't approve your profile right now." +
+      : "Hi " + row.display_name + ",\n\nThanks for applying to be an Chapterhive creator. We can't approve your profile right now." +
         (note ? "\n\nNote from the team: " + note : "") + "\n\nYou're welcome to update your application and apply again: " + site + "/hub/apply\n";
     try {
-      await sendMail(row.email, approved ? "You're in: welcome to Afterframe" : "Your Afterframe application", text,
+      await sendMail(row.email, approved ? "You're in: welcome to Chapterhive" : "Your Chapterhive application", text,
         "<p>" + text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>") + "</p>");
       emailed = true;
     } catch (error) {
@@ -708,16 +708,16 @@ const publishing = require("../publishing");
 // Ready-made messages. {name} and {title} are filled in.
 const REVIEW_TEMPLATES = {
   approve: [
-    ["great", "Love it!", "Great work, {name}! \"{title}\" is now live on Afterframe. Can't wait to see what you make next. 🎬"],
-    ["welcome-first", "First post", "Your first post is live, {name}! Welcome to the lineup: we're excited to have you on Afterframe."],
+    ["great", "Love it!", "Great work, {name}! \"{title}\" is now live on Chapterhive. Can't wait to see what you make next. 🐝"],
+    ["welcome-first", "First post", "Your first post is live, {name}! Welcome to the hive: we're excited to have you on Chapterhive."],
     ["keep-going", "Keep going", "\"{title}\" is live. Your style keeps getting stronger, so keep it coming!"],
     ["featured-worthy", "Standout piece", "This one really stands out, {name}. \"{title}\" is live, and it might find its way onto the home page."]
   ],
   decline: [
-    ["advertising", "Unapproved advertising", "Hi {name}, \"{title}\" wasn't published because it advertises a product, service or sponsor. Advertising (including sponsors) needs approval from the Afterframe team first. Remove the promotion, or contact us to ask for approval, then submit it again."],
+    ["advertising", "Unapproved advertising", "Hi {name}, \"{title}\" wasn't published because it advertises a product, service or sponsor. Advertising (including sponsors) needs approval from the Chapterhive team first. Remove the promotion, or contact us to ask for approval, then submit it again."],
     ["copyright", "Not your work / copyright", "Hi {name}, \"{title}\" wasn't published because it appears to include work you don't own the rights to. Only post work you created or have permission to share, and credit fan works clearly."],
     ["explicit", "Sexual or graphic content", "Hi {name}, \"{title}\" wasn't published because it includes sexual or overly graphic content, which the Content Rules don't allow. Please edit it and submit it again."],
-    ["hate", "Hate, harassment or bullying", "Hi {name}, \"{title}\" wasn't published because it targets or demeans people. Afterframe doesn't allow hate or harassment. Repeated posts like this can lead to suspension."],
+    ["hate", "Hate, harassment or bullying", "Hi {name}, \"{title}\" wasn't published because it targets or demeans people. Chapterhive doesn't allow hate or harassment. Repeated posts like this can lead to suspension."],
     ["spam", "Spam or low effort", "Hi {name}, \"{title}\" wasn't published because it looks like spam or a repeated post. Share something original and it'll be reviewed again."],
     ["spoilers", "Unmarked spoilers", "Hi {name}, \"{title}\" includes spoilers in the title or cover. Add a spoiler warning and keep the cover spoiler-free, then submit it again."],
     ["quality", "Needs a fix", "Hi {name}, \"{title}\" is almost there, but something needs fixing (for example a missing file, a broken link or a mislabelled category). Have a look and submit it again."]
@@ -953,7 +953,7 @@ router.put("/sponsor", async function (req, res) {
   const t = function (v, max) { return typeof v === "string" ? v.trim().slice(0, max) : ""; };
   const contact = b.contact || {};
   const sponsor = {
-    headline: t(b.headline, 120) || "Partner with Afterframe",
+    headline: t(b.headline, 120) || "Partner with Chapterhive",
     pitch: t(b.pitch, 4000),
     showStats: b.showStats !== false,
     tiers: (Array.isArray(b.tiers) ? b.tiers.slice(0, 6) : []).map(function (x) {

@@ -1,5 +1,5 @@
 // src/routes/hub.js
-// Afterframe, the creator platform (/hub):
+// Chapterhive, the creator platform (/hub):
 //   GET  /api/hub/home                       featured creators, latest releases, anime updates
 //   GET  /api/hub/creators                   the creator directory
 //   GET  /api/hub/creators/:handle           one creator's profile
@@ -25,7 +25,7 @@ const router = express.Router();
 
 const HANDLE_PATTERN = /^[a-z0-9](?:[a-z0-9_-]{1,28}[a-z0-9])$/;
 const KINDS = ["manga", "comics", "animation", "illustration", "stories", "comedy", "film", "series", "photography", "music", "memes", "poetry"];
-const RESERVED = ["admin", "hub", "studio", "apply", "feed", "news", "creators", "settings", "afterframe", "support", "help", "legal", "api"];
+const RESERVED = ["admin", "hub", "studio", "apply", "feed", "news", "creators", "settings", "chapterhive", "afterframe", "support", "help", "legal", "api"];
 
 const applyLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false,

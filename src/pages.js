@@ -81,8 +81,8 @@ function postMeta(req, post, brand) {
   const by = post.creator_name || "God's Banditos";
   const isNews = post.category === "news";
   return {
-    title: post.title + " | " + (brand === "afterframe" ? "Afterframe" : "God's Banditos"),
-    description: post.logline || post.summary || (isNews ? "Anime update on Afterframe." : "A work by " + by + "."),
+    title: post.title + " | " + (brand === "chapterhive" ? "Chapterhive" : "God's Banditos"),
+    description: post.logline || post.summary || (isNews ? "Anime update on Chapterhive." : "A work by " + by + "."),
     image: storage.thumbnailUrl(post.image_url),
     type: "article",
     jsonLd: {

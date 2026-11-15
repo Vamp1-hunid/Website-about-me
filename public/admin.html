@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Caveat:wght@500;700&family=Chakra+Petch:wght@400;600;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=9">
+  <link rel="stylesheet" href="/css/styles.css?v=10">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -85,7 +85,7 @@
         <button role="tab" type="button" data-tab="announce" aria-selected="false">Announcements</button>
         <button role="tab" type="button" data-tab="features" aria-selected="false">Features</button>
         <button role="tab" type="button" data-tab="settings" aria-selected="false">Settings</button>
-        <button role="tab" type="button" data-tab="afterframe" aria-selected="false" data-admin-only>Afterframe <span class="tab-badge" id="mod-badge" hidden></span></button>
+        <button role="tab" type="button" data-tab="chapterhive" aria-selected="false" data-admin-only>Chapterhive <span class="tab-badge" id="mod-badge" hidden></span></button>
         <button role="tab" type="button" data-tab="profile" aria-selected="false" data-studio-only hidden>Profile</button>
       </nav>
 
@@ -150,7 +150,7 @@
                   </optgroup>
                   <optgroup label="News">
                     <option value="updates">God's Banditos update</option>
-                    <option value="news">Anime update (Afterframe news)</option>
+                    <option value="news">Anime update (Chapterhive news)</option>
                   </optgroup>
                 </select>
                 <p class="error" id="category-error"></p>
@@ -652,10 +652,10 @@
         </div>
       </section>
 
-      <!-- ===== Afterframe moderation (admin only) ===== -->
-      <section class="dash-panel dash-two" role="tabpanel" data-panel="afterframe" aria-label="Afterframe moderation" hidden>
+      <!-- ===== Chapterhive moderation (admin only) ===== -->
+      <section class="dash-panel dash-two" role="tabpanel" data-panel="chapterhive" aria-label="Chapterhive moderation" hidden>
         <div class="panel">
-          <p class="node-label">Afterframe // creators</p>
+          <p class="node-label">Chapterhive // creators</p>
           <h2>Creator applications</h2>
           <div class="filters" id="creator-filter">
             <button type="button" class="btn btn-ghost btn-small" data-cstatus="pending" aria-pressed="true">Pending</button>
@@ -666,7 +666,7 @@
           <ul id="creator-queue" class="mod-list"></ul>
         </div>
         <div class="panel">
-          <p class="node-label">Afterframe // reports</p>
+          <p class="node-label">Chapterhive // reports</p>
           <h2>Reports</h2>
           <div class="filters" id="report-filter">
             <button type="button" class="btn btn-ghost btn-small" data-rstatus="open" aria-pressed="true">Open</button>
@@ -674,7 +674,7 @@
             <button type="button" class="btn btn-ghost btn-small" data-rstatus="dismissed" aria-pressed="false">Dismissed</button>
           </div>
           <ul id="report-queue" class="mod-list"></ul>
-          <p class="muted">You can open Afterframe at <a href="/hub">/hub</a>. Your own creator page is <a href="/hub/c/gods-banditos">@gods-banditos</a>.</p>
+          <p class="muted">You can open Chapterhive at <a href="/hub">/hub</a>. Your own creator page is <a href="/hub/c/gods-banditos">@gods-banditos</a>.</p>
         </div>
       </section>
 

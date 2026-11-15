@@ -27,7 +27,7 @@
       pending: "Your application for @" + profile.handle + " is being reviewed. We'll email you if you added an email to your account. You can update it below.",
       approved: "You're an approved creator. Head to your studio to publish.",
       rejected: "Your last application wasn't approved." + (profile.reviewNote ? " Note: " + profile.reviewNote : "") + " You can update it and apply again below.",
-      suspended: "This creator profile is suspended. Contact the Afterframe team through the contact form."
+      suspended: "This creator profile is suspended. Contact the Chapterhive team through the contact form."
     };
     card.appendChild(el("p", {}, messages[profile.status]));
     if (profile.status === "approved") card.appendChild(el("a", { class: "btn btn-small", href: "/hub/studio" }, "Open studio"));

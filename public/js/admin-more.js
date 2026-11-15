@@ -52,9 +52,9 @@
         ["Likes (7 days)", o.likesWeek],
         ["Unread messages", o.unreadMessages, "inbox"],
         ["Your followers", o.followers],
-        ["Afterframe creators", o.creators, "afterframe"],
-        ["Pending applications", o.pendingCreators, "afterframe"],
-        ["Open reports", o.openReports, "afterframe"]
+        ["Chapterhive creators", o.creators, "chapterhive"],
+        ["Pending applications", o.pendingCreators, "chapterhive"],
+        ["Open reports", o.openReports, "chapterhive"]
       ].forEach(function (s) {
         var box = el("div", { class: "stat" + (s[2] ? " stat-link" : "") });
         box.appendChild(el("dt", {}, s[0]));

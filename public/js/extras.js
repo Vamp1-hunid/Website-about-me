@@ -144,7 +144,7 @@
       var w = d.notifications.filter(function (n) { return n.type === "welcome" && n.unread; })[0];
       if (!w) return;
       var dialog = el("dialog", { class: "heist-dialog welcome-dialog", "aria-labelledby": "welcome-title" });
-      dialog.appendChild(el("p", { class: "node-label" }, MW.isHub ? "Afterframe // welcome" : "God's Banditos // welcome"));
+      dialog.appendChild(el("p", { class: "node-label" }, MW.isHub ? "Chapterhive // welcome" : "God's Banditos // welcome"));
       dialog.appendChild(el("h2", { id: "welcome-title" }, w.title));
       w.body.split(/\n+/).forEach(function (para) { dialog.appendChild(el("p", {}, para)); });
       var actions = el("div", { class: "form-actions" });
@@ -166,7 +166,7 @@
   /* ---------- Quick tips ---------- */
 
   var TIPS = {
-    "/": ["Press ☰ for every section of the site, plus search.", "Tap any work to read it, like it and join the comments.", "Afterframe is where other creators post: find it in the menu."],
+    "/": ["Press ☰ for every section of the site, plus search.", "Tap any work to read it, like it and join the comments.", "Chapterhive is where other creators post: find it in the menu."],
     "/gallery": ["Filter by category or tag, or sort by newest and most liked.", "Search finds titles, loglines and tags."],
     "/stories": ["Each story has its chapters, characters and concept art in one place."],
     "/hub": ["Follow creators to get their new posts in your bell and Following feed.", "Looking for a collaborator? Try the collab board.", "Got an idea for the site? Drop it in the suggestion box on the collab board."],

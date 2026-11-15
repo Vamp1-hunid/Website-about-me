@@ -17,7 +17,7 @@ const DEFAULTS = [
   ["help_assistant", "Help assistant", "The ? chat that answers questions from the FAQ (uses AI if an AI key is set)."],
   ["suggestion_box", "Suggestion box", "Members can send suggestions to your inbox from the collab board and help page."],
   ["sponsor_page", "Sponsor page", "The page for companies and investors with your business contact details."],
-  ["hub_support", "Fund the heist on Afterframe", "Shows the support button on Afterframe pages too."]
+  ["hub_support", "Fund the heist on Chapterhive", "Shows the support button on Chapterhive pages too."]
 ];
 
 let cache = null;

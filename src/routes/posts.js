@@ -30,7 +30,7 @@ const FONTS = ["theme", "serif", "typewriter", "handwritten", "clean"];
 const VISIBLE = "(p.published AND p.review_status = 'approved' AND (p.publish_at IS NULL OR p.publish_at <= NOW()) AND EXISTS " +
   "(SELECT 1 FROM creator_profiles cpv WHERE cpv.user_id = p.user_id AND cpv.status = 'approved'))";
 
-// God's Banditos shows only the admin's own works; Afterframe (/hub) shows every creator's.
+// God's Banditos shows only the admin's own works; Chapterhive (/hub) shows every creator's.
 const BANDITOS_ONLY = "p.user_id IN (SELECT id FROM users WHERE role = 'admin')";
 const SORTS = ["new", "old", "popular", "series"];
 const PAGE_SIZE = 12;
@@ -205,7 +205,7 @@ router.get("/", async function (req, res) {
     values.push(category);
     where.push("p.category = $" + values.length);
   } else if (!showDrafts) {
-    where.push("p.category <> 'news'"); // anime updates have their own section on Afterframe
+    where.push("p.category <> 'news'"); // anime updates have their own section on Chapterhive
   }
   if (tag) {
     values.push(tag);

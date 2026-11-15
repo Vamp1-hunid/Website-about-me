@@ -8,7 +8,7 @@
 
   var DEFAULT_OFFERS = [
     { name: "Sponsor a creator", price: "", perks: "Back a creator or a series you believe in. Your brand is credited on their work, with admin approval." },
-    { name: "Platform sponsor", price: "", perks: "Support Afterframe itself and be credited across the platform as it grows." },
+    { name: "Platform sponsor", price: "", perks: "Support Chapterhive itself and be credited across the platform as it grows." },
     { name: "Advertising", price: "", perks: "Approved, clearly labelled placements in front of a young creative audience." },
     { name: "Invest or partner", price: "", perks: "Talk to the founder about investment, licensing or a partnership." }
   ];

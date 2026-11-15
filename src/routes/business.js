@@ -25,8 +25,8 @@ function text(v, max) {
 }
 
 const DEFAULT_SPONSOR = {
-  headline: "Partner with Afterframe",
-  pitch: "Afterframe is a growing home for independent creators: manga, art, animation, films, comedy and stories. " +
+  headline: "Partner with Chapterhive",
+  pitch: "Chapterhive is a growing home for independent creators: manga, art, animation, films, comedy and stories. " +
     "Brands, studios and investors can reach an engaged creative audience and help new talent grow.",
   showStats: true,
   tiers: [],
@@ -84,7 +84,7 @@ router.post("/sponsor/enquiry", requireFlag("sponsor_page"), limiter, async func
     "INSERT INTO contact_messages (name, email, subject, message, kind, company, user_id) VALUES ($1, $2, $3, $4, 'business', $5, $6) RETURNING id",
     [name, email, interest, message, company, req.session.user ? req.session.user.id : null]
   );
-  const emailed = await emailOwner("[" + interest + "] " + (company || name), "Business enquiry from Afterframe\n\nFrom: " + name +
+  const emailed = await emailOwner("[" + interest + "] " + (company || name), "Business enquiry from Chapterhive\n\nFrom: " + name +
     (company ? " (" + company + ")" : "") + " <" + email + ">\nInterest: " + interest + "\n\n" + message + "\n", { email: email, name: name });
   if (emailed) await db.query("UPDATE contact_messages SET emailed = TRUE WHERE id = $1", [saved.rows[0].id]);
   await tellAdmins("💼 " + interest + " enquiry from " + (company || name), message);
