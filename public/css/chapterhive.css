@@ -1218,3 +1218,12 @@ body[data-brand="chapterhive"] .aside-hero::after { display: none; }
 .home-aside h2 { font-size: 1.15rem; }
 .feed-media { width: 100%; margin: 0; padding: 0; border: 0; }
 .feed-media::after, .feed-media::before { display: none !important; }
+
+/* Honey and flower rank stickers (replace the metal look) */
+.rank-badge { border-radius: 999px 999px 999px 4px; }
+.rank-badge.tier-gold { background: radial-gradient(circle at 30% 25%, #fff3b0, #ffc93c 45%, #e09400); color: #3a2300; border-color: #c98200; box-shadow: 0 0 14px rgba(255, 190, 40, 0.55), inset 0 -2px 0 rgba(140, 80, 0, 0.35); }
+.rank-badge.tier-silver { background: linear-gradient(180deg, #ffd56b, #f0a81c 60%, #c97d00); color: #331f00; border-color: #b87300; box-shadow: inset 0 -3px 0 rgba(120, 60, 0, 0.3); }
+.rank-badge.tier-bronze { background: repeating-linear-gradient(90deg, #ffd04a 0 9px, #2b1d06 9px 13px); color: #1e1403; border-color: #2b1d06; text-shadow: 0 0 3px #ffd04a, 0 0 3px #ffd04a; }
+.rank-badge.tier-bloom { background: radial-gradient(circle at 50% 40%, #fff6c9, #ffb3d1 55%, #ff7fb0); color: #4a1030; border-color: #ff7fb0; box-shadow: 0 0 12px rgba(255, 127, 176, 0.45); }
+.rank-badge.tier-scope { background: linear-gradient(135deg, #fde7f1, #e9f7dc); color: #3b2a1a; border-color: #f2a7c7; }
+.top-row.rank-1 a { border-color: #ffc93c; box-shadow: 0 0 0 1px #ffc93c inset, 0 0 26px rgba(255, 190, 40, 0.25); }

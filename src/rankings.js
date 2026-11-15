@@ -28,13 +28,16 @@ const TOP_SCOPE = 5;
 
 // The badge someone wears for a rank.
 function badgeFor(scope, rank) {
+  // Honey and bee themed for the overall top 10; a different flower for each shelf.
   if (scope === "overall") {
-    if (rank === 1) return { icon: "👑", label: "#1 on Chapterhive", tier: "gold" };
-    if (rank <= 3) return { icon: "🏆", label: "Top 3 on Chapterhive", tier: "silver" };
-    return { icon: "🔥", label: "Top 10 on Chapterhive", tier: "bronze" };
+    if (rank === 1) return { icon: "👑", label: "Queen Bee · #1 on Chapterhive", tier: "gold" };
+    if (rank <= 3) return { icon: "🍯", label: "Golden Honey · Top 3", tier: "silver" };
+    return { icon: "🐝", label: "Busy Bee · Top 10", tier: "bronze" };
   }
-  const icons = { books: "📚", comics: "💥", art: "🎨", video: "🎬", music: "🎵", writing: "✍️", comedy: "😂" };
-  return { icon: icons[scope] || "⭐", label: (rank === 1 ? "#1 in " : "Top 5 in ") + SCOPE_NAMES[scope], tier: rank === 1 ? "gold" : "scope" };
+  const flowers = { books: ["🌻", "Sunflower"], comics: ["🌺", "Hibiscus"], art: ["🌸", "Blossom"], video: ["🌷", "Tulip"],
+    music: ["🌼", "Daisy"], writing: ["🪻", "Lavender"], comedy: ["🌹", "Rose"] };
+  const f = flowers[scope] || ["🌼", "Flower"];
+  return { icon: f[0], label: f[1] + " · " + (rank === 1 ? "#1 in " : "Top 5 in ") + SCOPE_NAMES[scope], tier: rank === 1 ? "bloom" : "scope" };
 }
 
 function badgesFrom(list) {
