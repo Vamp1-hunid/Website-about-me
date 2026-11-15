@@ -51,6 +51,50 @@
     return b;
   }
 
+  // "⋯" on each post: see more or less of this kind of post. Teaches the "For you" feed.
+  function moreMenu(post, user, card) {
+    var wrap = el("div", { class: "feed-menu" });
+    var btn = el("button", { type: "button", class: "feed-act feed-menu-btn", "aria-haspopup": "true", "aria-expanded": "false", "aria-label": "More options" }, "⋯");
+    var menu = el("div", { class: "feed-menu-list", role: "menu", hidden: "" });
+    function item(label, fn) {
+      var b = el("button", { type: "button", role: "menuitem" }, label);
+      b.addEventListener("click", function () { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); fn(); });
+      menu.appendChild(b);
+    }
+    function send(more) {
+      if (!requireAccount(user)) return Promise.reject();
+      return MW.api("/account/interests/feedback", { method: "POST", json: { postId: post.id, more: more } });
+    }
+    item("👍  See more like this", function () {
+      send(true).then(function () { MW.toast("Got it: you'll see more " + MW.categoryName(post.category).toLowerCase() + " like this."); }).catch(function () {});
+    });
+    item("👎  See less like this", function () {
+      send(false).then(function () {
+        var note = el("div", { class: "feed-hidden-note" });
+        note.appendChild(el("p", {}, "Thanks. You'll see less like this in your feed."));
+        var undo = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "Undo");
+        undo.addEventListener("click", function () {
+          MW.api("/account/interests/feedback", { method: "POST", json: { postId: post.id, more: true } }).catch(function () {});
+          note.replaceWith(card);
+        });
+        note.appendChild(undo);
+        card.replaceWith(note);
+      }).catch(function () {});
+    });
+    item("🔗  Copy link", function () {
+      var full = window.location.origin + MW.workUrl(post);
+      if (navigator.clipboard) navigator.clipboard.writeText(full).then(function () { MW.toast("Link copied."); });
+    });
+    btn.addEventListener("click", function (event) {
+      event.stopPropagation();
+      menu.hidden = !menu.hidden;
+      btn.setAttribute("aria-expanded", String(!menu.hidden));
+    });
+    document.addEventListener("click", function () { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); });
+    wrap.append(btn, menu);
+    return wrap;
+  }
+
   MW.feedCard = function (post, user) {
     var url = MW.workUrl(post);
     var card = el("article", { class: "feed-card", "aria-label": post.title });
@@ -69,6 +113,7 @@
     names.appendChild(el("span", { class: "muted" }, MW.categoryName(post.category) + (post.series ? " · " + post.series.title : "") + " · " + ago(post.createdAt)));
     who.appendChild(names);
     head.appendChild(who);
+    head.appendChild(moreMenu(post, user, card));
     card.appendChild(head);
 
     // Media: trailer / video, else picture, else the opening words on a card

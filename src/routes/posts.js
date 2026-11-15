@@ -52,6 +52,7 @@ const PAGE_SIZE = 12;
 const MAX_MEDIA = 80;
 const plans = require("../plans");
 const rankings = require("../rankings");
+const interests = require("../interests");
 const { requireFlag, isOn: flagIsOn } = require("../flags");
 const MAX_TAGS = 12;
 
@@ -169,7 +170,7 @@ async function mediaFor(postId) {
 
 const SELECT_POST = `
   SELECT p.*, s.slug AS series_slug, s.title AS series_title,
-    cp.handle AS creator_handle, cp.name AS creator_name, ou.role AS owner_role, ou.avatar_url AS creator_avatar,
+    cp.handle AS creator_handle, cp.name AS creator_name, cp.post_visibility AS creator_post_visibility, ou.role AS owner_role, ou.avatar_url AS creator_avatar,
     (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id)::int    AS likes,
     (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)::int AS comments,
     (SELECT COUNT(*) FROM post_media m WHERE m.post_id = p.id AND m.role = 'page' AND m.kind <> 'document')::int AS media_count,
@@ -181,6 +182,15 @@ const SELECT_POST = `
     LEFT JOIN creator_profiles cp ON cp.user_id = p.user_id`;
 
 /* ---------- Reading ---------- */
+
+// Creators choose who can see their posts: everyone, members (signed in) or only their followers.
+// SQL for "can the viewer whose id is in $n see this post?" ($n may be NULL for visitors).
+function audienceSql(n) {
+  return `(cp.post_visibility IS NULL OR cp.post_visibility = 'everyone' OR p.user_id = $${n}::int
+    OR $${n}::int IN (SELECT id FROM users WHERE role = 'admin')
+    OR ($${n}::int IS NOT NULL AND (cp.post_visibility = 'members'
+        OR EXISTS (SELECT 1 FROM follows fv WHERE fv.follower_id = $${n}::int AND fv.creator_id = p.user_id))))`;
+}
 
 // For the home feed: the first picture of each post, its first video (members only: streaming
 // needs an account) and the viewer's like / save state.
@@ -233,6 +243,8 @@ router.get("/", async function (req, res) {
     where.push("p.user_id = $" + values.length);
   } else {
     where.push(VISIBLE);
+    values.push(me ? me.id : null);
+    where.push(audienceSql(values.length));
     if (creatorHandle) {
       values.push(creatorHandle);
       where.push("cp.handle = $" + values.length);
@@ -283,9 +295,22 @@ router.get("/", async function (req, res) {
     const n = "$" + values.length;
     where.push(`(p.title ILIKE ${n} OR p.summary ILIKE ${n} OR p.logline ILIKE ${n} OR array_to_string(p.tags, ' ') ILIKE ${n} OR s.title ILIKE ${n})`);
   }
-  const whereSql = where.length ? "WHERE " + where.join(" AND ") : "";
   // ?feed=1: the scrolling home feed also needs a picture/video to show and whether I liked or saved each post.
+  // The scrolling feed is for members; visitors get the plain new-releases list.
+  if (req.query.feed === "1" && !me) {
+    return res.status(401).json({ error: "Create a free account to get your own feed.", signup: true });
+  }
   const feedExtras = req.query.feed === "1" && !showDrafts;
+  // "For you" (no filters chosen): personalised from the member's interests. Kinds they said "less" to
+  // drift down, and kinds they strongly dislike are left out entirely.
+  let interestBonus = null;
+  if (feedExtras && me && !category && !SHELVES[req.query.shelf] && !GENRES.includes(req.query.genre) && !creatorHandle && !search) {
+    values.push(me.id);
+    const pieces = interests.feedSql(values.length);
+    where.push(pieces.hide);
+    interestBonus = pieces.bonus;
+  }
+  const whereSql = where.length ? "WHERE " + where.join(" AND ") : "";
 
   // Home feed priority: top creators' posts are shown as if they were posted a little later,
   // so they stay near the top longer (#1: +36h, top 3: +24h, rest of top 10 / top 5 in a shelf: +12h).
@@ -294,8 +319,9 @@ router.get("/", async function (req, res) {
           WHEN cr.scope = 'overall' AND cr.rank <= 3 THEN INTERVAL '24 hours' ELSE INTERVAL '12 hours' END)
           FROM creator_ranks cr WHERE cr.user_id = p.user_id), INTERVAL '0'))`
     : "p.created_at";
+  const ranked = interestBonus ? "(" + boost + " + " + interestBonus + ")" : boost;
   const orderSql = {
-    new: boost + " DESC, p.id DESC",
+    new: ranked + " DESC, p.id DESC",
     old: "p.created_at ASC, p.id ASC",
     popular: "likes DESC, comments DESC, p.created_at DESC",
     series: "p.series_order ASC NULLS LAST, p.created_at ASC"
@@ -395,6 +421,22 @@ router.get("/:slug", async function (req, res) {
   const row = rows[0];
   if (row && ["news", "updates"].includes(row.category) && !isAdmin && row.user_id !== userId && !(await flagIsOn("updates", req))) {
     return res.status(503).json({ error: "News & updates are paused for now. Please check back soon.", feature: "updates" });
+  }
+  // Followers-only or members-only posts.
+  if (row && row.user_id !== userId && !isAdmin && row.creator_post_visibility && row.creator_post_visibility !== "everyone") {
+    let allowed = false;
+    if (userId && row.creator_post_visibility === "members") allowed = true;
+    if (userId && row.creator_post_visibility === "followers") {
+      allowed = (await db.query("SELECT 1 FROM follows WHERE follower_id = $1 AND creator_id = $2", [userId, row.user_id])).rows.length > 0;
+    }
+    if (!allowed) {
+      return res.status(403).json({
+        error: row.creator_post_visibility === "followers"
+          ? (row.creator_name || "This creator") + " shares posts with followers only. Follow them to see this."
+          : "This post is for members. Create a free account or log in to see it.",
+        locked: row.creator_post_visibility, creator: row.creator_handle, signup: !userId
+      });
+    }
   }
   // Drafts, scheduled works and works of suspended creators: only their owner (and the admin) can open them.
   if (!row || (!row.visible && !isAdmin && row.user_id !== userId)) {
@@ -698,10 +740,12 @@ function toggleRoute(table, column) {
       return res.status(404).json({ error: "That work could not be found." });
     }
     if (req.method === "POST") {
-      await db.query(
+      const added = await db.query(
         `INSERT INTO ${table} (user_id, post_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
         [req.session.user.id, id]
       );
+      // Likes and saves quietly teach the home feed what this person enjoys.
+      if (added.rowCount) await interests.fromPost(req.session.user.id, id, table === "favourites" ? 2 : 1).catch(function () {});
     } else {
       await db.query(`DELETE FROM ${table} WHERE user_id = $1 AND post_id = $2`, [req.session.user.id, id]);
     }
@@ -908,6 +952,7 @@ router.get("/:id/results", async function (req, res) {
 
 module.exports = router;
 module.exports.GENRES = GENRES;
+module.exports.audienceSql = audienceSql;
 module.exports.SHELVES = SHELVES;
 module.exports.cleanForm = cleanForm;
 module.exports.toComment = toComment;

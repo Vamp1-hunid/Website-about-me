@@ -523,3 +523,29 @@ CREATE TABLE IF NOT EXISTS organisations (
   team         JSONB        NOT NULL DEFAULT '[]',
   created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
+
+-- v11: what each member likes to see. kind: 'category' or 'genre'. weight > 0 = more, < 0 = less.
+-- Set by the welcome survey, the "see more / see less" buttons, and quietly by likes and saves.
+CREATE TABLE IF NOT EXISTS user_interests (
+  user_id    INTEGER     NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  kind       VARCHAR(10) NOT NULL CHECK (kind IN ('category', 'genre')),
+  key        VARCHAR(20) NOT NULL,
+  weight     INTEGER     NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, kind, key)
+);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarded_at TIMESTAMPTZ;
+-- v11: a short bio on member pages (creators also have a longer bio on their creator page).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio VARCHAR(300) NOT NULL DEFAULT '';
+
+-- v12: privacy settings.
+--  chat_privacy: everyone | following (only creators I follow) | nobody
+--  profile_visible: whether other members can open my member page
+--  creator_profiles.post_visibility: everyone | members (signed-in only) | followers (only my followers)
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_chat_privacy_check;
+ALTER TABLE users ADD CONSTRAINT users_chat_privacy_check CHECK (chat_privacy IN ('everyone', 'following', 'nobody'));
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_visible BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS post_visibility VARCHAR(10) NOT NULL DEFAULT 'everyone';
+DO $$ BEGIN
+  ALTER TABLE creator_profiles ADD CONSTRAINT creator_post_visibility_check CHECK (post_visibility IN ('everyone', 'members', 'followers'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

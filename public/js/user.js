@@ -25,6 +25,7 @@
       if (u.streak > 1 && MW.feature("streaks")) { var sp = el("p"); sp.appendChild(el("span", { class: "streak-chip" }, "🔥 " + u.streak + "-day streak")); text.appendChild(sp); }
       var line = "@" + u.username + " · joined " + MW.formatDate(u.joined);
       text.appendChild(el("p", { class: "mono muted" }, line));
+      if (u.bio) text.appendChild(el("p", { class: "member-bio" }, u.bio));
       MW.me().then(function (me) {
         if (me && me.username !== u.username && MW.feature("chat")) {
           var mp = el("p");

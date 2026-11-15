@@ -65,6 +65,9 @@
   });
 
   MW.me().then(function (user) {
+    document.querySelectorAll("[data-feature-box]").forEach(function (box) {
+      if (MW.feature(box.getAttribute("data-feature-box"))) box.hidden = false;
+    });
     if (!user) return;
     MW.api("/hub/feed/unseen").then(function () {
       // Peek at the feed without marking it as seen: use the public list of followed creators instead.

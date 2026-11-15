@@ -315,7 +315,14 @@
 
   MW.me().then(function (user) {
     if (user && MW.feature("notifications")) buildBell(user);
-    if (user) showWelcome(user);
+    // Brand-new accounts get the full-screen welcome (with the interests survey) on Chapterhive.
+    var acc = MW.account && MW.account.account;
+    if (user && acc && acc.needsWelcome && !/^\/(admin|login|hub\/(register|join-organisation|verify))/.test(window.location.pathname)) {
+      var s = document.createElement("script");
+      s.src = "/js/onboarding.js";
+      s.onload = function () { if (MW.runOnboarding) MW.runOnboarding(user, function () { showWelcome(user); }); };
+      document.head.appendChild(s);
+    } else if (user) showWelcome(user);
     if (MW.feature("quick_tips")) showTips();
     if (MW.feature("help_assistant")) buildHelpButton();
   });

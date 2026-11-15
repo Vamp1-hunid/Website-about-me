@@ -1250,3 +1250,37 @@ body[data-brand="chapterhive"] .aside-hero::after { display: none; }
 .rank-badge.tier-gold { background: linear-gradient(90deg, #241703 0 5px, #ffd23f 5px 10px, #241703 10px 15px, #ffd23f 15px); text-shadow: none; padding-left: 1.15rem; }
 .rank-badge.tier-bronze { background: linear-gradient(90deg, #5b4210 0 4px, #ffe48a 4px 8px, #5b4210 8px 12px, #ffe48a 12px); text-shadow: none; padding-left: 1rem; }
 .rank-badges.is-compact .rank-badge.tier-gold, .rank-badges.is-compact .rank-badge.tier-bronze { padding-left: 0.3rem; }
+
+/* ===== v11: ⋯ menu on feed posts ===== */
+.feed-card-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.feed-menu { position: relative; }
+.feed-menu-btn { font-size: 1.3rem; letter-spacing: 0.05em; }
+.feed-menu-list {
+  position: absolute; right: 0; top: 100%; z-index: 20; min-width: 220px; padding: 0.35rem; border-radius: 14px;
+  background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); display: grid;
+}
+.feed-menu-list[hidden] { display: none; }
+.feed-menu-list button { text-align: left; background: none; border: 0; color: var(--ink); padding: 0.6rem 0.7rem; border-radius: 10px; font: 600 0.9rem/1.2 var(--font-ui); cursor: pointer; }
+.feed-menu-list button:hover { background: var(--panel-2); }
+.feed-hidden-note { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.2rem; border: 1px dashed var(--line); border-radius: 16px; }
+.feed-hidden-note p { margin: 0; }
+.guest-releases-title { margin: 0.5rem 0 0.8rem; }
+
+/* ===== v12: Settings page ===== */
+.settings-page { max-width: 760px; margin-inline: auto; }
+.settings-section { padding: 1.2rem 0; border-top: 1px solid var(--line); }
+.settings-section h2 { font-size: 1.15rem; margin: 0 0 0.3rem; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.4rem 0; }
+.settings-row p { margin: 0.1rem 0 0; font-size: 0.88rem; }
+.settings-choices { display: grid; gap: 0.5rem; margin-top: 0.4rem; }
+.settings-choice { display: flex; gap: 0.7rem; align-items: flex-start; padding: 0.75rem 0.9rem; border: 1px solid var(--line); border-radius: 14px; cursor: pointer;
+  background: var(--panel-2); text-transform: none; letter-spacing: normal; font-family: var(--font-ui); }
+.settings-choice span { display: grid; gap: 0.1rem; }
+.settings-choice .muted { font-size: 0.85rem; }
+.settings-choice.is-on { border-color: var(--pink); box-shadow: 0 0 0 1px var(--pink) inset; }
+.settings-choice input { margin-top: 0.3rem; accent-color: var(--pink); }
+.settings-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.settings-links { list-style: none; padding: 0; display: grid; gap: 0.2rem; }
+.settings-links a { display: block; padding: 0.6rem 0.4rem; border-radius: 10px; text-decoration: none; color: var(--ink); }
+.settings-links a:hover { background: var(--panel-2); }
+.settings-btn { font-size: 1rem; }

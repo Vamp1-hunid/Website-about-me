@@ -21,7 +21,7 @@ const { requireFlag, isOn: isFlagOn } = require("../flags");
 const { planOf } = require("../plans");
 const rankings = require("../rankings");
 const { resolveMedia } = require("../media");
-const { VISIBLE, SELECT_POST, toPost } = require("./posts");
+const { VISIBLE, SELECT_POST, toPost, audienceSql } = require("./posts");
 const { CHAR_VISIBLE } = require("./stories");
 
 const router = express.Router();
@@ -92,7 +92,8 @@ router.get("/home", async function (req, res) {
     CREATOR_SQL + " WHERE cp.status = 'approved' ORDER BY cp.featured DESC, followers DESC, cp.approved_at DESC LIMIT 8"
   );
   const latest = await db.query(
-    `${SELECT_POST} WHERE ${VISIBLE} AND p.category NOT IN ('news', 'updates') ORDER BY p.created_at DESC LIMIT 12`
+    `${SELECT_POST} WHERE ${VISIBLE} AND ${audienceSql(1)} AND p.category NOT IN ('news', 'updates') ORDER BY p.created_at DESC LIMIT 12`,
+    [req.session.user ? req.session.user.id : null]
   );
   const updatesOn = (req.session.user && req.session.user.role === "admin") || await isFlagOn("updates", req);
   const news = !updatesOn ? { rows: [] } : await db.query(

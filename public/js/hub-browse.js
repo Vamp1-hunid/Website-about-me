@@ -167,5 +167,21 @@
 
   drawControls();
   if (state.genre || state.category) { fbox.hidden = false; ft.setAttribute("aria-expanded", "true"); }
-  MW.me().then(function (u) { user = u; load(false); });
+  MW.me().then(function (u) {
+    user = u;
+    if (user) { load(false); return; }
+    // Visitors don't get a feed: just the newest releases as previews, and an invitation to join.
+    document.querySelector(".feed-head").hidden = true;
+    var title = el("h2", { class: "guest-releases-title" }, "New releases");
+    results.parentNode.insertBefore(title, results);
+    results.className = "works-grid";
+    results.textContent = "";
+    more.hidden = true;
+    lastPage = true;
+    MW.api("/posts?site=hub&page=1").then(function (d) {
+      d.posts.slice(0, 12).forEach(function (p) { results.appendChild(MW.workCard(p)); });
+      if (!d.posts.length) results.appendChild(el("p", { class: "empty" }, "The first releases are on their way."));
+    }).catch(function () {});
+    results.after(MW.guestGate("Create a free account to get your own feed: endless scrolling through the books, series, trailers, music and art you love, tuned to your taste."));
+  });
 })();

@@ -303,6 +303,10 @@
       }).catch(function () {});
     }
 
+    // Settings: always one tap away for members.
+    var gear = el("a", { class: "btn btn-ghost btn-small settings-btn", href: "/hub/settings", title: "Settings", "aria-label": "Settings" }, "⚙");
+    area.appendChild(gear);
+
     var me = el("a", { class: "auth-name", href: "/profile", title: "Your profile" });
     me.appendChild(MW.avatar(user));
     me.appendChild(document.createTextNode(" @" + user.username));
@@ -321,7 +325,8 @@
       } catch (error) {
         // Even if it fails, reload so the page shows the real state.
       }
-      window.location.href = "/";
+      // Stay on the same site: Chapterhive pages go back to the Chapterhive home, God's Banditos pages to its home.
+      window.location.href = MW.isHub || /^\/(profile|u\/|help|contact|legal)/.test(window.location.pathname) ? "/hub" : "/";
     });
     area.appendChild(logout);
   }
@@ -399,7 +404,20 @@
     main.appendChild(panel);
   }
 
+  // The search box sits at the end of the tab bar, where people look for it.
+  function moveSearchToNav() {
+    var nav = document.querySelector(".site-nav");
+    var search = document.querySelector(".site-header .header-search");
+    if (!nav || !search || nav.querySelector(".header-search")) return;
+    search.classList.add("nav-search");
+    var input = search.querySelector("input");
+    if (input) input.placeholder = MW.isHub ? "Search books, series, creators…" : "Search works, stories…";
+    if (!search.querySelector("button")) search.appendChild(el("button", { type: "submit", class: "btn btn-small", "aria-label": "Search" }, "🔍"));
+    nav.appendChild(search);
+  }
+
   function buildMenu() {
+    moveSearchToNav();
     var header = document.querySelector(".site-header");
     if (!header || document.getElementById("site-menu")) return;
     var menu = el("div", { id: "site-menu", class: "site-menu", hidden: "" });
@@ -471,6 +489,14 @@
         document.querySelectorAll(".header-search, .menu-search").forEach(function (f) { f.hidden = true; });
       }
       gatePage();
+      // Suggestion box: a link in every footer (and the help page / collab board keep the full form).
+      if (MW.feature("suggestion_box")) {
+        var foot = document.querySelector(".site-footer p:last-child");
+        if (foot && !foot.querySelector(".suggest-link")) {
+          foot.appendChild(document.createTextNode(" · "));
+          foot.appendChild(el("a", { class: "suggest-link", href: "/help#suggest" }, "💡 Suggest an idea"));
+        }
+      }
       // Visitors without an account: members-only links are hidden and replaced by one join prompt.
       if (!user) {
         document.querySelectorAll(".site-nav a[data-nav='feed'], .site-nav a[data-nav='collabs'], .site-nav a[data-nav='apply']")
@@ -483,7 +509,7 @@
         }
       }
       var items = user
-        ? [["/profile", "Account settings"], ["/u/" + encodeURIComponent(user.username), "Your public page"]]
+        ? [["/hub/settings", "⚙ Settings & privacy"], ["/profile", "Account settings"], ["/u/" + encodeURIComponent(user.username), "Your public page"]]
         : [["/hub/login?next=" + encodeURIComponent(MW.currentPath()), "Log in"], ["/hub/register", "Create a free account"]];
       // God's Banditos: no accounts here. Visitors are pointed to Chapterhive instead.
       if (!MW.isHub && (!user || user.role !== "admin")) {
@@ -591,7 +617,16 @@
   }
 
   function buildSupport(support) {
-    if (!support.enabled || document.getElementById("heist-dialog")) return;
+    // Not set up yet: the owner sees a reminder button that opens the settings; visitors see nothing.
+    if (!support.enabled) {
+      MW.me().then(function (user) {
+        if (!user || user.role !== "admin" || document.querySelector(".heist-setup")) return;
+        var b = el("a", { class: "heist-button heist-setup", href: "/admin#settings", title: "Only you can see this" }, "Fund the heist: set it up");
+        document.body.appendChild(b);
+      });
+      return;
+    }
+    if (document.getElementById("heist-dialog")) return;
 
     var dialog = el("dialog", { id: "heist-dialog", class: "heist-dialog", "aria-labelledby": "heist-title" });
     var top = el("div", { class: "heist-top" });
