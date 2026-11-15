@@ -27,7 +27,7 @@
       grid.textContent = "";
       var p = el("p", { class: "empty" });
       p.appendChild(document.createTextNode("Log in to follow creators and see their new releases here. "));
-      p.appendChild(el("a", { href: "/login?next=/hub/feed" }, "Log in"));
+      p.appendChild(el("a", { href: "/hub/login?next=/hub/feed" }, "Log in"));
       grid.appendChild(p);
       return;
     }

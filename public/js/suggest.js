@@ -14,7 +14,7 @@
       if (host) host.hidden = false;
       if (!user) {
         var p = el("p", { class: "muted" }, "");
-        p.appendChild(el("a", { href: "/login?next=" + encodeURIComponent(MW.currentPath()) }, "Log in"));
+        p.appendChild(el("a", { href: "/hub/login?next=" + encodeURIComponent(MW.currentPath()) }, "Log in"));
         p.appendChild(document.createTextNode(" to drop something in the suggestion box."));
         container.appendChild(p);
         return;

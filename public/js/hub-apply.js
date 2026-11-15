@@ -39,9 +39,9 @@
       status.textContent = "";
       var p = el("p", { class: "lead" });
       p.appendChild(document.createTextNode("First, "));
-      p.appendChild(el("a", { href: "/register?next=/hub/apply" }, "create a free account"));
+      p.appendChild(el("a", { href: "/hub/register?next=/hub/apply" }, "create a free account"));
       p.appendChild(document.createTextNode(" or "));
-      p.appendChild(el("a", { href: "/login?next=/hub/apply" }, "log in"));
+      p.appendChild(el("a", { href: "/hub/login?next=/hub/apply" }, "log in"));
       p.appendChild(document.createTextNode(". Then come back here to apply."));
       status.appendChild(p);
       return;

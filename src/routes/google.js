@@ -41,7 +41,7 @@ function client(req) {
 // Sends the visitor back with a short code the page turns into a message:
 // to the profile page when they were linking, otherwise to the login page.
 function fail(res, linking, code) {
-  res.redirect((linking ? "/profile" : "/login") + "?google=" + code);
+  res.redirect((linking ? "/profile" : "/hub/login") + "?google=" + code);
 }
 
 // Makes a username from the Google email, e.g. "Mwamba.Mulenga@gmail.com" -> "mwamba_mulenga".
@@ -65,7 +65,7 @@ async function makeUsername(email, name) {
 
 // Step 1: GET /auth/google?next=/work/abc   (add &link=1 to link Google to the logged-in account)
 router.get("/", function (req, res) {
-  const next = safeNext(req.query.next, "/profile");
+  const next = safeNext(req.query.next, "/hub");
   if (!googleEnabled()) {
     return fail(res, req.query.link === "1", "off");
   }
@@ -151,11 +151,11 @@ router.get("/callback", async function (req, res) {
       username: username,
       next: next
     };
-    return req.session.save(function () { res.redirect("/register?google=1"); });
+    return req.session.save(function () { res.redirect("/hub/register?google=1"); });
   }
 
   const blocked = require("../users").standingProblem(user);
-  if (blocked) return res.redirect("/login?error=" + encodeURIComponent(blocked));
+  if (blocked) return res.redirect("/hub/login?error=" + encodeURIComponent(blocked));
 
   await startSession(req, user);
   res.redirect(next);

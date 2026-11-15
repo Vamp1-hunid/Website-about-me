@@ -15,7 +15,7 @@
   var user = null;
 
   function loginUrl() {
-    return "/login?next=" + encodeURIComponent(window.location.pathname);
+    return "/hub/login?next=" + encodeURIComponent(window.location.pathname);
   }
 
   function showError(message) {
@@ -28,6 +28,15 @@
 
   /* ---------- Like and save buttons ---------- */
 
+  // God's Banditos is view-only for everyone but the owner: likes, saves, votes and comments
+  // happen on the same work's Chapterhive page.
+  function viewOnly() {
+    return !MW.isHub && !(user && user.role === "admin");
+  }
+  function hubLink() {
+    return "/hub/w/" + encodeURIComponent(post.slug);
+  }
+
   function actionButton(label, pressed, count) {
     var button = el("button", { class: "btn btn-ghost btn-small", type: "button", "aria-pressed": String(pressed) });
     button.textContent = count === undefined ? label : label + " · " + count;
@@ -37,7 +46,7 @@
   function wireToggle(button, kind, labelOn, labelOff, showCount) {
     button.addEventListener("click", async function () {
       if (!user) {
-        window.location.href = "/register?next=" + encodeURIComponent(MW.currentPath());
+        window.location.href = "/hub/register?next=" + encodeURIComponent(MW.currentPath());
         return;
       }
       var on = button.getAttribute("aria-pressed") === "true";
@@ -105,6 +114,15 @@
     }
 
     var actions = el("div", { class: "work-actions" });
+    if (viewOnly()) {
+      var counts = [];
+      if (post.likes) counts.push("♥ " + post.likes);
+      if (post.comments) counts.push("💬 " + post.comments);
+      actions.appendChild(el("a", { class: "btn btn-small", href: hubLink() }, "Like, save & comment on Chapterhive ↗"));
+      if (counts.length) actions.appendChild(el("span", { class: "mono muted" }, counts.join("  ")));
+      info.appendChild(actions);
+      return;
+    }
     var likeBtn = actionButton(post.liked ? "♥ Liked" : "♡ Like", post.liked, post.likes);
     var saveBtn = actionButton(post.favourited ? "★ Saved" : "☆ Save", post.favourited);
     actions.append(likeBtn, saveBtn);
@@ -179,7 +197,8 @@
       renderHeader(info);
       renderBody(info, false);
       renderDocuments(info);
-      if (post.form && MW.renderPoll) MW.renderPoll(info, post);
+      if (post.form && MW.renderPoll && !viewOnly()) MW.renderPoll(info, post);
+      else if (post.form) { var vote = el("p"); vote.appendChild(el("a", { class: "btn", href: hubLink() }, "Vote on Chapterhive ↗")); info.appendChild(vote); }
       layout.appendChild(info);
       article.appendChild(layout);
     } else {
@@ -190,7 +209,8 @@
       if (media.length) article.appendChild(MW.renderMedia(media, post.title));
       renderBody(article, true);
       renderDocuments(article);
-      if (post.form && MW.renderPoll) MW.renderPoll(article, post);
+      if (post.form && MW.renderPoll && !viewOnly()) MW.renderPoll(article, post);
+      else if (post.form) { var vote = el("p"); vote.appendChild(el("a", { class: "btn", href: hubLink() }, "Vote on Chapterhive ↗")); article.appendChild(vote); }
     }
 
     // Visitors without an account only get a preview of the work.
@@ -522,17 +542,18 @@
     } else {
       document.getElementById("comment-login").hidden = false;
       document.getElementById("comment-login-link").href = loginUrl();
-      document.getElementById("comment-join-link").href = "/register?next=" + encodeURIComponent(window.location.pathname);
+      document.getElementById("comment-join-link").href = "/hub/register?next=" + encodeURIComponent(window.location.pathname);
     }
   }
 
   /* ---------- Start ---------- */
 
-  Promise.all([MW.me(), MW.api("/posts/" + encodeURIComponent(slug))])
+  Promise.all([MW.me(), MW.api("/posts/" + encodeURIComponent(slug) + (MW.isHub ? "" : "?site=gb"))])
     .then(function (results) {
       user = results[0];
       post = results[1].post;
       renderPost();
+      if (viewOnly()) return;
       return loadComments();
     })
     .catch(function (error) {

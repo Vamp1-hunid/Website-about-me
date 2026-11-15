@@ -44,7 +44,7 @@
     button.addEventListener("click", async function () {
       var user = await MW.me();
       if (!user) {
-        window.location.href = "/login?next=" + encodeURIComponent(MW.currentPath());
+        window.location.href = "/hub/login?next=" + encodeURIComponent(MW.currentPath());
         return;
       }
       var on = button.getAttribute("aria-pressed") === "true";
@@ -156,7 +156,7 @@
     b.addEventListener("click", async function () {
       var user = await MW.me();
       if (!user) {
-        window.location.href = "/login?next=" + encodeURIComponent(MW.currentPath());
+        window.location.href = "/hub/login?next=" + encodeURIComponent(MW.currentPath());
         return;
       }
       openReport(type, id);

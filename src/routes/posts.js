@@ -332,7 +332,9 @@ router.get("/:slug", async function (req, res) {
   post.nav = await neighbours(row);
   // Visitors without an account get a preview: the opening of the text and the first few images.
   // Video, audio, documents and forms stay locked until they sign up.
-  if (!userId) guestPreview(post);
+  // On God's Banditos the owner's own works are shown in full to everyone (view only).
+  const banditosPage = req.query.site === "gb" && row.owner_role === "admin";
+  if (!userId && !banditosPage) guestPreview(post);
   if (row.form && userId) {
     const mine = await db.query("SELECT answers FROM form_responses WHERE post_id = $1 AND user_id = $2", [row.id, userId]);
     post.myResponse = mine.rows[0] ? mine.rows[0].answers : null;

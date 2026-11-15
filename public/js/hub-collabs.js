@@ -20,7 +20,7 @@
       var post = document.getElementById("post-collab");
       var creator = user && (user.role === "admin" || (MW.creator && MW.creator.status === "approved"));
       if (!creator) {
-        post.href = user ? "/hub/apply" : "/register?next=/hub/apply";
+        post.href = user ? "/hub/apply" : "/hub/register?next=/hub/apply";
         post.textContent = "Become a creator to post requests";
       }
     });
@@ -113,7 +113,7 @@
     if (!user) {
       form.textContent = "";
       var p = el("p");
-      p.appendChild(el("a", { class: "btn", href: "/login?next=" + encodeURIComponent(MW.currentPath()) }, "Log in to reply"));
+      p.appendChild(el("a", { class: "btn", href: "/hub/login?next=" + encodeURIComponent(MW.currentPath()) }, "Log in to reply"));
       form.appendChild(p);
       return;
     }

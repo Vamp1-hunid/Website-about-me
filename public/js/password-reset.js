@@ -83,7 +83,7 @@
         reset.hidden = true;
         intro.textContent = "Password changed. You've been signed out everywhere: log in with your new password.";
         var p = document.createElement("p");
-        p.appendChild(MW.el("a", { class: "btn", href: "/login" }, "Log in"));
+        p.appendChild(MW.el("a", { class: "btn", href: "/hub/login" }, "Log in"));
         intro.after(p);
       } catch (error) {
         MW.showProblems(reset, (error.data && error.data.problems) || []);
