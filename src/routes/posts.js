@@ -49,7 +49,7 @@ const GENRES = ["fantasy", "scifi", "horror", "mystery", "romance", "comedy", "d
 const PAGE_SIZE = 12;
 const MAX_MEDIA = 80;
 const plans = require("../plans");
-const { requireFlag } = require("../flags");
+const { requireFlag, isOn: flagIsOn } = require("../flags");
 const MAX_TAGS = 12;
 
 const commentLimiter = rateLimit({
@@ -217,6 +217,9 @@ router.get("/", async function (req, res) {
     values.push(section);
     where.push("p.section = $" + values.length);
   }
+  // News & updates switched off (Admin → Site features): update posts are hidden from everyone but you.
+  const updatesOn = me && me.role === "admin" ? true : await flagIsOn("updates", req);
+  if (!updatesOn && !showDrafts) where.push("p.category NOT IN ('news', 'updates')");
   if (category) {
     values.push(category);
     where.push("p.category = $" + values.length);
@@ -347,6 +350,9 @@ router.get("/:slug", async function (req, res) {
   );
 
   const row = rows[0];
+  if (row && ["news", "updates"].includes(row.category) && !isAdmin && row.user_id !== userId && !(await flagIsOn("updates", req))) {
+    return res.status(503).json({ error: "News & updates are paused for now. Please check back soon.", feature: "updates" });
+  }
   // Drafts, scheduled works and works of suspended creators: only their owner (and the admin) can open them.
   if (!row || (!row.visible && !isAdmin && row.user_id !== userId)) {
     return res.status(404).json({ error: "That work could not be found." });

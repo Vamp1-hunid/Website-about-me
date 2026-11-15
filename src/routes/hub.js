@@ -91,7 +91,8 @@ router.get("/home", async function (req, res) {
   const latest = await db.query(
     `${SELECT_POST} WHERE ${VISIBLE} AND p.category NOT IN ('news', 'updates') ORDER BY p.created_at DESC LIMIT 12`
   );
-  const news = await db.query(
+  const updatesOn = (req.session.user && req.session.user.role === "admin") || await isFlagOn("updates", req);
+  const news = !updatesOn ? { rows: [] } : await db.query(
     `${SELECT_POST} WHERE ${VISIBLE} AND p.category = 'news' ORDER BY p.created_at DESC LIMIT 6`
   );
   const stats = await db.query(

@@ -484,3 +484,9 @@ ALTER TABLE feature_flags ADD COLUMN IF NOT EXISTS grp VARCHAR(30) NOT NULL DEFA
 -- v8: genres for browsing (horror, sci-fi, romance, education ...). A post can have up to three.
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS genres VARCHAR(20)[] NOT NULL DEFAULT '{}';
 CREATE INDEX IF NOT EXISTS posts_genres_idx ON posts USING GIN (genres);
+
+-- v9: what visitors see while a feature isn't live for them: hide it, or show it with a friendly notice.
+ALTER TABLE feature_flags ADD COLUMN IF NOT EXISTS display VARCHAR(12) NOT NULL DEFAULT 'hide';
+DO $$ BEGIN
+  ALTER TABLE feature_flags ADD CONSTRAINT feature_flags_display_check CHECK (display IN ('hide', 'soon', 'maintenance'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

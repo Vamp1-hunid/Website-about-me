@@ -30,6 +30,8 @@ const DEFAULTS = [
   ["hub_support", "Fund the heist on Chapterhive", "Shows the support button on Chapterhive pages too.", "admin", "Money & business"],
   ["sponsor_page", "Sponsor page", "The page for companies and investors with your business contact details.", "admin", "Money & business"],
   ["premium", "Premium plan", "The Premium page, waitlist and custom creator pages. Keep it queued until payments are ready.", "admin", "Money & business"],
+  // News
+  ["updates", "News & updates", "Chapterhive's News & updates and the God's Banditos Updates section. Suspend to hide all update posts.", "everyone", "News"],
   // Help & discovery
   ["search", "Search", "The search box and search results pages.", "everyone", "Help & discovery"],
   ["help_assistant", "Help assistant", "The ? chat that answers questions from the FAQ (uses AI if an AI key is set).", "admin", "Help & discovery"],
@@ -56,7 +58,7 @@ async function all() {
   if (cache && Date.now() - cachedAt < 15000 && !(nextLaunch && Date.now() >= nextLaunch)) return cache;
   // A scheduled launch: once launch_at has passed the switch counts as "everyone" (and is saved that way).
   await db.query("UPDATE feature_flags SET audience = 'everyone', launch_at = NULL, updated_at = NOW() WHERE launch_at IS NOT NULL AND launch_at <= NOW()");
-  const { rows } = await db.query("SELECT key, label, description, audience, launch_at, grp, updated_at FROM feature_flags ORDER BY grp, label");
+  const { rows } = await db.query("SELECT key, label, description, audience, launch_at, grp, display, updated_at FROM feature_flags ORDER BY grp, label");
   cache = rows;
   cachedAt = Date.now();
   // Refresh as soon as the next scheduled launch is due, not 15 seconds later.
@@ -81,6 +83,19 @@ async function enabledFor(user) {
   return rows.filter(function (f) { return allowed(f.audience, user); }).map(function (f) { return f.key; });
 }
 
+// Features that are off for this person but should still be shown with a friendly notice.
+// -> { chat: { notice: "soon", label: "Chat", launchAt } }
+async function noticesFor(user) {
+  const rows = await all();
+  const out = {};
+  rows.forEach(function (f) {
+    if (f.display !== "hide" && !allowed(f.audience, user)) out[f.key] = { notice: f.display, label: f.label, launchAt: f.launch_at || null };
+  });
+  return out;
+}
+
+const NOTICE_TEXT = { soon: "is coming soon", maintenance: "is under maintenance right now" };
+
 // For routes: is this feature on for whoever is asking?
 async function isOn(key, req) {
   const rows = await all();
@@ -102,17 +117,26 @@ function requireFlag(key, options) {
     if (await isOn(key, req)) return next();
     const rows = await all();
     const flag = rows.find(function (f) { return f.key === key; });
-    res.status(503).json({ error: (flag ? flag.label : "That feature") + " is paused or not launched yet. Please check back soon.", feature: key });
+    const phrase = flag && NOTICE_TEXT[flag.display] ? NOTICE_TEXT[flag.display] : "isn't available right now";
+    res.status(503).json({ error: (flag ? flag.label : "That feature") + " " + phrase + ". Please check back soon.", feature: key, notice: flag ? flag.display : "hide" });
   };
+}
+
+async function setDisplay(key, display) {
+  const { rows } = await db.query(
+    "UPDATE feature_flags SET display = $1, updated_at = NOW() WHERE key = $2 RETURNING key, label, description, audience, launch_at, grp, display, updated_at",
+    [display, key]);
+  cache = null;
+  return rows[0] || null;
 }
 
 async function setAudience(key, audience, launchAt) {
   const { rows } = await db.query(
-    "UPDATE feature_flags SET audience = $1, launch_at = $3, updated_at = NOW() WHERE key = $2 RETURNING key, label, description, audience, launch_at, grp, updated_at",
+    "UPDATE feature_flags SET audience = $1, launch_at = $3, updated_at = NOW() WHERE key = $2 RETURNING key, label, description, audience, launch_at, grp, display, updated_at",
     [audience, key, launchAt || null]
   );
   cache = null;
   return rows[0] || null;
 }
 
-module.exports = { ensureDefaults, all, enabledFor, isOn, requireFlag, setAudience, DEFAULTS };
+module.exports = { ensureDefaults, all, enabledFor, noticesFor, isOn, requireFlag, setAudience, setDisplay, DEFAULTS };

@@ -104,7 +104,7 @@ router.get("/search", flagsLib.requireFlag("search", { adminAlways: true }), sea
         );
       }
     }
-    if (want("news")) {
+    if (want("news") && await flagsLib.isOn("updates", req)) {
       news = await db.query(
         `${SELECT_POST} WHERE ${VISIBLE} AND p.category = 'news' AND (p.title ILIKE $1 OR p.summary ILIKE $1 OR p.body ILIKE $1)
           ORDER BY p.created_at DESC LIMIT 12`,

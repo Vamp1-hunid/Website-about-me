@@ -216,10 +216,12 @@ router.get("/me", async function (req, res) {
         } };
     }
   }
-  const features = await flags.enabledFor(req.session.user ? Object.assign({}, req.session.user, { is_beta: extra.isBeta }) : null);
+  const flagUser = req.session.user ? Object.assign({}, req.session.user, { is_beta: extra.isBeta }) : null;
+  const features = await flags.enabledFor(flagUser);
+  const featureNotices = await flags.noticesFor(flagUser);
   res.json(Object.assign({
     user: req.session.user || null, creator: creator, googleEnabled: googleEnabled(), mailEnabled: mailEnabled(),
-    features: features
+    features: features, featureNotices: featureNotices
   }, extra));
 });
 

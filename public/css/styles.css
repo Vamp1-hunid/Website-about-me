@@ -4359,3 +4359,16 @@ input[type="date"] { color-scheme: inherit; }
 .genre-picks { display: flex; flex-wrap: wrap; gap: 0.4rem 0.9rem; }
 .genre-picks label { display: inline-flex; gap: 0.35rem; align-items: center; text-transform: none; letter-spacing: normal; font-family: var(--font-ui); }
 .tribute-reel.is-still { animation: none; flex-wrap: wrap; width: auto; }
+
+/* ===== v9: "Coming soon" / "Under maintenance" notices ===== */
+.is-notice { opacity: 0.75; cursor: help; }
+.notice-badge {
+  display: inline-block; margin-left: 0.4rem; padding: 0.1rem 0.45rem; border-radius: 99px; vertical-align: middle;
+  font: 700 0.62rem/1.4 var(--font-ui); letter-spacing: 0.02em; text-transform: uppercase;
+  background: var(--cyan); color: #120d05;
+}
+.notice-maintenance .notice-badge { background: #e8a33d; }
+.feature-notice { text-align: center; padding: 3rem 1.5rem; }
+.feature-notice-icon { font-size: 3rem; margin: 0; }
+.feature-notice .lead { max-width: 34rem; margin-inline: auto; }
+.flag-display { width: auto; max-width: 100%; }

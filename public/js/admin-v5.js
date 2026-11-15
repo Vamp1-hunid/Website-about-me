@@ -335,6 +335,18 @@
     var sched = el("div", { class: "flag-schedule" });
     sched.append(when, schedule, cancel);
     controls.appendChild(sched);
+
+    // While it isn't live: hide it completely, or keep its tabs and links visible with a friendly notice.
+    var display = el("select", { "aria-label": "What visitors see while " + f.label + " isn't live", class: "flag-display" });
+    [["hide", "When not live: hide it"], ["soon", "When not live: show “Coming soon”"], ["maintenance", "When not live: show “Under maintenance”"]]
+      .forEach(function (o) { display.appendChild(el("option", { value: o[0] }, o[1])); });
+    display.value = f.display || "hide";
+    display.addEventListener("change", function () {
+      MW.api("/admin/flags/" + f.key + "/display", { method: "PUT", json: { display: display.value } })
+        .then(function (r) { paint(r.flag); MW.toast(f.label + ": " + display.options[display.selectedIndex].textContent.replace("When not live: ", "")); })
+        .catch(function (e) { MW.toast(e.message, true); display.value = f.display || "hide"; });
+    });
+    controls.appendChild(display);
     row.appendChild(controls);
 
     function paint(flag) {
@@ -343,10 +355,15 @@
       toggle.checked = f.audience === "everyone";
       sel.value = f.audience;
       sched.hidden = f.audience === "everyone";
+      display.hidden = f.audience === "everyone";
+      display.value = f.display || "hide";
       cancel.hidden = !f.launch_at;
       schedule.textContent = f.launch_at ? "Change launch" : "Schedule launch";
       status.textContent = f.audience === "everyone" ? "● LIVE" : f.audience === "off" ? "■ SUSPENDED" :
         "◆ QUEUED" + (f.launch_at ? " · launches " + MW.formatDateTime(f.launch_at) : "");
+      if (f.audience !== "everyone") {
+        status.textContent += f.display === "soon" ? " · visitors see “Coming soon”" : f.display === "maintenance" ? " · visitors see “Under maintenance”" : " · hidden from visitors";
+      }
     }
     function save(audience, launchAt, message) {
       return MW.api("/admin/flags/" + f.key, { method: "PUT", json: { audience: audience, launchAt: launchAt || null } })

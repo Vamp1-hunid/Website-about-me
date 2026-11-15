@@ -940,6 +940,15 @@ router.get("/flags", async function (req, res) {
   res.json({ flags: await flagsLib.all() });
 });
 
+// PUT /api/admin/flags/:key/display { display: hide | soon | maintenance }
+router.put("/flags/:key/display", async function (req, res) {
+  const display = ["hide", "soon", "maintenance"].includes(req.body.display) ? req.body.display : null;
+  if (!display) return res.status(400).json({ error: "Choose hide, soon or maintenance." });
+  const flag = await flagsLib.setDisplay(String(req.params.key).slice(0, 40), display);
+  if (!flag) return res.status(404).json({ error: "Unknown feature." });
+  res.json({ flag: flag });
+});
+
 router.put("/flags/:key", async function (req, res) {
   const audience = ["off", "admin", "beta", "everyone"].includes(req.body.audience) ? req.body.audience : null;
   if (!audience) return res.status(400).json({ error: "Choose off, admin, beta or everyone." });
