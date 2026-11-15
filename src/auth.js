@@ -20,7 +20,7 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// Only lets the request through for the admin or an approved Afterframe creator.
+// Only lets the request through for the admin or an approved Chapterhive creator.
 // Sets req.creator = { userId, handle, status, canWriteNews } and req.isAdmin.
 async function requireCreator(req, res, next) {
   if (!req.session.user) {
@@ -37,7 +37,7 @@ async function requireCreator(req, res, next) {
     return res.status(403).json({
       error: profile && profile.status === "pending"
         ? "Your creator application is still being reviewed."
-        : "Only approved Afterframe creators can do that. Apply at /hub/apply."
+        : "Only approved Chapterhive creators can do that. Apply at /hub/apply."
     });
   }
   req.creator = {
@@ -46,6 +46,27 @@ async function requireCreator(req, res, next) {
     status: profile ? profile.status : "approved",
     canWriteNews: req.isAdmin || Boolean(profile && profile.can_write_news)
   };
+  next();
+}
+
+// Runs on every API request from a logged-in person, at most once a minute each:
+// records that they're online, keeps their daily streak, and signs out banned or
+// suspended accounts straight away.
+async function trackActivity(req, res, next) {
+  const user = req.session && req.session.user;
+  if (!user) return next();
+  const now = Date.now();
+  if (req.session.touchedAt && now - req.session.touchedAt < 60000) return next();
+  req.session.touchedAt = now;
+  const users = require("./users");
+  const row = await users.touch(user.id);
+  const blocked = row ? users.standingProblem(row) : "Your account no longer exists.";
+  if (blocked) {
+    return req.session.destroy(function () {
+      res.clearCookie("mm.sid");
+      res.status(403).json({ error: blocked, signedOut: true });
+    });
+  }
   next();
 }
 
@@ -107,4 +128,4 @@ function safeNext(value, fallback) {
   return fallback || "/";
 }
 
-module.exports = { requireLogin, requireAdmin, requireCreator, sameOriginOnly, publicUser, startSession, safeNext };
+module.exports = { requireLogin, requireAdmin, requireCreator, trackActivity, sameOriginOnly, publicUser, startSession, safeNext };

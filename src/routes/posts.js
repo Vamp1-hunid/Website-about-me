@@ -20,16 +20,17 @@ router.param("id", function (req, res, next, value) {
   next();
 });
 
-const CATEGORIES = ["story-art", "anime", "writing", "updates", "news"];
+const CATEGORIES = ["story-art", "anime", "writing", "updates", "news", "art", "comedy", "film", "series", "meme", "thoughts", "poll"];
+const NEEDS_VISUAL = ["story-art", "anime", "art", "meme"];
 const SECTIONS = ["main", "concept-art"];
 const FONTS = ["theme", "serif", "typewriter", "handwritten", "clean"];
 
 // A work is public once it's published, its publish time (if any) has passed,
 // and its creator is approved (a suspended creator's works disappear everywhere).
-const VISIBLE = "(p.published AND (p.publish_at IS NULL OR p.publish_at <= NOW()) AND EXISTS " +
+const VISIBLE = "(p.published AND p.review_status = 'approved' AND (p.publish_at IS NULL OR p.publish_at <= NOW()) AND EXISTS " +
   "(SELECT 1 FROM creator_profiles cpv WHERE cpv.user_id = p.user_id AND cpv.status = 'approved'))";
 
-// God's Banditos shows only the admin's own works; Afterframe (/hub) shows every creator's.
+// God's Banditos shows only the admin's own works; Chapterhive (/hub) shows every creator's.
 const BANDITOS_ONLY = "p.user_id IN (SELECT id FROM users WHERE role = 'admin')";
 const SORTS = ["new", "old", "popular", "series"];
 const PAGE_SIZE = 12;
@@ -98,6 +99,8 @@ function toPost(row, full) {
     font: row.font || "theme",
     publishAt: row.publish_at,
     status: statusOf(row),
+    reviewStatus: row.review_status || "approved",
+    hasForm: Boolean(row.form),
     imageUrl: full ? storage.displayUrl(row.image_url, "image") : storage.thumbnailUrl(row.image_url),
     tags: row.tags || [],
     creator: row.creator_handle ? {
@@ -119,6 +122,8 @@ function toPost(row, full) {
   };
   if (full) {
     post.body = row.body;
+    post.form = row.form || null;
+    post.reviewNote = row.review_note || "";
     post.liked = Boolean(row.liked);
     post.favourited = Boolean(row.favourited);
   }
@@ -189,6 +194,8 @@ router.get("/", async function (req, res) {
   if (showDrafts && req.query.status === "draft") where.push("NOT p.published");
   if (showDrafts && req.query.status === "scheduled") where.push("p.published AND p.publish_at > NOW()");
   if (showDrafts && req.query.status === "live") where.push(VISIBLE);
+  if (showDrafts && req.query.status === "pending") where.push("p.published AND p.review_status = 'pending'");
+  if (showDrafts && req.query.status === "declined") where.push("p.review_status = 'declined'");
   const section = SECTIONS.includes(req.query.section) ? req.query.section : null;
   if (section) {
     values.push(section);
@@ -198,7 +205,7 @@ router.get("/", async function (req, res) {
     values.push(category);
     where.push("p.category = $" + values.length);
   } else if (!showDrafts) {
-    where.push("p.category <> 'news'"); // anime updates have their own section on Afterframe
+    where.push("p.category <> 'news'"); // anime updates have their own section on Chapterhive
   }
   if (tag) {
     values.push(tag);
@@ -323,6 +330,10 @@ router.get("/:slug", async function (req, res) {
   post.isMine = Boolean(userId && row.user_id === userId);
   post.media = await mediaFor(row.id);
   post.nav = await neighbours(row);
+  if (row.form && userId) {
+    const mine = await db.query("SELECT answers FROM form_responses WHERE post_id = $1 AND user_id = $2", [row.id, userId]);
+    post.myResponse = mine.rows[0] ? mine.rows[0].answers : null;
+  }
   res.json({ post: post });
 });
 
@@ -355,6 +366,7 @@ async function validatePost(body, req) {
     logline: cleanText(body.logline),
     section: SECTIONS.includes(body.section) ? body.section : "main",
     font: FONTS.includes(body.font) ? body.font : "theme",
+    form: null,
     publishAt: parsePublishAt(body.publishAt),
     tags: cleanTags(body.tags),
     seriesId: optionalInt(body.seriesId, 1, 999999999),
@@ -365,7 +377,7 @@ async function validatePost(body, req) {
     problems.push({ field: "title", message: "Give the work a title (up to 120 characters)." });
   }
   if (!CATEGORIES.includes(values.category)) {
-    problems.push({ field: "category", message: "Choose Story art, Anime works, Writing or Updates." });
+    problems.push({ field: "category", message: "Choose a category." });
   }
   if (values.logline.length > 200) {
     problems.push({ field: "logline", message: "Keep the logline to one sentence (200 characters at most)." });
@@ -389,7 +401,19 @@ async function validatePost(body, req) {
     problems.push({ field: "category", message: "Anime updates can only be posted by approved writers." });
   }
   if (values.category === "updates" && !req.isAdmin) {
-    problems.push({ field: "category", message: "Choose Story art, Anime works or Writing." });
+    problems.push({ field: "category", message: "Choose another category." });
+  }
+  if (body.form) {
+    if (!(await require("../flags").isOn("polls", req))) {
+      problems.push({ field: "form", message: "Polls and questionnaires aren't switched on yet." });
+    } else {
+      const form = cleanForm(body.form);
+      if (form.problem) problems.push({ field: "form", message: form.problem });
+      else values.form = form.form;
+    }
+  }
+  if (values.category === "poll" && !values.form) {
+    problems.push({ field: "form", message: "Add the poll's question and options." });
   }
   if (Number.isNaN(values.seriesOrder)) {
     problems.push({ field: "seriesOrder", message: "Use a whole number for the chapter, e.g. 1, 2, 3." });
@@ -427,8 +451,8 @@ async function savePost(req, res, existingRow) {
       if (m.role === "cover") { if (seenCover) m.role = "page"; seenCover = true; }
     });
     const visual = media.items.some(function (m) { return m.kind === "image" || m.kind === "video"; });
-    if ((values.category === "story-art" || values.category === "anime") && !visual) {
-      problems.push({ field: "media", message: "Story art and anime works need at least one picture or video." });
+    if (NEEDS_VISUAL.includes(values.category) && !visual) {
+      problems.push({ field: "media", message: "This kind of post needs at least one picture or video." });
     }
   }
   if (problems.length) {
@@ -444,16 +468,21 @@ async function savePost(req, res, existingRow) {
   let postId;
   try {
     await client.query("BEGIN");
+    // Review: the admin's own posts go straight out; everyone else's wait for approval.
+    const reviewStatus = req.isAdmin || !values.published ? "approved" : "pending";
     const fields = [slug, values.category, values.title, values.summary, values.body, cover,
       values.published, values.tags, values.seriesId, values.seriesOrder,
-      values.logline, values.section, values.font, values.publishAt];
+      values.logline, values.section, values.font, values.publishAt,
+      values.form ? JSON.stringify(values.form) : null, reviewStatus];
     if (existingRow) {
       postId = existingRow.id;
       await client.query(
         `UPDATE posts SET slug = $1, category = $2, title = $3, summary = $4, body = $5, image_url = $6,
                 image_public_id = NULL, published = $7, tags = $8, series_id = $9, series_order = $10,
-                logline = $11, section = $12, font = $13, publish_at = $14, updated_at = NOW()
-          WHERE id = $15`,
+                logline = $11, section = $12, font = $13, publish_at = $14, form = $15::jsonb,
+                review_status = $16::varchar, review_note = CASE WHEN $16::varchar = 'pending' THEN '' ELSE review_note END,
+                submitted_at = CASE WHEN $16::varchar = 'pending' THEN NOW() ELSE submitted_at END, updated_at = NOW()
+          WHERE id = $17`,
         fields.concat([postId])
       );
       const keep = media.items.filter(function (m) { return m.id; }).map(function (m) { return m.id; });
@@ -461,8 +490,9 @@ async function savePost(req, res, existingRow) {
     } else {
       const inserted = await client.query(
         `INSERT INTO posts (slug, category, title, summary, body, image_url, published, tags, series_id, series_order,
-                            logline, section, font, publish_at, user_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id`,
+                            logline, section, font, publish_at, form, review_status, submitted_at, user_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb, $16::varchar,
+                 CASE WHEN $16::varchar = 'pending' THEN NOW() END, $17) RETURNING id`,
         fields.concat([req.session.user.id])
       );
       postId = inserted.rows[0].id;
@@ -495,7 +525,20 @@ async function savePost(req, res, existingRow) {
   }
 
   const { rows } = await db.query(SELECT_POST + " WHERE p.id = $1", [postId]);
-  res.status(existingRow ? 200 : 201).json({ post: toPost(rows[0], true) });
+  const saved = rows[0];
+  if (saved.review_status === "pending") {
+    // Let the admin know there's something to review.
+    const admins = await db.query("SELECT id FROM users WHERE role = 'admin'");
+    await require("../notify").notifyMany(admins.rows.map(function (a) { return a.id; }), {
+      type: "review",
+      title: "New post to review: " + saved.title,
+      body: "By " + (saved.creator_name || "a creator") + ". Approve it or send feedback.",
+      link: "/admin#reviews"
+    });
+  } else {
+    require("../publishing").announceReady().catch(function () {});
+  }
+  res.status(existingRow ? 200 : 201).json({ post: toPost(saved, true) });
 }
 
 // POST /api/posts  (JSON: title, category, summary, body, published, tags, seriesId, seriesOrder, media[])
@@ -566,7 +609,8 @@ router.delete("/:id/favourite", requireLogin, toggleRoute("favourites", "favouri
 /* ---------- Comments ---------- */
 
 const COMMENT_SELECT = `
-  SELECT c.*, u.username, u.display_name, u.role, u.avatar_url
+  SELECT c.*, u.username, u.display_name, u.role, u.avatar_url,
+         (u.show_online AND u.last_seen_at > NOW() - INTERVAL '5 minutes') AS online
     FROM comments c JOIN users u ON u.id = c.user_id`;
 
 // postOwnerId: the creator of the work, who may delete comments on it.
@@ -581,7 +625,8 @@ function toComment(row, viewer, postOwnerId) {
       username: row.username,
       displayName: row.display_name,
       role: row.role,
-      avatarUrl: storage.avatarUrl(row.avatar_url)
+      avatarUrl: storage.avatarUrl(row.avatar_url),
+      online: Boolean(row.online)
     },
     canEdit: Boolean(viewer && viewer.id === row.user_id),
     canDelete: Boolean(viewer && (viewer.role === "admin" || viewer.id === row.user_id || viewer.id === postOwnerId))
@@ -626,13 +671,130 @@ router.post("/:id/comments", requireLogin, commentLimiter, async function (req, 
 
   const { rows } = await db.query(
     `WITH c AS (INSERT INTO comments (post_id, user_id, body, parent_id) VALUES ($1, $2, $3, $4) RETURNING *)
-     SELECT c.*, u.username, u.display_name, u.role, u.avatar_url FROM c JOIN users u ON u.id = c.user_id`,
+     SELECT c.*, u.username, u.display_name, u.role, u.avatar_url, TRUE AS online FROM c JOIN users u ON u.id = c.user_id`,
     [id, req.session.user.id, body, parentId]
   );
   res.status(201).json({ comment: toComment(rows[0], req.session.user, post.user_id) });
 });
 
+/* ---------- Polls and questionnaires ---------- */
+
+// Checks and tidies a poll / questionnaire from the editor.
+// { kind: "poll"|"questionnaire", questions: [{ text, type: "single"|"multiple"|"text", options: [] }],
+//   results: "after-vote"|"always"|"creator", closesAt }
+function cleanForm(input) {
+  if (!input || typeof input !== "object") return { problem: "The poll is not valid." };
+  const kind = input.kind === "questionnaire" ? "questionnaire" : "poll";
+  const list = Array.isArray(input.questions) ? input.questions : [];
+  if (!list.length) return { problem: "Add at least one question." };
+  if (list.length > (kind === "poll" ? 1 : 20)) return { problem: kind === "poll" ? "A poll has one question. Use a questionnaire for more." : "Up to 20 questions." };
+  const questions = [];
+  for (let i = 0; i < list.length; i++) {
+    const q = list[i] || {};
+    const textValue = cleanText(q.text).slice(0, 200);
+    const type = ["single", "multiple", "text"].includes(q.type) ? q.type : "single";
+    if (!textValue) return { problem: "Question " + (i + 1) + " needs some text." };
+    if (kind === "poll" && type === "text") return { problem: "Poll questions need options to choose from." };
+    const question = { id: "q" + (i + 1), text: textValue, type: type };
+    if (type !== "text") {
+      const options = (Array.isArray(q.options) ? q.options : []).map(function (o) { return cleanText(o).slice(0, 80); }).filter(Boolean);
+      if (options.length < 2 || options.length > 10) return { problem: "Question " + (i + 1) + " needs 2 to 10 options." };
+      question.options = options;
+    }
+    questions.push(question);
+  }
+  const closes = input.closesAt ? new Date(input.closesAt) : null;
+  if (closes && isNaN(closes.getTime())) return { problem: "That closing date isn't valid." };
+  return {
+    form: {
+      kind: kind,
+      questions: questions,
+      results: ["after-vote", "always", "creator"].includes(input.results) ? input.results : "after-vote",
+      closesAt: closes ? closes.toISOString() : null
+    }
+  };
+}
+
+async function formPost(id) {
+  const { rows } = await db.query("SELECT p.id, p.user_id, p.form, p.title FROM posts p WHERE p.id = $1 AND p.form IS NOT NULL AND " + VISIBLE, [id]);
+  return rows[0] || null;
+}
+
+// POST /api/posts/:id/responses { answers: { q1: 0, q2: [0, 2], q3: "text" } }
+router.post("/:id/responses", requireLogin, commentLimiter, async function (req, res) {
+  const post = await formPost(Number(req.params.id));
+  if (!post) return res.status(404).json({ error: "That poll could not be found." });
+  const form = post.form;
+  if (form.closesAt && new Date(form.closesAt) < new Date()) return res.status(400).json({ error: "This poll has closed." });
+  const input = req.body.answers && typeof req.body.answers === "object" ? req.body.answers : {};
+  const answers = {};
+  for (const q of form.questions) {
+    const a = input[q.id];
+    if (q.type === "single") {
+      if (!Number.isInteger(a) || a < 0 || a >= q.options.length) return res.status(400).json({ error: "Answer: " + q.text });
+      answers[q.id] = a;
+    } else if (q.type === "multiple") {
+      const picks = Array.isArray(a) ? Array.from(new Set(a.filter(function (x) { return Number.isInteger(x) && x >= 0 && x < q.options.length; }))) : [];
+      if (!picks.length) return res.status(400).json({ error: "Choose at least one option: " + q.text });
+      answers[q.id] = picks;
+    } else {
+      const t = cleanText(a).slice(0, 1000);
+      if (!t) return res.status(400).json({ error: "Answer: " + q.text });
+      answers[q.id] = t;
+    }
+  }
+  await db.query(
+    `INSERT INTO form_responses (post_id, user_id, answers) VALUES ($1, $2, $3)
+     ON CONFLICT (post_id, user_id) DO UPDATE SET answers = EXCLUDED.answers, created_at = NOW()`,
+    [post.id, req.session.user.id, JSON.stringify(answers)]
+  );
+  res.status(201).json({ ok: true, answers: answers });
+});
+
+// GET /api/posts/:id/results -> counts per option; written answers only for the creator
+router.get("/:id/results", async function (req, res) {
+  const post = await formPost(Number(req.params.id));
+  if (!post) return res.status(404).json({ error: "That poll could not be found." });
+  const viewer = req.session.user;
+  const isOwner = Boolean(viewer && (viewer.id === post.user_id || viewer.role === "admin"));
+  let voted = false;
+  if (viewer) {
+    const r = await db.query("SELECT 1 FROM form_responses WHERE post_id = $1 AND user_id = $2", [post.id, viewer.id]);
+    voted = r.rows.length > 0;
+  }
+  const closed = post.form.closesAt && new Date(post.form.closesAt) < new Date();
+  const mode = post.form.results;
+  const canSee = isOwner || mode === "always" || (mode === "after-vote" && (voted || closed));
+  const total = await db.query("SELECT COUNT(*)::int AS n FROM form_responses WHERE post_id = $1", [post.id]);
+  if (!canSee) return res.json({ visible: false, total: total.rows[0].n, voted: voted, closed: Boolean(closed) });
+
+  const { rows } = await db.query(
+    `SELECT r.answers, r.created_at, u.username, u.display_name FROM form_responses r JOIN users u ON u.id = r.user_id
+      WHERE r.post_id = $1 ORDER BY r.created_at DESC LIMIT 5000`,
+    [post.id]
+  );
+  const questions = post.form.questions.map(function (q) {
+    const out = { id: q.id, text: q.text, type: q.type };
+    if (q.type === "text") {
+      out.answers = isOwner ? rows.filter(function (r) { return r.answers[q.id]; }).map(function (r) {
+        return { text: r.answers[q.id], username: r.username, displayName: r.display_name, at: r.created_at };
+      }) : undefined;
+      out.count = rows.filter(function (r) { return r.answers[q.id]; }).length;
+    } else {
+      const counts = q.options.map(function () { return 0; });
+      rows.forEach(function (r) {
+        const a = r.answers[q.id];
+        (Array.isArray(a) ? a : [a]).forEach(function (i) { if (Number.isInteger(i) && i < counts.length) counts[i]++; });
+      });
+      out.options = q.options.map(function (label, i) { return { label: label, count: counts[i] }; });
+    }
+    return out;
+  });
+  res.json({ visible: true, total: rows.length, voted: voted, closed: Boolean(closed), isOwner: isOwner, questions: questions });
+});
+
 module.exports = router;
+module.exports.cleanForm = cleanForm;
 module.exports.toComment = toComment;
 module.exports.COMMENT_SELECT = COMMENT_SELECT;
 module.exports.uniqueSlug = uniqueSlug;

@@ -33,17 +33,17 @@ fonts or artwork are used).
 | `/profile` | Picture, email, stats, favourites, password, Google, delete account |
 | `/admin` | Site owner's dashboard (see below) |
 
-## Afterframe: the creator platform (`/hub`)
+## Chapterhive: the creator platform (`/hub`)
 
-God's Banditos stays your own brand. **Afterframe** is a separate platform on the same server where
+God's Banditos stays your own brand. **Chapterhive** is a separate platform on the same server where
 other manga artists, animators and story writers publish. Both share accounts, so one login works on both.
 
 | Address | What it is |
 |---|---|
-| `/hub` | Afterframe home: featured creators, latest releases, anime updates |
+| `/hub` | Chapterhive home: featured creators, latest releases, anime updates |
 | `/hub/creators` | Creator directory (search, filter by what they make, sort) |
 | `/hub/c/<handle>` | A creator's profile: banner, bio, links, followers, stories, works, characters, Follow button |
-| `/hub/w/<work>`, `/hub/s/<story>`, `/hub/ch/<character>` | Works, stories and characters on Afterframe |
+| `/hub/w/<work>`, `/hub/s/<story>`, `/hub/ch/<character>` | Works, stories and characters on Chapterhive |
 | `/hub/feed` | New releases from creators you follow (the ☰ button shows a dot when there's something new) |
 | `/hub/news` | Anime updates, written by you or creators you allow |
 | `/hub/collabs` | Collab board: creators post requests ("writer looking for a manga artist"), filter by role and pay, and reply "I'm interested" |
@@ -52,7 +52,7 @@ other manga artists, animators and story writers publish. Both share accounts, s
 | `/legal/terms`, `/legal/privacy`, `/legal/creator-agreement`, `/legal/content-rules` | Legal pages (drafts: have them reviewed) |
 
 How it works:
-- Anyone with an account can apply. You approve, reject or suspend creators in **Dashboard → Afterframe**,
+- Anyone with an account can apply. You approve, reject or suspend creators in **Dashboard → Chapterhive**,
   where you can also feature creators and allow them to post anime updates. Approval and rejection are emailed
   when email is set up.
 - Creators can only see and edit their own works, stories and characters, and can delete comments on their own works.
@@ -60,11 +60,11 @@ How it works:
   animator, colorist, voice actor, composer ...) or chooses "Other (describe it)" and types their own. Anyone logged
   in can reply; only the poster sees the replies (and gets an email if email is set up). Requests can be closed,
   reopened, edited or deleted, and reported like anything else.
-- Everyone can report a work, comment or creator (⚑ Report). Reports appear in **Dashboard → Afterframe** with
+- Everyone can report a work, comment or creator (⚑ Report). Reports appear in **Dashboard → Chapterhive** with
   buttons to delete the work or comment, suspend the creator, resolve or dismiss.
 - A suspended creator's works disappear everywhere at once.
 - Your existing works belong to your creator profile **@gods-banditos**. The God's Banditos pages only show your
-  own work; another creator's work opened at a God's Banditos address is redirected to Afterframe.
+  own work; another creator's work opened at a God's Banditos address is redirected to Chapterhive.
 - Work, story, character and creator pages get their title, description and preview picture from the server,
   so Google and WhatsApp/Facebook link previews show the real thing. The sitemap lists every public page.
 
@@ -82,7 +82,7 @@ How it works:
 | Comments | The latest comments on every work, to reply or delete |
 | Inbox | Messages from the contact form |
 | Settings | Social media links (shown under Contact, in the menu and footer), the **support button**, and a check of the Render settings |
-| Afterframe | Creator applications (approve, reject, feature, allow anime updates, suspend) and reports |
+| Chapterhive | Creator applications (approve, reject, feature, allow anime updates, suspend) and reports |
 
 ### The support button ("Fund the heist")
 A loot-bag button (bottom left of every page) that opens a panel with the ways people can send you
@@ -121,6 +121,32 @@ and pictures with the 🖼 button. The **Formatting help** link in Compose shows
 - Only the admin can upload works. Pictures, video, audio and documents go straight from the browser to Cloudinary with a signed, one-time permission from the server, and the server checks Cloudinary's receipt before saving. Members can upload a profile picture (8 MB).
 - Everything visitors type is shown as plain text, never as HTML. Works' formatting is turned into page elements by `js/markup.js` without ever using HTML, and links must start with `https://`.
 - Scheduled works and drafts are hidden everywhere (lists, search, sitemap, comments) until their time comes.
+
+## Version 5: reviews, bell, feature switches and more
+
+**Rules that are always on**
+- **Usernames** must be unique (not case-sensitive) and names like *admin*, *support*, *official* or *chapterhive* are reserved. The Join page checks while you type.
+- **Terms first:** joining is two steps. People tick the Terms, Privacy Policy, Content Rules (including the no-advertising rule) and age boxes before they can choose a username. First-time Google sign-ins go through the same step before any account is created.
+- **Every creator post is reviewed.** It waits in **Dashboard → Reviews** until you approve it (with a friendly message) or decline it (with a ready-made warning, or your own words). The creator gets the message in their bell and by email. Your own posts skip the queue.
+- **No advertising without approval:** added to the Terms, Content Rules and Creator Agreement.
+- **Manage users** (Dashboard): search members, view their scheduled or pending posts, suspend for a number of days, ban, reactivate, or make them a beta tester. Suspended and banned people are signed out and can't log in.
+- **Welcome messages** for every new account (member, creator, admin), shown once as a card.
+
+**Features you switch on in Dashboard → Features**
+Each new feature starts as **Only me**, so you can try it on the live site first. Change it to **Beta testers** or **Everyone** when you're happy. Off hides it from everyone.
+- Notification bell: new posts from people you follow, new followers, follower milestones, streaks, review results, trending posts and your announcements (Dashboard → Announcements).
+- Online status (green dot, members can hide it in Account settings) and daily streaks.
+- Polls and questionnaires in Compose, with results bars on the work page.
+- Quick tips under the header, and the Help & FAQ page with the ? help assistant.
+- Suggestion box (collab board, studio Collabs tab, Help page) → your Inbox.
+- Sponsor & business page at /hub/sponsor (edit it in Dashboard → Settings) → business enquiries land in your Inbox.
+- "Fund the heist" on Chapterhive pages too.
+
+**Other changes**
+- Contact moved from the Mulenga Mwamba page to its own God's Banditos page at /contact.
+- Chapterhive now welcomes all kinds of creative work: art, comics, animation, live action films, series, comedy, writing, memes, polls and personal posts.
+
+**Optional: AI answers in the help assistant.** Without anything set up, the assistant answers from the FAQ for free. To let it write answers with AI, add `AI_API_KEY` (an Anthropic API key) on Render. `AI_MODEL` can change the model. It still only uses the FAQ as its knowledge.
 
 ## How it is built
 

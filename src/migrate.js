@@ -13,9 +13,10 @@ async function migrate() {
   await db.query(sql);
   await ensureAdmin();
   await assignOwnership();
+  await require("./flags").ensureDefaults();
 }
 
-// Version 4 (Afterframe): every work, story and character has an owner. Anything made
+// Version 4 (Chapterhive): every work, story and character has an owner. Anything made
 // before that belongs to the admin, whose creator profile is "God's Banditos".
 async function assignOwnership() {
   const { rows } = await db.query("SELECT id, display_name FROM users WHERE role = 'admin' ORDER BY id LIMIT 1");
@@ -52,10 +53,11 @@ async function ensureAdmin() {
 
   if (rows.length === 0) {
     const hash = await bcrypt.hash(password, 12);
-    await db.query(
-      "INSERT INTO users (username, display_name, password_hash, role) VALUES ($1, $2, $3, 'admin')",
+    const created = await db.query(
+      "INSERT INTO users (username, display_name, password_hash, role, terms_accepted_at) VALUES ($1, $2, $3, 'admin', NOW()) RETURNING id",
       [username, process.env.ADMIN_DISPLAY_NAME || "Mulenga Mwamba", hash]
     );
+    await require("./users").welcome(created.rows[0].id, "admin");
     console.log("Admin account created: " + username);
   } else if (rows[0].role !== "admin") {
     await db.query("UPDATE users SET role = 'admin' WHERE id = $1", [rows[0].id]);

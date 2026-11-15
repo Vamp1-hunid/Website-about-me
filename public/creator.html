@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mulenga Mwamba | Creator of God's Banditos</title>
-  <meta name="description" content="Mulenga Mwamba (Mwamba), creator of God's Banditos and Data Science student at Mulungushi University, Zambia: about, learning plan, projects, photos and contact.">
+  <meta name="description" content="Mulenga Mwamba (Mwamba), creator of God's Banditos and Data Science student at Mulungushi University, Zambia: about, learning plan, projects and photos.">
   <meta name="author" content="Mulenga Mwamba">
   <meta property="og:site_name" content="God's Banditos">
   <meta property="og:title" content="Mulenga Mwamba | Creator of God's Banditos">
-  <meta property="og:description" content="Mulenga Mwamba (Mwamba), creator of God's Banditos and Data Science student at Mulungushi University, Zambia: about, learning plan, projects, photos and contact.">
+  <meta property="og:description" content="Mulenga Mwamba (Mwamba), creator of God's Banditos and Data Science student at Mulungushi University, Zambia: about, learning plan, projects and photos.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://mulenga-mwamba-website.onrender.com/images/og-card.png">
   <meta property="og:image:width" content="1200">
@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=9">
+  <link rel="stylesheet" href="/css/styles.css?v=10">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -58,7 +58,7 @@
     <a href="/gallery?category=updates" data-nav="updates">Updates</a>
     <a href="/products" data-nav="products">More products</a>
     <a href="/creator" data-nav="creator">Creator</a>
-    <a href="/creator#contact">Contact</a>
+    <a href="/contact" data-nav="contact">Contact</a>
   </nav>
 
   <main id="main">
@@ -70,7 +70,7 @@
       <p class="programme">Bachelor of Science in Data Science &middot; Year 2 &middot; Mulungushi University, Zambia</p>
       <p class="lead">Welcome! I am a second-year Data Science student at Mulungushi University and the creator behind God's Banditos. This page shows who I am and what I am learning and building along the way.</p>
       <nav class="section-index" aria-label="On this page">
-        <a href="#about">About</a><a href="#hobbies">Hobbies</a><a href="#plan">Learning plan</a><a href="#projects">Projects</a><a href="#photos">Photos</a><a href="#media">Media</a><a href="#contact">Contact</a>
+        <a href="#about">About</a><a href="#hobbies">Hobbies</a><a href="#plan">Learning plan</a><a href="#projects">Projects</a><a href="#photos">Photos</a><a href="#media">Media</a><a href="/contact">Contact</a>
       </nav>
     </section>
 
@@ -278,77 +278,6 @@
       </div>
     </section>
 
-    <section id="contact" class="panel reveal" aria-labelledby="contact-title">
-      <p class="node-label">Node 08 // Transmission</p>
-      <h2 id="contact-title" data-decode>Contact</h2>
-      <div class="contact-socials" id="contact-socials-box" hidden>
-        <p class="node-label">Find me online</p>
-        <div class="social-row" id="contact-socials"></div>
-      </div>
-      <p class="notice">Check your message first, then press Send: it goes straight to my inbox and I'll reply by email.</p>
-      <form id="contact-form" novalidate>
-        <div class="form-row">
-          <label for="name">Name</label>
-          <input type="text" id="name" name="name" autocomplete="name"
-                 required aria-describedby="name-error">
-          <p class="error" id="name-error"></p>
-        </div>
-
-        <div class="form-row">
-          <label for="email">Email</label>
-          <input type="email" id="email" name="email" autocomplete="email"
-                 required aria-describedby="email-error">
-          <p class="error" id="email-error"></p>
-        </div>
-
-        <div class="form-row">
-          <label for="topic">Topic</label>
-          <select id="topic" name="topic">
-            <option value="general">General enquiry</option>
-            <option value="collaboration">Collaboration</option>
-            <option value="feedback">Feedback on this site</option>
-            <option value="support">Supporting your work (bank details etc.)</option>
-          </select>
-        </div>
-
-        <div class="form-row">
-          <label for="message">Message</label>
-          <textarea id="message" name="message" rows="5"
-                    required aria-describedby="message-error"></textarea>
-          <p class="error" id="message-error"></p>
-        </div>
-
-        <!-- Hidden from people; bots fill it in, which marks their message as spam. -->
-        <div class="hp-field" aria-hidden="true">
-          <label for="website">Leave this empty</label>
-          <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
-        </div>
-
-        <button type="submit">Check my message</button>
-      </form>
-
-      <p class="feedback" id="form-feedback" aria-live="polite"></p>
-
-      <div id="preview" class="preview" hidden>
-        <h3>Validated preview</h3>
-        <p id="preview-note">The details below passed validation in this browser. Nothing has been sent yet.</p>
-        <dl>
-          <dt>Name</dt>
-          <dd id="preview-name"></dd>
-          <dt>Email</dt>
-          <dd id="preview-email"></dd>
-          <dt>Topic</dt>
-          <dd id="preview-topic"></dd>
-          <dt>Message</dt>
-          <dd id="preview-message"></dd>
-        </dl>
-        <div class="hero-actions">
-          <button type="button" id="send-message">Send message</button>
-          <button type="button" id="edit-message" class="btn btn-ghost">Edit</button>
-        </div>
-        <p class="feedback" id="send-feedback" aria-live="polite"></p>
-      </div>
-    </section>
 
   </main>
 

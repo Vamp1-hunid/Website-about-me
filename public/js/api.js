@@ -11,12 +11,12 @@
 
   var MW = (window.MW = window.MW || {});
 
-  // Which site this page belongs to: God's Banditos ("banditos") or Afterframe ("afterframe").
+  // Which site this page belongs to: God's Banditos ("banditos") or Chapterhive ("chapterhive").
   MW.brand = (document.body && document.body.getAttribute("data-brand")) || "banditos";
-  MW.isHub = MW.brand === "afterframe";
+  MW.isHub = MW.brand === "chapterhive";
 
-  // Where a work, story or character lives. On Afterframe everything opens in Afterframe's look;
-  // on God's Banditos, other creators' things open on Afterframe.
+  // Where a work, story or character lives. On Chapterhive everything opens in Chapterhive's look;
+  // on God's Banditos, other creators' things open on Chapterhive.
   MW.workUrl = function (post) {
     var slug = encodeURIComponent(post.slug);
     if (post.category === "news") return "/hub/news/" + slug;
@@ -79,11 +79,27 @@
           MW.googleEnabled = Boolean(data.googleEnabled);
           MW.mailEnabled = Boolean(data.mailEnabled);
           MW.creator = data.creator || null;
+          MW.features = data.features || [];
+          MW.account = data;
           return data.user;
         })
         .catch(function () { return null; });
     }
     return mePromise;
+  };
+
+  // Is a feature switched on for this visitor? (Admin → Features decides who sees what.)
+  MW.features = [];
+  MW.feature = function (key) { return MW.features.indexOf(key) !== -1; };
+
+  // A small green dot for people who are online (and haven't hidden it).
+  MW.onlineDot = function (online) {
+    if (!online || !MW.feature("online_status")) return document.createTextNode("");
+    var dot = document.createElement("span");
+    dot.className = "online-dot";
+    dot.title = "Online now";
+    dot.setAttribute("aria-label", "Online now");
+    return dot;
   };
 
   // Small pop-up message.
@@ -111,7 +127,8 @@
   };
 
   MW.categoryName = function (category) {
-    return { "story-art": "Story art", anime: "Anime works", writing: "Writing", updates: "Update", news: "Anime update" }[category] || category;
+    return { "story-art": "Story art", anime: "Anime works", writing: "Writing", updates: "Update", news: "Anime update",
+      art: "Art", comedy: "Comedy", film: "Live action film", series: "Series", meme: "Meme", thoughts: "Thoughts", poll: "Poll" }[category] || category;
   };
 
   // "2026-11-20T15:00:00Z" -> "20 Nov 2026, 17:00" (in the visitor's own time zone)
@@ -307,14 +324,14 @@
     menu.appendChild(search);
 
     var groups = MW.isHub ? [
-      ["Afterframe", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following"], ["/hub/news", "Anime updates"]]],
-      ["Create", [["/hub/collabs", "Collab board"], ["/hub/apply", "Become a creator"], ["/legal/creator-agreement", "Creator Agreement"], ["/legal/content-rules", "Content Rules"]]],
-      ["More", [["/", "God's Banditos"], ["/creator#contact", "Contact"], ["/legal/terms", "Terms"], ["/legal/privacy", "Privacy"]]]
+      ["Chapterhive", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following"], ["/hub/news", "Anime updates"]]],
+      ["Create", [["/hub/collabs", "Collab board"], ["/hub/collabs#suggest", "Suggestion box"], ["/hub/apply", "Become a creator"], ["/legal/content-rules", "Content Rules"]]],
+      ["More", [["/help", "Help & FAQ"], ["/hub/sponsor", "Sponsor & business"], ["/", "God's Banditos"], ["/contact", "Contact"], ["/legal/terms", "Terms"]]]
     ] : [
       ["Explore", [["/", "Home"], ["/gallery", "All works"], ["/gallery?category=story-art", "Story art"],
         ["/gallery?category=anime", "Anime works"], ["/gallery?category=writing", "Writing"], ["/gallery?category=updates", "Updates"]]],
       ["Stories", [["/stories", "All stories"], ["/gallery?section=concept-art", "Concept art"]]],
-      ["Studio", [["/products", "More products by us"], ["/creator", "Meet the creator"], ["/creator#contact", "Contact"], ["/hub", "Afterframe ↗"]]]
+      ["Studio", [["/products", "More products by us"], ["/creator", "Meet the creator"], ["/contact", "Contact"], ["/help", "Help & FAQ"], ["/hub", "Chapterhive ↗"]]]
     ];
     var grid = el("div", { class: "menu-grid" });
     groups.forEach(function (group) {
@@ -362,6 +379,9 @@
         li.appendChild(el("a", { href: item[0] }, item[1]));
         ul.appendChild(li);
       });
+      if (user && MW.feature("streaks") && MW.account && MW.account.streak) {
+        ul.appendChild(el("li", { class: "menu-streak" }, "🔥 " + MW.account.streak + "-day streak"));
+      }
     });
     MW.socials().then(function (links) { MW.renderSocials(socials, links); });
   }
@@ -419,7 +439,7 @@
         card.appendChild(el("p", { class: "heist-details mono" }, m.details));
       } else {
         card.appendChild(el("p", { class: "muted" }, "Send a message and the account details will come to you by email."));
-        card.appendChild(el("a", { class: "btn btn-small", href: "/creator?topic=support#contact" }, "Ask for bank details"));
+        card.appendChild(el("a", { class: "btn btn-small", href: "/contact?topic=support" }, "Ask for bank details"));
       }
     } else {
       if (m.details) card.appendChild(el("p", { class: "muted" }, m.details));
@@ -487,7 +507,16 @@
     if (window.location.hash === "#fund") open();
   }
 
-  if (!MW.isHub) MW.api("/support").then(buildSupport).catch(function () {});
+  // God's Banditos always shows the heist button; Chapterhive shows it once the "hub_support" feature is on.
+  MW.me().then(function () {
+    if (!MW.isHub || MW.feature("hub_support")) MW.api("/support").then(buildSupport).catch(function () {});
+  });
+
+  // The bell, welcome card, quick tips and help button live in extras.js.
+  var extras = document.createElement("script");
+  extras.src = "/js/extras.js";
+  extras.defer = true;
+  document.head.appendChild(extras);
 
   buildMenu();
   addFooterSocials();

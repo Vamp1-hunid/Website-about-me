@@ -1,5 +1,5 @@
 // src/routes/collabs.js
-// Afterframe collab board: creators post requests ("Writer looking for an artist") and others reply.
+// Chapterhive collab board: creators post requests ("Writer looking for an artist") and others reply.
 //   GET    /api/collabs/meta            the role and compensation lists for the drop-downs
 //   GET    /api/collabs                 open requests (filter: role, comp, q)
 //   GET    /api/collabs/mine            your own requests with reply counts (creators)
@@ -289,7 +289,7 @@ router.post("/:id/replies", requireLogin, replyLimiter, async function (req, res
   if (inserted.rows[0].is_new && collab.email && mailEnabled()) {
     const site = (process.env.PUBLIC_URL || req.protocol + "://" + req.get("host")).replace(/\/+$/, "");
     const who = req.session.user.displayName + " (@" + req.session.user.username + ")";
-    const body = "Hi " + collab.display_name + ",\n\n" + who + " replied to your Afterframe collab request \"" + collab.title + "\":\n\n" +
+    const body = "Hi " + collab.display_name + ",\n\n" + who + " replied to your Chapterhive collab request \"" + collab.title + "\":\n\n" +
       message + "\n\nSee all replies in your studio: " + site + "/hub/studio#collabs\n";
     sendMail(collab.email, "New reply to your collab request: " + collab.title, body,
       "<p>" + body.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>") + "</p>")

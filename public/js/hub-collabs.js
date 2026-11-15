@@ -50,7 +50,7 @@
 
   Promise.all([MW.api("/collabs/" + encodeURIComponent(id)), MW.me()]).then(function (results) {
     var c = results[0].collab, user = results[1];
-    document.title = c.title + " | Collabs | Afterframe";
+    document.title = c.title + " | Collabs | Chapterhive";
     box.textContent = "";
     box.appendChild(el("p", { class: "node-label" }, "Collab request" + (c.status === "closed" ? " · closed" : "")));
     box.appendChild(el("h1", {}, c.title));

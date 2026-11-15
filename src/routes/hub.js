@@ -1,5 +1,5 @@
 // src/routes/hub.js
-// Afterframe, the creator platform (/hub):
+// Chapterhive, the creator platform (/hub):
 //   GET  /api/hub/home                       featured creators, latest releases, anime updates
 //   GET  /api/hub/creators                   the creator directory
 //   GET  /api/hub/creators/:handle           one creator's profile
@@ -24,8 +24,8 @@ const { CHAR_VISIBLE } = require("./stories");
 const router = express.Router();
 
 const HANDLE_PATTERN = /^[a-z0-9](?:[a-z0-9_-]{1,28}[a-z0-9])$/;
-const KINDS = ["manga", "comics", "animation", "stories", "illustration", "music"];
-const RESERVED = ["admin", "hub", "studio", "apply", "feed", "news", "creators", "settings", "afterframe", "support", "help", "legal", "api"];
+const KINDS = ["manga", "comics", "animation", "illustration", "stories", "comedy", "film", "series", "photography", "music", "memes", "poetry"];
+const RESERVED = ["admin", "hub", "studio", "apply", "feed", "news", "creators", "settings", "chapterhive", "afterframe", "support", "help", "legal", "api"];
 
 const applyLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false,
@@ -68,12 +68,14 @@ function toCreatorCard(row) {
     followers: row.followers || 0,
     works: row.works || 0,
     featured: row.featured,
-    isBanditos: row.role === "admin"
+    isBanditos: row.role === "admin",
+    online: !!row.online
   };
 }
 
 const CREATOR_SQL = `
-  SELECT cp.*, u.avatar_url, u.role, u.created_at AS joined,
+  SELECT cp.*, u.avatar_url, u.role, u.created_at AS joined, u.streak_count,
+    (u.show_online AND u.last_seen_at > NOW() - INTERVAL '5 minutes') AS online,
     (SELECT COUNT(*) FROM follows f WHERE f.creator_id = cp.user_id)::int AS followers,
     (SELECT COUNT(*) FROM posts p WHERE p.user_id = cp.user_id AND p.category <> 'news' AND ${VISIBLE})::int AS works
   FROM creator_profiles cp JOIN users u ON u.id = cp.user_id`;
@@ -194,12 +196,19 @@ async function followRoute(req, res) {
   const id = await creatorUserId(req.params.handle);
   if (!id) return res.status(404).json({ error: "That creator could not be found." });
   if (id === req.session.user.id) return res.status(400).json({ error: "You can't follow yourself." });
+  let added = null;
   if (req.method === "POST") {
-    await db.query("INSERT INTO follows (follower_id, creator_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", [req.session.user.id, id]);
+    added = await db.query("INSERT INTO follows (follower_id, creator_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", [req.session.user.id, id]);
   } else {
     await db.query("DELETE FROM follows WHERE follower_id = $1 AND creator_id = $2", [req.session.user.id, id]);
   }
   const count = await db.query("SELECT COUNT(*)::int AS n FROM follows WHERE creator_id = $1", [id]);
+  if (req.method === "POST" && added.rowCount) {
+    const me = req.session.user;
+    const { notify } = require("../notify");
+    await notify(id, { type: "follower", title: (me.displayName || me.username) + " followed you", body: "You now have " + count.rows[0].n + " follower" + (count.rows[0].n === 1 ? "" : "s") + ".", link: "/u/" + me.username });
+    await require("../users").followerMilestone(id, count.rows[0].n);
+  }
   res.json({ following: req.method === "POST", followers: count.rows[0].n });
 }
 router.post("/creators/:handle/follow", requireLogin, followRoute);

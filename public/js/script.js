@@ -146,7 +146,7 @@ async function sendContactMessage() {
 }
 
 if (contactForm) {
-  // Links like /creator?topic=support#contact choose the topic for the visitor.
+  // Links like /contact?topic=support choose the topic for the visitor.
   const wantedTopic = new URLSearchParams(window.location.search).get("topic");
   if (wantedTopic && byId("topic").querySelector("option[value='" + wantedTopic.replace(/[^a-z-]/g, "") + "']")) {
     byId("topic").value = wantedTopic;

@@ -10,6 +10,8 @@ const { googleEnabled } = require("./google");
 const crypto = require("crypto");
 const { thumbnailUrl, upload, saveImage, deleteImage, avatarUrl } = require("../storage");
 const { mailEnabled, sendMail } = require("../mail");
+const users = require("../users");
+const flags = require("../flags");
 
 const router = express.Router();
 
@@ -51,8 +53,9 @@ router.post("/register", registerLimiter, async function (req, res) {
   if (email && (email.length > 254 || !EMAIL_PATTERN.test(email))) {
     problems.push({ field: "email", message: "That email address doesn't look right (or leave it empty)." });
   }
-  if (!USERNAME_PATTERN.test(username)) {
-    problems.push({ field: "username", message: "Use 3 to 30 characters: lowercase letters, numbers or _." });
+  const usernameIssue = await users.usernameProblem(username);
+  if (usernameIssue) {
+    problems.push({ field: "username", message: usernameIssue });
   }
   if (displayName.length > 60) {
     problems.push({ field: "displayName", message: "Display name must be 60 characters or fewer." });
@@ -64,15 +67,8 @@ router.post("/register", registerLimiter, async function (req, res) {
     problems.push({ field: "acceptTerms", message: "Please accept the Terms of Service and Privacy Policy." });
   }
   if (problems.length) {
-    return res.status(400).json({ error: "Please fix the highlighted fields.", problems: problems });
-  }
-
-  const taken = await db.query("SELECT 1 FROM users WHERE username = $1", [username]);
-  if (taken.rows.length) {
-    return res.status(409).json({
-      error: "That username is taken.",
-      problems: [{ field: "username", message: "That username is taken. Try another." }]
-    });
+    const taken = problems.some(function (p) { return p.field === "username" && /taken|reserved/.test(p.message); });
+    return res.status(taken && problems.length === 1 ? 409 : 400).json({ error: "Please fix the highlighted fields.", problems: problems });
   }
 
   const hash = await bcrypt.hash(password, 12);
@@ -81,8 +77,46 @@ router.post("/register", registerLimiter, async function (req, res) {
     [username, displayName, hash, email || null]
   );
 
+  await users.welcome(rows[0].id, "member");
   await startSession(req, rows[0]);
   res.status(201).json({ user: req.session.user });
+});
+
+// GET /api/account/username-available?u=name  -> { available, message }  (checked live while typing)
+router.get("/username-available", async function (req, res) {
+  const problem = await users.usernameProblem(typeof req.query.u === "string" ? req.query.u : req.query.username);
+  res.json({ available: !problem, message: problem || "That username is available." });
+});
+
+// POST /api/account/google-complete { acceptTerms, username }
+// A first-time Google sign-in waits here until the person has accepted the terms.
+router.post("/google-complete", registerLimiter, async function (req, res) {
+  const pending = req.session.pendingGoogle;
+  if (!pending) return res.status(400).json({ error: "Your Google sign-in expired. Please press Continue with Google again." });
+  if (req.body.acceptTerms !== true) {
+    return res.status(400).json({ error: "Please accept the terms to create your account.", problems: [{ field: "acceptTerms", message: "Please accept the Terms of Service and Privacy Policy." }] });
+  }
+  const username = cleanText(req.body.username).toLowerCase() || pending.username;
+  const issue = await users.usernameProblem(username);
+  if (issue) return res.status(400).json({ error: issue, problems: [{ field: "username", message: issue }] });
+  const already = await db.query("SELECT 1 FROM users WHERE google_sub = $1", [pending.sub]);
+  if (already.rows.length) return res.status(409).json({ error: "This Google account already has an account. Log in instead." });
+  const { rows } = await db.query(
+    `INSERT INTO users (username, display_name, password_hash, role, google_sub, email, terms_accepted_at)
+     VALUES ($1, $2, NULL, 'member', $3, $4, NOW()) RETURNING *`,
+    [username, pending.displayName, pending.sub, pending.email]
+  );
+  const next = pending.next || "/hub";
+  delete req.session.pendingGoogle;
+  await users.welcome(rows[0].id, "member");
+  await startSession(req, rows[0]);
+  res.status(201).json({ user: req.session.user, next: next });
+});
+
+// GET /api/account/google-pending -> the Google details waiting for terms acceptance (or null)
+router.get("/google-pending", function (req, res) {
+  const p = req.session.pendingGoogle;
+  res.json({ pending: p ? { email: p.email, displayName: p.displayName, username: p.username } : null });
 });
 
 // POST /api/account/login  { username, password }
@@ -105,8 +139,18 @@ router.post("/login", loginLimiter, async function (req, res) {
     });
   }
 
+  const blocked = users.standingProblem(user);
+  if (blocked) return res.status(403).json({ error: blocked });
+
   await startSession(req, user);
   res.json({ user: req.session.user });
+});
+
+// PUT /api/account/presence { showOnline }  -> show or hide your green "online" dot
+router.put("/presence", requireLogin, async function (req, res) {
+  const showOnline = req.body.showOnline !== false;
+  await db.query("UPDATE users SET show_online = $1 WHERE id = $2", [showOnline, req.session.user.id]);
+  res.json({ showOnline: showOnline });
 });
 
 // POST /api/account/logout
@@ -127,7 +171,21 @@ router.get("/me", async function (req, res) {
     );
     if (rows[0]) creator = { handle: rows[0].handle, status: rows[0].status, canWriteNews: rows[0].can_write_news };
   }
-  res.json({ user: req.session.user || null, creator: creator, googleEnabled: googleEnabled(), mailEnabled: mailEnabled() });
+  let extra = {};
+  if (req.session.user) {
+    const { rows } = await db.query(
+      "SELECT show_online, streak_count, streak_best, is_beta FROM users WHERE id = $1",
+      [req.session.user.id]
+    );
+    if (rows[0]) {
+      extra = { showOnline: rows[0].show_online, streak: rows[0].streak_count, streakBest: rows[0].streak_best, isBeta: rows[0].is_beta };
+    }
+  }
+  const features = await flags.enabledFor(req.session.user ? Object.assign({}, req.session.user, { is_beta: extra.isBeta }) : null);
+  res.json(Object.assign({
+    user: req.session.user || null, creator: creator, googleEnabled: googleEnabled(), mailEnabled: mailEnabled(),
+    features: features
+  }, extra));
 });
 
 // GET /api/account/favourites  -> the logged-in member's saved works
@@ -136,7 +194,7 @@ router.get("/favourites", requireLogin, async function (req, res) {
     `SELECT p.id, p.slug, p.category, p.title, p.summary, p.image_url, f.created_at AS saved_at
        FROM favourites f
        JOIN posts p ON p.id = f.post_id
-      WHERE f.user_id = $1 AND (p.published AND (p.publish_at IS NULL OR p.publish_at <= NOW()))
+      WHERE f.user_id = $1 AND (p.published AND p.review_status = 'approved' AND (p.publish_at IS NULL OR p.publish_at <= NOW()))
       ORDER BY f.created_at DESC`,
     [req.session.user.id]
   );

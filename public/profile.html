@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=9">
+  <link rel="stylesheet" href="/css/styles.css?v=10">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -59,7 +59,7 @@
     <a href="/gallery?category=updates" data-nav="updates">Updates</a>
     <a href="/products" data-nav="products">More products</a>
     <a href="/creator" data-nav="creator">Creator</a>
-    <a href="/creator#contact">Contact</a>
+    <a href="/contact" data-nav="contact">Contact</a>
   </nav>
 
   <main id="main">
@@ -81,6 +81,7 @@
         <div class="stat"><dt>Saved</dt><dd id="stat-favourites">0</dd></div>
         <div class="stat"><dt>Likes</dt><dd id="stat-likes">0</dd></div>
         <div class="stat"><dt>Comments</dt><dd id="stat-comments">0</dd></div>
+        <div class="stat" id="stat-streak-box" hidden><dt>Streak</dt><dd id="stat-streak">0</dd></div>
       </dl>
       <p id="admin-link" hidden><a class="btn" href="/admin">Open the admin area</a></p>
     </section>
@@ -89,6 +90,13 @@
       <p class="node-label">Member // saved files</p>
       <h2 id="saved-title">Your favourites</h2>
       <div id="favourites" class="works-grid"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="presence-title" id="presence-panel" hidden>
+      <p class="node-label">Privacy // presence</p>
+      <h2 id="presence-title">Online status</h2>
+      <label class="check-row"><input type="checkbox" id="show-online"> <span>Show when I'm online (a green dot on my profile, comments and creator page)</span></label>
+      <p class="feedback" id="presence-feedback" aria-live="polite"></p>
     </section>
 
     <section class="panel" aria-labelledby="email-title" id="email-panel" hidden>
@@ -179,5 +187,6 @@
   <script src="/js/flair.js" defer></script>
   <script src="/js/works-grid.js" defer></script>
   <script src="/js/profile.js" defer></script>
+  <script src="/js/profile-v5.js" defer></script>
 </body>
 </html>

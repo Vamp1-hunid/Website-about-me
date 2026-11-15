@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sponsor &amp; business | Chapterhive</title>
+  <meta name="description" content="Sponsor creators, advertise with approval, partner or invest in Chapterhive. Business contact details and enquiry form.">
+  
+  <meta property="og:site_name" content="Chapterhive">
+  <meta property="og:title" content="Sponsor &amp; business | Chapterhive">
+  <meta property="og:description" content="Sponsor creators, advertise with approval, partner or invest in Chapterhive. Business contact details and enquiry form.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://mulenga-mwamba-website.onrender.com/images/chapterhive-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#0e0b07">
+  <link rel="icon" href="/images/chapterhive-mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css?v=10">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=2">
+  <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
+  <script src="/js/theme-boot.js"></script>
+</head>
+<body data-page="sponsor" data-brand="chapterhive">
+
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <a class="af-brand" href="/hub" aria-label="Chapterhive, home">
+      <img src="/images/chapterhive-mark.svg" alt="" width="34" height="34">
+      <span>Chapter<b>hive</b></span>
+    </a>
+    <div class="header-actions">
+      <div class="auth-area" id="auth-area"></div>
+      <form class="header-search" action="/hub/search" method="get" role="search">
+        <label class="sr-only" for="header-q">Search Chapterhive</label>
+        <input type="search" id="header-q" name="q" placeholder="Search creators, works&hellip;" maxlength="80" autocomplete="off">
+      </form>
+      <button id="menu-toggle" class="btn btn-ghost btn-small menu-toggle" type="button"
+              aria-expanded="false" aria-controls="site-menu" aria-label="Open menu">
+        <span class="bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
+      <button id="theme-toggle" class="btn btn-ghost btn-small" type="button">Light mode</button>
+    </div>
+  </header>
+
+  <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+    <a href="/hub" data-nav="hub">Home</a>
+    <a href="/hub/creators" data-nav="creators">Creators</a>
+    <a href="/hub/feed" data-nav="feed">Following</a>
+    <a href="/hub/news" data-nav="news">Anime updates</a>
+    <a href="/hub/collabs" data-nav="collabs">Collabs</a>
+    <a href="/hub/apply" data-nav="apply">Become a creator</a>
+    <a href="/hub/sponsor" data-nav="sponsor">Sponsor</a>
+    <a href="/">God's Banditos</a>
+  </nav>
+
+  <main id="main">
+    <section class="panel af-hero film-edge sponsor-hero">
+      <p class="node-label">Sponsor // business</p>
+      <h1 id="sp-headline">Partner with Chapterhive</h1>
+      <p class="lead" id="sp-pitch"></p>
+      <div class="hero-actions"><a class="btn" href="#enquire">Start a conversation</a><a class="btn btn-ghost" href="#contact-details">Contact details</a></div>
+      <div class="sponsor-stats" id="sp-stats" hidden></div>
+    </section>
+
+    <section class="panel" id="sp-unavailable" hidden>
+      <h2>Coming soon</h2>
+      <p>The sponsor page isn't open yet. For business enquiries in the meantime, use the <a href="/contact">contact page</a>.</p>
+    </section>
+
+    <section class="panel" id="sp-ways" aria-labelledby="ways-title" hidden>
+      <h2 id="ways-title">Ways to work with us</h2>
+      <div class="sponsor-offers" id="sp-tiers"></div>
+      <p class="muted">Advertising and sponsored content on Chapterhive always needs approval from the admins, and is labelled clearly for viewers.</p>
+    </section>
+
+    <section class="panel" id="contact-details" aria-labelledby="cd-title" hidden>
+      <h2 id="cd-title">Business contact</h2>
+      <div class="sponsor-contact" id="sp-contact"></div>
+    </section>
+
+    <section class="panel" id="enquire" aria-labelledby="enq-title" hidden>
+      <h2 id="enq-title">Send a business enquiry</h2>
+      <p class="muted">It goes straight to the owner, who replies by email.</p>
+      <form id="enquiry-form" novalidate>
+        <div class="form-row"><label for="eq-name">Your name</label><input type="text" id="eq-name" name="name" autocomplete="name" maxlength="100" required aria-describedby="eq-name-error"><p class="error" id="eq-name-error"></p></div>
+        <div class="form-row"><label for="eq-company">Company or organisation</label><input type="text" id="eq-company" name="company" autocomplete="organization" maxlength="120"></div>
+        <div class="form-row"><label for="eq-email">Work email</label><input id="eq-email" name="email" type="email" autocomplete="email" maxlength="254" required aria-describedby="eq-email-error"><p class="error" id="eq-email-error"></p></div>
+        <div class="form-row"><label for="eq-interest">Interested in</label>
+          <select id="eq-interest" name="interest"><option value="sponsorship">Sponsoring creators or the platform</option><option value="advertising">Advertising</option><option value="partnership">A partnership</option><option value="investment">Investing</option></select></div>
+        <div class="form-row"><label for="eq-message">Message</label><textarea id="eq-message" name="message" rows="5" maxlength="5000" required aria-describedby="eq-message-error"></textarea><p class="error" id="eq-message-error"></p></div>
+        <div class="hp-field" aria-hidden="true"><label for="eq-website">Leave this empty</label><input type="text" id="eq-website" name="website" tabindex="-1" autocomplete="off"></div>
+        <button type="submit">Send enquiry</button>
+        <p class="feedback" id="eq-feedback" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p class="footer-brand"><img src="/images/chapterhive-mark.svg" alt="" width="28" height="28"> &copy; 2026 Chapterhive &middot; a <a href="/">God's Banditos</a> production</p>
+    <p><a href="/legal/terms">Terms</a> &middot; <a href="/legal/privacy">Privacy</a> &middot; <a href="/legal/creator-agreement">Creator Agreement</a> &middot; <a href="/legal/content-rules">Content Rules</a> &middot; <a href="/contact">Contact</a></p>
+  </footer>
+
+  <script src="/js/api.js" defer></script>
+  <script src="/js/script.js" defer></script>
+  <script src="/js/markup.js" defer></script>
+  <script src="/js/hub.js" defer></script>
+  <script src="/js/sponsor.js" defer></script>
+</body>
+</html>

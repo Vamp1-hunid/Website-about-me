@@ -1,5 +1,5 @@
 // js/hub.js
-// Afterframe building blocks shared by every /hub page:
+// Chapterhive building blocks shared by every /hub page:
 //   MW.creatorCard()   a creator in a list
 //   MW.followButton()  follow / unfollow
 //   MW.byline()        "by <creator>" with a follow button (work, story and character pages)
@@ -12,7 +12,8 @@
   if (!MW) return;
   var el = MW.el;
 
-  var KIND_NAMES = { manga: "Manga", comics: "Comics", animation: "Animation", stories: "Stories", illustration: "Illustration", music: "Music" };
+  var KIND_NAMES = { manga: "Manga", comics: "Comics", animation: "Animation", stories: "Stories & writing", illustration: "Art & illustration", music: "Music",
+    comedy: "Comedy", film: "Live action film", series: "Series", photography: "Photography", memes: "Memes", poetry: "Poetry" };
   MW.kindName = function (k) { return KIND_NAMES[k] || k; };
 
   MW.creatorCard = function (c) {
@@ -22,7 +23,9 @@
     card.appendChild(banner);
     var body = el("div", { class: "creator-card-body" });
     body.appendChild(MW.avatar({ avatarUrl: c.avatarUrl, displayName: c.name }, "big"));
-    body.appendChild(el("h3", {}, c.name));
+    var h3 = el("h3", {}, c.name);
+    h3.appendChild(MW.onlineDot(c.online));
+    body.appendChild(h3);
     body.appendChild(el("p", { class: "mono muted" }, "@" + c.handle + " · " + c.followers + (c.followers === 1 ? " follower" : " followers")));
     if (c.tagline) body.appendChild(el("p", {}, c.tagline));
     if (c.kinds && c.kinds.length) {
@@ -101,7 +104,7 @@
       dialog = el("dialog", { class: "report-dialog", "aria-labelledby": "report-title" });
       var form = el("form", { novalidate: "" });
       form.appendChild(el("h2", { id: "report-title" }, "Report"));
-      form.appendChild(el("p", { class: "muted" }, "Reports are private. The Afterframe team reviews them against the Content Rules."));
+      form.appendChild(el("p", { class: "muted" }, "Reports are private. The Chapterhive team reviews them against the Content Rules."));
       var set = el("fieldset");
       set.appendChild(el("legend", { class: "label" }, "What's wrong?"));
       REASONS.forEach(function (r, i) {
@@ -133,7 +136,7 @@
             reason: form.querySelector("input[name='reason']:checked").value, details: details.value
           } });
           dialog.close();
-          MW.toast("Thanks. The report was sent to the Afterframe team.");
+          MW.toast("Thanks. The report was sent to the Chapterhive team.");
         } catch (error) {
           feedback.className = "feedback feedback-error";
           feedback.textContent = error.message;

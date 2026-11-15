@@ -19,7 +19,10 @@
       head.appendChild(MW.avatar(u, "big"));
       var text = el("div");
       text.appendChild(el("p", { class: "node-label" }, u.role === "admin" ? "Creator // profile" : "Member // profile"));
-      text.appendChild(el("h1", { class: "glitch" }, u.displayName));
+      var h1 = el("h1", { class: "glitch" }, u.displayName);
+      h1.appendChild(MW.onlineDot(u.online));
+      text.appendChild(h1);
+      if (u.streak > 1 && MW.feature("streaks")) { var sp = el("p"); sp.appendChild(el("span", { class: "streak-chip" }, "🔥 " + u.streak + "-day streak")); text.appendChild(sp); }
       var line = "@" + u.username + " · joined " + MW.formatDate(u.joined);
       text.appendChild(el("p", { class: "mono muted" }, line));
       if (u.role === "admin") {

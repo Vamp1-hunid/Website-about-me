@@ -52,6 +52,7 @@ async function makeUsername(email, name) {
     .replace(/^_+|_+$/g, "")
     .slice(0, 24);
   if (base.length < 3) base = (base + "_member").slice(0, 24);
+  if (require("../users").isReserved(base)) base = (base + "_fan").slice(0, 24);
 
   let candidate = base;
   for (let i = 0; i < 20; i++) {
@@ -139,16 +140,22 @@ router.get("/callback", async function (req, res) {
 
   let user = linked.rows[0];
 
-  // First time with this Google account: create a member account.
+  // First time with this Google account: nothing is created until they accept the terms
+  // on /register (step 2). Their Google details wait in the session meanwhile.
   if (!user) {
     const username = await makeUsername(profile.email, profile.name);
-    const displayName = String(profile.name || username).slice(0, 60);
-    const created = await db.query(
-      "INSERT INTO users (username, display_name, password_hash, role, google_sub, email, terms_accepted_at) VALUES ($1, $2, NULL, 'member', $3, $4, NOW()) RETURNING *",
-      [username, displayName, profile.sub, email]
-    );
-    user = created.rows[0];
+    req.session.pendingGoogle = {
+      sub: profile.sub,
+      email: email,
+      displayName: String(profile.name || username).slice(0, 60),
+      username: username,
+      next: next
+    };
+    return req.session.save(function () { res.redirect("/register?google=1"); });
   }
+
+  const blocked = require("../users").standingProblem(user);
+  if (blocked) return res.redirect("/login?error=" + encodeURIComponent(blocked));
 
   await startSession(req, user);
   res.redirect(next);

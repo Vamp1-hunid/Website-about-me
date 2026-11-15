@@ -163,6 +163,7 @@
     form.reset();
     MW.showProblems(form, []);
     media.load([]);
+    if (builder) { builder.clear(); builderWrap.open = false; }
     visibility.set(true, null);
     cancelBtn.hidden = true;
     saveBtn.textContent = buttonLabel();
@@ -193,12 +194,15 @@
       field("font").value = post.font || "theme";
       body.value = post.body;
       media.load(post.media);
+      if (builder) { builder.load(post.form || null); builderWrap.open = Boolean(post.form); }
       visibility.set(post.published, post.publishAt);
       cancelBtn.hidden = false;
       saveBtn.textContent = buttonLabel();
       field("editor-title").textContent = "Edit: " + post.title;
       field("editor-kicker").textContent = "Edit // file " + String(post.id).padStart(3, "0");
-      field("autosave-note").textContent = "";
+      field("autosave-note").textContent = post.reviewStatus === "declined" && post.reviewNote
+        ? "Needs changes: " + post.reviewNote + " Edit and publish again to send it back for review."
+        : post.reviewStatus === "pending" ? "This post is waiting for review." : "";
       history.replaceState(null, "", ADMIN.base + "?edit=" + post.id + "#compose");
       renderPreview();
       field("editor-title").scrollIntoView({ block: "start" });
@@ -214,6 +218,24 @@
   cancelBtn.addEventListener("click", function () {
     history.replaceState(null, "", ADMIN.base + "#compose");
     resetForm();
+  });
+
+  // Polls and questionnaires (switched on in Dashboard → Features).
+  var builderWrap = document.getElementById("form-builder-wrap");
+  var builder = null;
+  ADMIN.onReady(function (user) {
+    if (builderWrap && MW.feature("polls") && MW.formBuilder) {
+      builder = MW.formBuilder(document.getElementById("form-builder"));
+      builderWrap.hidden = false;
+    } else {
+      var pollOption = field("category").querySelector("option[value='poll']");
+      if (pollOption) pollOption.remove();
+    }
+    var note = document.getElementById("review-note");
+    if (note && user.role !== "admin") note.hidden = false;
+  });
+  field("category").addEventListener("change", function () {
+    if (field("category").value === "poll" && builder) { builderWrap.open = true; builder.start("poll"); }
   });
 
   // Which categories this person may post in.
@@ -251,8 +273,11 @@
     if (media.busy()) problems.push({ field: "media", message: "Wait for the uploads to finish." });
     var category = field("category").value;
     var visual = media.items().some(function (m) { return m.kind === "image" || m.kind === "video"; });
-    if ((category === "story-art" || category === "anime") && !visual) {
-      problems.push({ field: "media", message: "Story art and anime works need at least one picture or video." });
+    if (["story-art", "anime", "art", "meme"].indexOf(category) !== -1 && !visual) {
+      problems.push({ field: "media", message: "This kind of post needs at least one picture or video." });
+    }
+    if (category === "poll" && (!builder || builder.isEmpty())) {
+      problems.push({ field: "category", message: "Add your poll or questionnaire below (or choose another category)." });
     }
     MW.showProblems(form, problems);
     if (problems.length) {
@@ -276,6 +301,7 @@
       publishAt: vis.publishAt,
       media: media.value()
     };
+    if (builder) payload.form = builder.value();
 
     saveBtn.disabled = true;
     saveBtn.textContent = "Saving…";
@@ -290,7 +316,7 @@
       resetForm();
       clearDraftLocally();
       feedback.className = "feedback feedback-success";
-      var verb = post.status === "draft" ? "Draft saved: " : post.status === "scheduled" ? "Scheduled for " + MW.formatDateTime(post.publishAt) + ": " : wasEditing ? "Saved: " : "Published: ";
+      var verb = post.status === "pending" ? "Sent for review: " : post.status === "draft" ? "Draft saved: " : post.status === "scheduled" ? "Scheduled for " + MW.formatDateTime(post.publishAt) + ": " : wasEditing ? "Saved: " : "Published: ";
       feedback.textContent = verb + post.title + ". ";
       feedback.appendChild(el("a", { href: MW.workUrl(post) }, post.status === "live" ? "View it" : "Preview it"));
       MW.toast(verb + post.title);

@@ -24,7 +24,7 @@ router.get("/search", searchLimiter, async function (req, res) {
   const hub = req.query.site === "hub";
   if (q.length < 2) return res.json({ q: q, works: [], stories: [], characters: [], products: [], creators: [] });
   const like = "%" + q.replace(/[\\%_]/g, "\\$&") + "%";
-  // God's Banditos searches only its own works; Afterframe searches every creator's.
+  // God's Banditos searches only its own works; Chapterhive searches every creator's.
   const workScope = hub ? "" : " AND " + BANDITOS_ONLY;
   const ownerScope = function (alias) { return hub ? "" : " AND " + alias + ".user_id IN (SELECT id FROM users WHERE role = 'admin')"; };
 

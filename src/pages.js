@@ -63,7 +63,7 @@ function sendPage(req, res, file, meta) {
   res.type("html").send(html);
 }
 
-const VISIBLE_POST = "p.published AND (p.publish_at IS NULL OR p.publish_at <= NOW()) AND cp.status = 'approved'";
+const VISIBLE_POST = "p.published AND p.review_status = 'approved' AND (p.publish_at IS NULL OR p.publish_at <= NOW()) AND cp.status = 'approved'";
 
 async function findPost(slug) {
   const { rows } = await db.query(
@@ -81,8 +81,8 @@ function postMeta(req, post, brand) {
   const by = post.creator_name || "God's Banditos";
   const isNews = post.category === "news";
   return {
-    title: post.title + " | " + (brand === "afterframe" ? "Afterframe" : "God's Banditos"),
-    description: post.logline || post.summary || (isNews ? "Anime update on Afterframe." : "A work by " + by + "."),
+    title: post.title + " | " + (brand === "chapterhive" ? "Chapterhive" : "God's Banditos"),
+    description: post.logline || post.summary || (isNews ? "Anime update on Chapterhive." : "A work by " + by + "."),
     image: storage.thumbnailUrl(post.image_url),
     type: "article",
     jsonLd: {

@@ -76,6 +76,8 @@ app.use(
 
 const api = express.Router();
 api.use(sameOriginOnly);
+// Online status, streaks and ban checks for logged-in people.
+api.use(require("./src/auth").trackActivity);
 api.use("/account", require("./src/routes/account"));
 api.use("/posts", require("./src/routes/posts"));
 api.use("/comments", require("./src/routes/comments"));
@@ -84,6 +86,9 @@ api.use("/contact", require("./src/routes/contact"));
 api.use("/stories", require("./src/routes/stories"));
 api.use("/hub", require("./src/routes/hub"));
 api.use("/collabs", require("./src/routes/collabs"));
+api.use("/notifications", require("./src/routes/notifications"));
+api.use("/help", require("./src/routes/help"));
+api.use(require("./src/routes/business"));
 api.use(require("./src/routes/search"));
 api.use("/admin", require("./src/routes/admin"));
 api.get("/health", function (req, res) {
@@ -110,7 +115,7 @@ const pages = require("./src/pages");
 const storageForPages = require("./src/storage");
 
 // ----- God's Banditos pages (works, stories and characters by the admin) -----
-// Another creator's work opened at a God's Banditos address is sent to its Afterframe address.
+// Another creator's work opened at a God's Banditos address is sent to its Chapterhive address.
 
 app.get("/work/:slug", async function (req, res) {
   const post = await pages.findPost(req.params.slug);
@@ -145,7 +150,7 @@ app.get("/u/:username", function (req, res) {
   pages.sendPage(req, res, "user.html", null);
 });
 
-// ----- Afterframe (/hub): the creator platform -----
+// ----- Chapterhive (/hub): the creator platform -----
 
 app.get(["/hub", "/hub/"], function (req, res) {
   pages.sendPage(req, res, "hub/index.html", null);
@@ -153,19 +158,19 @@ app.get(["/hub", "/hub/"], function (req, res) {
 
 app.get("/hub/w/:slug", async function (req, res) {
   const post = await pages.findPost(req.params.slug);
-  pages.sendPage(req, res, "hub/work.html", pages.postMeta(req, post, "afterframe"));
+  pages.sendPage(req, res, "hub/work.html", pages.postMeta(req, post, "chapterhive"));
 });
 
 app.get("/hub/news/:slug", async function (req, res) {
   const post = await pages.findPost(req.params.slug);
-  pages.sendPage(req, res, "hub/work.html", pages.postMeta(req, post, "afterframe"));
+  pages.sendPage(req, res, "hub/work.html", pages.postMeta(req, post, "chapterhive"));
 });
 
 app.get("/hub/s/:slug", async function (req, res) {
   const s = await pages.findSeries(req.params.slug);
   pages.sendPage(req, res, "hub/story.html", s && s.status === "approved" ? {
-    title: s.title + " by " + s.creator_name + " | Afterframe",
-    description: s.logline || s.description || "A story on Afterframe.",
+    title: s.title + " by " + s.creator_name + " | Chapterhive",
+    description: s.logline || s.description || "A story on Chapterhive.",
     image: storageForPages.thumbnailUrl(s.cover_url),
     jsonLd: { "@context": "https://schema.org", "@type": "CreativeWorkSeries", name: s.title, description: s.logline || s.description || undefined,
       author: { "@type": "Person", name: s.creator_name } }
@@ -175,8 +180,8 @@ app.get("/hub/s/:slug", async function (req, res) {
 app.get("/hub/ch/:slug", async function (req, res) {
   const c = await pages.findCharacter(req.params.slug);
   pages.sendPage(req, res, "hub/character.html", c && c.visible ? {
-    title: c.name + " | " + c.creator_name + " | Afterframe",
-    description: c.tagline || (c.role ? c.role + ", by " + c.creator_name + "." : "A character on Afterframe."),
+    title: c.name + " | " + c.creator_name + " | Chapterhive",
+    description: c.tagline || (c.role ? c.role + ", by " + c.creator_name + "." : "A character on Chapterhive."),
     image: storageForPages.thumbnailUrl(c.portrait)
   } : null);
 });
@@ -191,7 +196,7 @@ app.get("/hub/collabs/:id", async function (req, res) {
   );
   const c = rows[0];
   pages.sendPage(req, res, "hub/collab.html", c ? {
-    title: c.title + " | Collabs | Afterframe",
+    title: c.title + " | Collabs | Chapterhive",
     description: c.name + " is looking for collaborators: " + c.description.slice(0, 160)
   } : null);
 });
@@ -199,8 +204,8 @@ app.get("/hub/collabs/:id", async function (req, res) {
 app.get("/hub/c/:handle", async function (req, res) {
   const c = await pages.findCreator(req.params.handle);
   pages.sendPage(req, res, "hub/creator.html", c && c.status === "approved" ? {
-    title: c.name + " (@" + c.handle + ") | Afterframe",
-    description: c.tagline || String(c.bio || "").slice(0, 180) || c.name + " on Afterframe.",
+    title: c.name + " (@" + c.handle + ") | Chapterhive",
+    description: c.tagline || String(c.bio || "").slice(0, 180) || c.name + " on Chapterhive.",
     image: storageForPages.thumbnailUrl(c.banner_url) || storageForPages.avatarUrl(c.avatar_url),
     type: "profile",
     jsonLd: { "@context": "https://schema.org", "@type": "ProfilePage",
@@ -252,6 +257,7 @@ migrate()
     app.listen(PORT, function () {
       console.log("Website running on http://localhost:" + PORT);
     });
+    require("./src/publishing").start();
   })
   .catch(function (error) {
     console.error("Could not prepare the database:", error);

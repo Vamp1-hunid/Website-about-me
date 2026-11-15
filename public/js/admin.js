@@ -18,7 +18,7 @@
 
   var el = MW.el;
   var ADMIN = (window.ADMIN = { el: el });
-  // "studio" on /hub/studio (any approved Afterframe creator), "dashboard" on /admin (site owner).
+  // "studio" on /hub/studio (any approved Chapterhive creator), "dashboard" on /admin (site owner).
   ADMIN.mode = document.body.getAttribute("data-mode") === "studio" ? "studio" : "dashboard";
   ADMIN.base = window.location.pathname;
   var readyCallbacks = [];
@@ -39,7 +39,7 @@
     if (ADMIN.mode === "studio" && user.role !== "admin" && !approved) {
       gate.textContent = MW.creator && MW.creator.status === "pending"
         ? "Your creator application is being reviewed. The studio opens as soon as you're approved."
-        : "The studio is for Afterframe creators. ";
+        : "The studio is for Chapterhive creators. ";
       if (!MW.creator || MW.creator.status === "rejected") {
         gate.appendChild(el("a", { class: "btn btn-small", href: "/hub/apply" }, "Apply to become a creator"));
       }
@@ -51,7 +51,7 @@
     }
     ADMIN.user = user;
     gate.textContent = ADMIN.mode === "studio"
-      ? "Welcome back, " + user.displayName + ". Publish, schedule and manage everything on your Afterframe page."
+      ? "Welcome back, " + user.displayName + ". Publish, schedule and manage everything on your Chapterhive page."
       : "Welcome back, " + user.displayName + ".";
     area.hidden = false;
     readyCallbacks.forEach(function (fn) { fn(user); });
@@ -91,6 +91,12 @@
     });
   });
 
+  // Links such as /hub/studio#collabs (from the ☰ menu) switch tabs even when the page is already open.
+  window.addEventListener("hashchange", function () {
+    var name = (window.location.hash || "").slice(1);
+    if (ADMIN.user && name && document.querySelector("[data-panel='" + name + "']")) ADMIN.show(name, { keepUrl: true });
+  });
+
   document.addEventListener("click", function (event) {
     var go = event.target.closest("[data-go]");
     if (go) ADMIN.show(go.getAttribute("data-go"), { fresh: go.hasAttribute("data-new") });
@@ -109,6 +115,8 @@
 
   ADMIN.statusText = function (item) {
     if (item.status === "draft") return "DRAFT";
+    if (item.status === "pending") return "IN REVIEW";
+    if (item.status === "declined") return "NEEDS CHANGES";
     if (item.status === "scheduled") return "SCHEDULED · " + MW.formatDateTime(item.publishAt);
     return "";
   };
