@@ -413,3 +413,47 @@ CREATE TABLE IF NOT EXISTS feature_flags (
 ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS kind VARCHAR(12) NOT NULL DEFAULT 'contact';
 ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS company VARCHAR(120) NOT NULL DEFAULT '';
 ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users (id) ON DELETE SET NULL;
+
+-- v7: international-standard sign-up details.
+-- birth_date: needed for age checks (13+ to join; 13-17 get a teen account). Never shown publicly.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date DATE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS country CHAR(2);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verify_token VARCHAR(80);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_opt_in BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_version VARCHAR(20);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS chat_privacy VARCHAR(10) NOT NULL DEFAULT 'everyone';
+DO $$ BEGIN
+  ALTER TABLE users ADD CONSTRAINT users_chat_privacy_check CHECK (chat_privacy IN ('everyone', 'nobody'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- v7: chat between members (one-to-one conversations).
+CREATE TABLE IF NOT EXISTS chat_threads (
+  id         SERIAL PRIMARY KEY,
+  user_a     INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,  -- always the smaller user id
+  user_b     INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  a_read_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  b_read_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_a, user_b),
+  CHECK (user_a < user_b)
+);
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id         SERIAL PRIMARY KEY,
+  thread_id  INTEGER NOT NULL REFERENCES chat_threads (id) ON DELETE CASCADE,
+  sender_id  INTEGER REFERENCES users (id) ON DELETE SET NULL,
+  body       VARCHAR(2000) NOT NULL DEFAULT '',
+  post_id    INTEGER REFERENCES posts (id) ON DELETE SET NULL,  -- a shared work (story, video, art...)
+  deleted    BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS chat_messages_thread_idx ON chat_messages (thread_id, id);
+CREATE TABLE IF NOT EXISTS chat_blocks (
+  blocker_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  blocked_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (blocker_id, blocked_id)
+);
+ALTER TABLE reports DROP CONSTRAINT IF EXISTS reports_target_type_check;
+ALTER TABLE reports ADD CONSTRAINT reports_target_type_check CHECK (target_type IN ('post', 'comment', 'creator', 'collab', 'message'));

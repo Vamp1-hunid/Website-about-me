@@ -262,6 +262,18 @@
       return;
     }
 
+    // Chat: a speech-bubble link with the number of unread conversations.
+    if (MW.isHub && MW.feature && MW.feature("chat")) {
+      var chatLink = el("a", { class: "btn btn-ghost btn-small chat-link-btn", href: "/hub/chat", title: "Chat", "aria-label": "Chat" }, "💬");
+      area.appendChild(chatLink);
+      MW.api("/chat/unread").then(function (d) {
+        if (d.unread) {
+          chatLink.appendChild(el("span", { class: "chat-badge" }, String(d.unread)));
+          chatLink.setAttribute("aria-label", "Chat, " + d.unread + " unread");
+        }
+      }).catch(function () {});
+    }
+
     var me = el("a", { class: "auth-name", href: "/profile", title: "Your profile" });
     me.appendChild(MW.avatar(user));
     me.appendChild(document.createTextNode(" @" + user.username));
@@ -405,6 +417,7 @@
       }
       var isCreator = user && (user.role === "admin" || (MW.creator && MW.creator.status === "approved"));
       if (user) items.splice(1, 0, ["/hub/feed", "Following feed"]);
+      if (user && MW.feature && MW.feature("chat")) items.splice(1, 0, ["/hub/chat", "Chat"]);
       if (isCreator) {
         items.unshift(["/hub/studio#profile", "Creator profile settings"]);
         items.unshift(["/hub/studio#collabs", "My collab requests"]);

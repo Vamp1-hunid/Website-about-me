@@ -44,6 +44,9 @@
       actions.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub/studio" }, "Open studio"));
     } else {
       actions.appendChild(MW.followButton(c.handle, c.following, function (n) { followers.textContent = String(n); }));
+      if (c.username && MW.feature("chat")) {
+        actions.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub/chat?with=" + encodeURIComponent(c.username) }, "💬 Message"));
+      }
     }
     top.appendChild(actions);
     body.appendChild(top);

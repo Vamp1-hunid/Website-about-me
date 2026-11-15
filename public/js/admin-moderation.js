@@ -92,7 +92,7 @@
   /* ---------- Reports ---------- */
 
   var REASONS = { stolen: "Stolen / copyright", explicit: "Sexual or graphic", hate: "Hate or violence", harassment: "Harassment",
-    spam: "Spam or scam", spoiler: "Unmarked spoilers", other: "Other" };
+    spam: "Spam or scam", spoiler: "Unmarked spoilers", scam: "Scam", "self-harm": "Self-harm concern", other: "Other" };
 
   async function setReport(r, status) {
     await MW.api("/admin/reports/" + r.id, { method: "POST", json: { status: status } });
@@ -137,6 +137,17 @@
         actions.appendChild(ADMIN.confirmButton("Suspend creator", async function () {
           await MW.api("/admin/creators/" + t.id + "/review", { method: "POST", json: { status: "suspended", note: "Suspended after a report (" + r.reason + ")." } });
           await setReport(r, "resolved");
+        }));
+      }
+    }
+    if (t && r.targetType === "message") {
+      li.appendChild(el("p", {}, t.deleted ? "(message already removed)" : "“" + t.body + "”"));
+      li.appendChild(el("p", { class: "muted" }, "Chat message from @" + (t.sender || "deleted account") + ". Check their account under Manage users if needed."));
+      if (!t.deleted) {
+        actions.appendChild(ADMIN.confirmButton("Remove message", async function () {
+          await MW.api("/admin/chat-messages/" + t.id, { method: "DELETE" });
+          await setReport(r, "resolved");
+          MW.toast("Message removed.");
         }));
       }
     }

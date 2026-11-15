@@ -17,17 +17,18 @@ const DEFAULTS = [
   ["help_assistant", "Help assistant", "The ? chat that answers questions from the FAQ (uses AI if an AI key is set)."],
   ["suggestion_box", "Suggestion box", "Members can send suggestions to your inbox from the collab board and help page."],
   ["sponsor_page", "Sponsor page", "The page for companies and investors with your business contact details."],
-  ["hub_support", "Fund the heist on Chapterhive", "Shows the support button on Chapterhive pages too."]
+  ["hub_support", "Fund the heist on Chapterhive", "Shows the support button on Chapterhive pages too."],
+  ["chat", "Chat", "Members can message each other and share works they're enjoying.", "everyone"]
 ];
 
 let cache = null;
 let cachedAt = 0;
 
 async function ensureDefaults() {
-  for (const [key, label, description] of DEFAULTS) {
+  for (const [key, label, description, audience] of DEFAULTS) {
     await db.query(
-      "INSERT INTO feature_flags (key, label, description, audience) VALUES ($1, $2, $3, 'admin') ON CONFLICT (key) DO UPDATE SET label = EXCLUDED.label, description = EXCLUDED.description",
-      [key, label, description]
+      "INSERT INTO feature_flags (key, label, description, audience) VALUES ($1, $2, $3, $4) ON CONFLICT (key) DO UPDATE SET label = EXCLUDED.label, description = EXCLUDED.description",
+      [key, label, description, audience || "admin"]
     );
   }
   cache = null;

@@ -661,6 +661,12 @@ router.post("/creators/:id/review", async function (req, res) {
   res.json({ creator: toCreatorAdmin(row), emailed: emailed });
 });
 
+// DELETE /api/admin/chat-messages/:id  -> removes a reported chat message
+router.delete("/chat-messages/:id", async function (req, res) {
+  await db.query("UPDATE chat_messages SET deleted = TRUE, body = '', post_id = NULL WHERE id = $1", [Number(req.params.id)]);
+  res.json({ ok: true });
+});
+
 // GET /api/admin/reports?status=open
 router.get("/reports", async function (req, res) {
   const status = ["open", "resolved", "dismissed"].includes(req.query.status) ? req.query.status : "open";
@@ -675,6 +681,8 @@ router.get("/reports", async function (req, res) {
                                 FROM creator_profiles cp WHERE cp.user_id = r.target_id)
          WHEN 'collab' THEN (SELECT json_build_object('title', c.title, 'id', c.id, 'creator', cp.handle)
                                FROM collab_posts c JOIN creator_profiles cp ON cp.user_id = c.user_id WHERE c.id = r.target_id)
+         WHEN 'message' THEN (SELECT json_build_object('id', m.id, 'body', m.body, 'deleted', m.deleted, 'sender', su.username)
+                               FROM chat_messages m LEFT JOIN users su ON su.id = m.sender_id WHERE m.id = r.target_id)
        END AS target
        FROM reports r LEFT JOIN users u ON u.id = r.reporter_id
       WHERE r.status = $1 ORDER BY r.created_at DESC LIMIT 100`,
