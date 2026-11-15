@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Afterframe">
+  <!-- Afterframe mark: a film frame, and the next frame already arriving behind it -->
+  <rect x="14" y="10" width="40" height="40" rx="3" fill="none" stroke="#ffb547" stroke-width="3" opacity="0.45"/>
+  <path d="M8 16h34l6 6v28H8z" fill="#0e1426" stroke="#ffb547" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M22 26l13 7.5L22 41z" fill="#ffb547"/>
+  <g fill="#56e1d0"><rect x="11" y="54" width="5" height="4" rx="1"/><rect x="21" y="54" width="5" height="4" rx="1"/><rect x="31" y="54" width="5" height="4" rx="1"/><rect x="41" y="54" width="5" height="4" rx="1"/></g>
+</svg>

@@ -60,6 +60,9 @@ router.post("/register", registerLimiter, async function (req, res) {
   if (password.length < 8 || password.length > 200) {
     problems.push({ field: "password", message: "Password must be at least 8 characters." });
   }
+  if (req.body.acceptTerms !== true) {
+    problems.push({ field: "acceptTerms", message: "Please accept the Terms of Service and Privacy Policy." });
+  }
   if (problems.length) {
     return res.status(400).json({ error: "Please fix the highlighted fields.", problems: problems });
   }
@@ -74,7 +77,7 @@ router.post("/register", registerLimiter, async function (req, res) {
 
   const hash = await bcrypt.hash(password, 12);
   const { rows } = await db.query(
-    "INSERT INTO users (username, display_name, password_hash, role, email) VALUES ($1, $2, $3, 'member', $4) RETURNING *",
+    "INSERT INTO users (username, display_name, password_hash, role, email, terms_accepted_at) VALUES ($1, $2, $3, 'member', $4, NOW()) RETURNING *",
     [username, displayName, hash, email || null]
   );
 
@@ -115,8 +118,16 @@ router.post("/logout", function (req, res) {
 });
 
 // GET /api/account/me  -> { user } or { user: null }
-router.get("/me", function (req, res) {
-  res.json({ user: req.session.user || null, googleEnabled: googleEnabled(), mailEnabled: mailEnabled() });
+router.get("/me", async function (req, res) {
+  let creator = null;
+  if (req.session.user) {
+    const { rows } = await db.query(
+      "SELECT handle, status, can_write_news FROM creator_profiles WHERE user_id = $1",
+      [req.session.user.id]
+    );
+    if (rows[0]) creator = { handle: rows[0].handle, status: rows[0].status, canWriteNews: rows[0].can_write_news };
+  }
+  res.json({ user: req.session.user || null, creator: creator, googleEnabled: googleEnabled(), mailEnabled: mailEnabled() });
 });
 
 // GET /api/account/favourites  -> the logged-in member's saved works
@@ -242,7 +253,18 @@ router.delete("/", requireLogin, async function (req, res) {
       error: user && !user.password_hash ? "Type your username exactly to confirm." : "That password is not correct."
     });
   }
+  // Collect every uploaded file first, so nothing is left behind on Cloudinary.
+  const files = await db.query(
+    `SELECT m.public_id, m.kind FROM post_media m JOIN posts p ON p.id = m.post_id WHERE p.user_id = $1
+     UNION ALL SELECT cm.public_id, 'image' FROM character_media cm JOIN characters c ON c.id = cm.character_id WHERE c.user_id = $1
+     UNION ALL SELECT cover_public_id, 'image' FROM series WHERE user_id = $1
+     UNION ALL SELECT banner_public_id, 'image' FROM creator_profiles WHERE user_id = $1
+     UNION ALL SELECT avatar_public_id, 'image' FROM users WHERE id = $1`,
+    [req.session.user.id]
+  );
   await db.query("DELETE FROM users WHERE id = $1", [req.session.user.id]);
+  const { deleteAll } = require("../media");
+  await deleteAll(files.rows.filter(function (f) { return f.public_id; }));
   req.session.destroy(function () {
     res.clearCookie("mm.sid");
     res.json({ ok: true });

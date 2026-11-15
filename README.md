@@ -33,6 +33,36 @@ fonts or artwork are used).
 | `/profile` | Picture, email, stats, favourites, password, Google, delete account |
 | `/admin` | Site owner's dashboard (see below) |
 
+## Afterframe: the creator platform (`/hub`)
+
+God's Banditos stays your own brand. **Afterframe** is a separate platform on the same server where
+other manga artists, animators and story writers publish. Both share accounts, so one login works on both.
+
+| Address | What it is |
+|---|---|
+| `/hub` | Afterframe home: featured creators, latest releases, anime updates |
+| `/hub/creators` | Creator directory (search, filter by what they make, sort) |
+| `/hub/c/<handle>` | A creator's profile: banner, bio, links, followers, stories, works, characters, Follow button |
+| `/hub/w/<work>`, `/hub/s/<story>`, `/hub/ch/<character>` | Works, stories and characters on Afterframe |
+| `/hub/feed` | New releases from creators you follow (the ☰ button shows a dot when there's something new) |
+| `/hub/news` | Anime updates, written by you or creators you allow |
+| `/hub/apply` | Apply to become a creator (accept the Creator Agreement) |
+| `/hub/studio` | A creator's studio: the same composer, uploads, scheduling and drafts as your dashboard, plus their profile |
+| `/legal/terms`, `/legal/privacy`, `/legal/creator-agreement`, `/legal/content-rules` | Legal pages (drafts: have them reviewed) |
+
+How it works:
+- Anyone with an account can apply. You approve, reject or suspend creators in **Dashboard → Afterframe**,
+  where you can also feature creators and allow them to post anime updates. Approval and rejection are emailed
+  when email is set up.
+- Creators can only see and edit their own works, stories and characters, and can delete comments on their own works.
+- Everyone can report a work, comment or creator (⚑ Report). Reports appear in **Dashboard → Afterframe** with
+  buttons to delete the work or comment, suspend the creator, resolve or dismiss.
+- A suspended creator's works disappear everywhere at once.
+- Your existing works belong to your creator profile **@gods-banditos**. The God's Banditos pages only show your
+  own work; another creator's work opened at a God's Banditos address is redirected to Afterframe.
+- Work, story, character and creator pages get their title, description and preview picture from the server,
+  so Google and WhatsApp/Facebook link previews show the real thing. The sitemap lists every public page.
+
 ## The dashboard (`/admin`)
 
 | Tab | What it's for |
@@ -47,6 +77,7 @@ fonts or artwork are used).
 | Comments | The latest comments on every work, to reply or delete |
 | Inbox | Messages from the contact form |
 | Settings | Social media links (shown under Contact, in the menu and footer), the **support button**, and a check of the Render settings |
+| Afterframe | Creator applications (approve, reject, feature, allow anime updates, suspend) and reports |
 
 ### The support button ("Fund the heist")
 A loot-bag button (bottom left of every page) that opens a panel with the ways people can send you

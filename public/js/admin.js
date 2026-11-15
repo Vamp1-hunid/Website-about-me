@@ -18,6 +18,9 @@
 
   var el = MW.el;
   var ADMIN = (window.ADMIN = { el: el });
+  // "studio" on /hub/studio (any approved Afterframe creator), "dashboard" on /admin (site owner).
+  ADMIN.mode = document.body.getAttribute("data-mode") === "studio" ? "studio" : "dashboard";
+  ADMIN.base = window.location.pathname;
   var readyCallbacks = [];
   var showCallbacks = {};
 
@@ -32,11 +35,24 @@
       return;
     }
     gate.classList.remove("loading");
-    if (user.role !== "admin") {
+    var approved = MW.creator && MW.creator.status === "approved";
+    if (ADMIN.mode === "studio" && user.role !== "admin" && !approved) {
+      gate.textContent = MW.creator && MW.creator.status === "pending"
+        ? "Your creator application is being reviewed. The studio opens as soon as you're approved."
+        : "The studio is for Afterframe creators. ";
+      if (!MW.creator || MW.creator.status === "rejected") {
+        gate.appendChild(el("a", { class: "btn btn-small", href: "/hub/apply" }, "Apply to become a creator"));
+      }
+      return;
+    }
+    if (ADMIN.mode === "dashboard" && user.role !== "admin") {
       gate.textContent = "Access denied. This area is only for the site owner.";
       return;
     }
-    gate.textContent = "Welcome back, " + user.displayName + ".";
+    ADMIN.user = user;
+    gate.textContent = ADMIN.mode === "studio"
+      ? "Welcome back, " + user.displayName + ". Publish, schedule and manage everything on your Afterframe page."
+      : "Welcome back, " + user.displayName + ".";
     area.hidden = false;
     readyCallbacks.forEach(function (fn) { fn(user); });
     var params = new URLSearchParams(window.location.search);
@@ -57,7 +73,7 @@
     document.querySelectorAll("[data-panel]").forEach(function (panel) {
       panel.hidden = panel.getAttribute("data-panel") !== name;
     });
-    if (!(options && options.keepUrl)) history.replaceState(null, "", "/admin#" + name);
+    if (!(options && options.keepUrl)) history.replaceState(null, "", ADMIN.base + "#" + name);
     (showCallbacks[name] || []).forEach(function (fn) { fn(options || {}); });
   };
 
@@ -67,7 +83,9 @@
     tab.addEventListener("keydown", function (event) {
       var step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
       if (!step) return;
-      var next = tabs[(index + step + tabs.length) % tabs.length];
+      var visible = Array.prototype.filter.call(tabs, function (t) { return !t.hidden; });
+      var at = visible.indexOf(tab);
+      var next = visible[(at + step + visible.length) % visible.length];
       next.focus();
       ADMIN.show(next.getAttribute("data-tab"));
     });

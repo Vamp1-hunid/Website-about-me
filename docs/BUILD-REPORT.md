@@ -1239,3 +1239,31 @@ contact-form messages with Reply-To set to the visitor.
 
 **New settings on Render:** `BREVO_API_KEY` (or `RESEND_API_KEY`), `MAIL_FROM`, `CONTACT_EMAIL`.
 All optional; the dashboard's Settings tab shows which are working.
+
+
+---
+
+## Version 4 (November 2026): Afterframe, the creator platform
+
+**Two front doors, one server.** God's Banditos pages show only works owned by the admin
+(`BANDITOS_ONLY` in `src/routes/posts.js`). Afterframe pages live under `/hub` (and `public/hub/`),
+use `css/afterframe.css` on top of `styles.css`, and set `data-brand="afterframe"` on `<body>`, which
+`js/api.js` reads to choose links, the ☰ menu and search. Moving Afterframe to its own domain later
+only needs a redirect from the new domain to `/hub`.
+
+**Ownership.** `posts`, `series` and `characters` have a `user_id`. On start-up `src/migrate.js` gives
+anything without an owner to the admin and creates the admin's creator profile `@gods-banditos`.
+`requireCreator` (src/auth.js) lets the admin and approved creators publish; every edit and delete
+checks the owner.
+
+**New tables:** `creator_profiles` (handle, bio, links, banner, status pending/approved/rejected/
+suspended, featured, can_write_news), `follows`, `reports`; new columns `users.feed_seen_at`,
+`users.terms_accepted_at`. A work is public only when its creator is approved, so suspending a
+creator hides their work everywhere.
+
+**Server-side previews.** `src/pages.js` fills in the title, description, Open Graph tags, canonical
+link and JSON-LD for work, story, character, creator and news pages before sending them.
+
+**Legal pages** (`public/legal/`) are drafts written as a starting point: have a Zambian lawyer review
+them. Sign-up now requires accepting the Terms and Privacy Policy; applying as a creator requires
+accepting the Creator Agreement and Content Rules.

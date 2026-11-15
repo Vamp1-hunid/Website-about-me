@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Become a creator | Afterframe</title>
+  <meta name="description" content="Publish your manga, animation and stories on Afterframe.">
+  
+  <meta property="og:site_name" content="Afterframe">
+  <meta property="og:title" content="Become a creator | Afterframe">
+  <meta property="og:description" content="Publish your manga, animation and stories on Afterframe.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://mulenga-mwamba-website.onrender.com/images/afterframe-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#070b16">
+  <link rel="icon" href="/images/afterframe-mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css?v=9">
+  <link rel="stylesheet" href="/css/afterframe.css?v=1">
+  <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
+  <script src="/js/theme-boot.js"></script>
+</head>
+<body data-page="apply" data-brand="afterframe">
+
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <a class="af-brand" href="/hub" aria-label="Afterframe, home">
+      <img src="/images/afterframe-mark.svg" alt="" width="34" height="34">
+      <span>AFTERFRAME</span>
+    </a>
+    <div class="header-actions">
+      <div class="auth-area" id="auth-area"></div>
+      <form class="header-search" action="/hub/search" method="get" role="search">
+        <label class="sr-only" for="header-q">Search Afterframe</label>
+        <input type="search" id="header-q" name="q" placeholder="Search creators, works&hellip;" maxlength="80" autocomplete="off">
+      </form>
+      <button id="menu-toggle" class="btn btn-ghost btn-small menu-toggle" type="button"
+              aria-expanded="false" aria-controls="site-menu" aria-label="Open menu">
+        <span class="bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
+      <button id="theme-toggle" class="btn btn-ghost btn-small" type="button">Light mode</button>
+    </div>
+  </header>
+
+  <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+    <a href="/hub" data-nav="hub">Home</a>
+    <a href="/hub/creators" data-nav="creators">Creators</a>
+    <a href="/hub/feed" data-nav="feed">Following</a>
+    <a href="/hub/news" data-nav="news">Anime updates</a>
+    <a href="/hub/apply" data-nav="apply">Become a creator</a>
+    <a href="/">God's Banditos</a>
+  </nav>
+
+  <main id="main">
+    <section class="panel narrow-wide">
+      <p class="node-label">Join the lineup</p>
+      <h1>Become a creator</h1>
+      <p class="lead">Get your own profile page, publish chapters, animation and stories, and build a following. Free while Afterframe is in launch.</p>
+      <div id="apply-status" aria-live="polite"><p class="loading">Checking&hellip;</p></div>
+      <form id="apply-form" novalidate hidden>
+        <div class="form-grid">
+          <div class="form-row">
+            <label for="handle">Handle <span class="muted">(your address: /hub/c/handle)</span></label>
+            <input type="text" id="handle" name="handle" maxlength="30" autocapitalize="none" spellcheck="false" aria-describedby="handle-error">
+            <p class="error" id="handle-error"></p>
+          </div>
+          <div class="form-row">
+            <label for="cname">Creator name</label>
+            <input type="text" id="cname" name="name" maxlength="80" aria-describedby="cname-error">
+            <p class="error" id="cname-error"></p>
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="tagline">Tagline <span class="muted">(one line about what you make)</span></label>
+          <input type="text" id="tagline" name="tagline" maxlength="160">
+        </div>
+        <fieldset class="form-row">
+          <legend>What do you make?</legend>
+          <div class="kind-picker" id="kinds">
+            <label><input type="checkbox" value="manga"><span>Manga</span></label>
+            <label><input type="checkbox" value="comics"><span>Comics</span></label>
+            <label><input type="checkbox" value="animation"><span>Animation</span></label>
+            <label><input type="checkbox" value="stories"><span>Stories</span></label>
+            <label><input type="checkbox" value="illustration"><span>Illustration</span></label>
+            <label><input type="checkbox" value="music"><span>Music</span></label>
+          </div>
+          <input type="hidden" name="kinds" id="kinds-anchor"><p class="error" id="kinds-anchor-error"></p>
+        </fieldset>
+        <div class="form-row">
+          <label for="application">Tell us about your work</label>
+          <textarea id="application" name="application" rows="5" maxlength="2000" aria-describedby="application-hint application-error"></textarea>
+          <p class="muted" id="application-hint">What you make, what you plan to publish, and anything we should know. At least 30 characters.</p>
+          <p class="error" id="application-error"></p>
+        </div>
+        <div class="form-row">
+          <span class="label">Links to your work <span class="muted">(Instagram, ArtStation, YouTube&hellip; https only)</span></span>
+          <div class="links-edit" id="apply-links"></div>
+          <button type="button" class="btn btn-ghost btn-small" id="add-link">＋ Add a link</button>
+          <input type="hidden" name="links" id="links-anchor"><p class="error" id="links-anchor-error"></p>
+        </div>
+        <div class="check-row">
+          <input type="checkbox" id="agree" name="agree">
+          <label for="agree">I own (or have permission for) everything I'll publish, and I accept the <a href="/legal/creator-agreement" target="_blank">Creator Agreement</a> and <a href="/legal/content-rules" target="_blank">Content Rules</a>.</label>
+        </div>
+        <p class="error" id="agree-error"></p>
+        <button type="submit">Send application</button>
+        <p class="feedback" id="apply-feedback" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p class="footer-brand"><img src="/images/afterframe-mark.svg" alt="" width="28" height="28"> &copy; 2026 Afterframe &middot; a <a href="/">God's Banditos</a> production</p>
+    <p><a href="/legal/terms">Terms</a> &middot; <a href="/legal/privacy">Privacy</a> &middot; <a href="/legal/creator-agreement">Creator Agreement</a> &middot; <a href="/legal/content-rules">Content Rules</a> &middot; <a href="/creator#contact">Contact</a></p>
+  </footer>
+
+  <script src="/js/api.js" defer></script>
+  <script src="/js/script.js" defer></script>
+  <script src="/js/hub.js" defer></script>
+  <script src="/js/hub-apply.js" defer></script>
+</body>
+</html>

@@ -8,10 +8,11 @@
   var box = document.getElementById("character");
   if (!box || !MW) return;
   var el = MW.el;
-  var slug = decodeURIComponent(window.location.pathname.replace(/^\/characters\//, "").replace(/\/$/, ""));
+  var slug = decodeURIComponent(window.location.pathname.replace(/^\/(characters|hub\/ch)\//, "").replace(/\/$/, ""));
+  var owner = null;
 
   function card(c) {
-    var a = el("a", { class: "character-card", href: "/characters/" + encodeURIComponent(c.slug) });
+    var a = el("a", { class: "character-card", href: MW.characterUrl(c.slug, owner) });
     var pic = el("div", { class: "character-portrait" });
     if (c.portraitUrl) pic.appendChild(el("img", { src: c.portraitUrl, alt: "", loading: "lazy" }));
     else pic.appendChild(el("span", { "aria-hidden": "true" }, c.name.charAt(0)));
@@ -24,11 +25,12 @@
   MW.api("/stories/characters/" + encodeURIComponent(slug))
     .then(function (data) {
       var c = data.character;
-      document.title = c.name + " | God's Banditos";
+      owner = c.creator;
+      document.title = c.name + (MW.isHub ? " | Afterframe" : " | God's Banditos");
       box.textContent = "";
       if (c.series) {
         var back = document.getElementById("back-link");
-        back.href = "/stories/" + encodeURIComponent(c.series.slug) + "#characters";
+        back.href = MW.storyUrl(c.series.slug, c.creator) + "#characters";
         back.textContent = "← " + c.series.title;
       }
       var portrait = c.media.find(function (m) { return m.role === "portrait"; }) || c.media[0];
@@ -49,6 +51,7 @@
       text.appendChild(el("h1", { class: "glitch" }, c.name));
       if (c.role) text.appendChild(el("p", { class: "sticker" }, c.role));
       if (c.tagline) text.appendChild(el("p", { class: "logline logline-big" }, c.tagline));
+      if (MW.isHub && c.creator && MW.byline) MW.me().then(function (u) { text.appendChild(MW.byline(c.creator, u)); });
       if (!c.visible) text.appendChild(el("p", { class: "draft-flag mono" }, c.published ? "SCHEDULED — only you can see this" : "DRAFT — only you can see this"));
       if (c.profile) {
         var prose = el("div", { class: "prose work-body" });

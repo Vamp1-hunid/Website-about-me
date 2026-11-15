@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Caveat:wght@500;700&family=Chakra+Petch:wght@400;600;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=8">
+  <link rel="stylesheet" href="/css/styles.css?v=9">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -81,6 +81,8 @@
         <button role="tab" type="button" data-tab="comments" aria-selected="false">Comments</button>
         <button role="tab" type="button" data-tab="inbox" aria-selected="false">Inbox <span class="tab-badge" id="inbox-badge" hidden></span></button>
         <button role="tab" type="button" data-tab="settings" aria-selected="false">Settings</button>
+        <button role="tab" type="button" data-tab="afterframe" aria-selected="false" data-admin-only>Afterframe <span class="tab-badge" id="mod-badge" hidden></span></button>
+        <button role="tab" type="button" data-tab="profile" aria-selected="false" data-studio-only hidden>Profile</button>
       </nav>
 
       <!-- ===== Overview ===== -->
@@ -129,7 +131,8 @@
                   <option value="story-art">Story art</option>
                   <option value="anime">Anime works</option>
                   <option value="writing">Writing</option>
-                  <option value="updates">Update / news</option>
+                  <option value="updates">God's Banditos update</option>
+                  <option value="news">Anime update (Afterframe news)</option>
                 </select>
                 <p class="error" id="category-error"></p>
               </div>
@@ -530,6 +533,88 @@
           <ul id="status-list" class="status-list"><li class="muted">Checking&hellip;</li></ul>
         </div>
       </section>
+
+      <!-- ===== Afterframe moderation (admin only) ===== -->
+      <section class="dash-panel dash-two" role="tabpanel" data-panel="afterframe" aria-label="Afterframe moderation" hidden>
+        <div class="panel">
+          <p class="node-label">Afterframe // creators</p>
+          <h2>Creator applications</h2>
+          <div class="filters" id="creator-filter">
+            <button type="button" class="btn btn-ghost btn-small" data-cstatus="pending" aria-pressed="true">Pending</button>
+            <button type="button" class="btn btn-ghost btn-small" data-cstatus="approved" aria-pressed="false">Approved</button>
+            <button type="button" class="btn btn-ghost btn-small" data-cstatus="rejected" aria-pressed="false">Rejected</button>
+            <button type="button" class="btn btn-ghost btn-small" data-cstatus="suspended" aria-pressed="false">Suspended</button>
+          </div>
+          <ul id="creator-queue" class="mod-list"></ul>
+        </div>
+        <div class="panel">
+          <p class="node-label">Afterframe // reports</p>
+          <h2>Reports</h2>
+          <div class="filters" id="report-filter">
+            <button type="button" class="btn btn-ghost btn-small" data-rstatus="open" aria-pressed="true">Open</button>
+            <button type="button" class="btn btn-ghost btn-small" data-rstatus="resolved" aria-pressed="false">Resolved</button>
+            <button type="button" class="btn btn-ghost btn-small" data-rstatus="dismissed" aria-pressed="false">Dismissed</button>
+          </div>
+          <ul id="report-queue" class="mod-list"></ul>
+          <p class="muted">You can open Afterframe at <a href="/hub">/hub</a>. Your own creator page is <a href="/hub/c/gods-banditos">@gods-banditos</a>.</p>
+        </div>
+      </section>
+
+      <!-- ===== Creator profile (studio) ===== -->
+      <section class="panel dash-panel" role="tabpanel" data-panel="profile" aria-label="Creator profile" hidden>
+        <p class="node-label">Studio // profile</p>
+        <h2>Your creator profile</h2>
+        <p class="muted" id="profile-status-line"></p>
+        <form id="cprofile-form" class="narrow-wide" novalidate>
+          <div class="form-row">
+            <label for="cp-name">Creator name</label>
+            <input type="text" id="cp-name" name="name" maxlength="80" aria-describedby="cp-name-error">
+            <p class="error" id="cp-name-error"></p>
+          </div>
+          <div class="form-row">
+            <label for="cp-tagline">Tagline</label>
+            <input type="text" id="cp-tagline" name="tagline" maxlength="160">
+          </div>
+          <div class="form-row">
+            <label for="cp-bio">About you</label>
+            <div class="toolbar" data-toolbar-for="cp-bio"></div>
+            <textarea id="cp-bio" name="bio" rows="8" maxlength="5000"></textarea>
+          </div>
+          <fieldset class="form-row">
+            <legend>What you make</legend>
+            <div class="kind-picker" id="cp-kinds">
+              <label><input type="checkbox" value="manga"><span>Manga</span></label>
+              <label><input type="checkbox" value="comics"><span>Comics</span></label>
+              <label><input type="checkbox" value="animation"><span>Animation</span></label>
+              <label><input type="checkbox" value="stories"><span>Stories</span></label>
+              <label><input type="checkbox" value="illustration"><span>Illustration</span></label>
+              <label><input type="checkbox" value="music"><span>Music</span></label>
+            </div>
+          </fieldset>
+          <div class="form-row">
+            <span class="label">Links <span class="muted">(https only)</span></span>
+            <div class="links-edit" id="cp-links"></div>
+            <button type="button" class="btn btn-ghost btn-small" id="cp-add-link">＋ Add a link</button>
+            <input type="hidden" name="links" id="cp-links-anchor"><p class="error" id="cp-links-anchor-error"></p>
+          </div>
+          <div class="form-row" data-cover-picker="banner">
+            <span class="label">Banner picture <span class="muted">(wide, e.g. 1500 × 500)</span></span>
+            <div class="cover-picker">
+              <img class="cover-preview cover-wide" alt="" hidden>
+              <label class="btn btn-ghost btn-small" for="cp-banner">Choose picture</label>
+              <input type="file" id="cp-banner" class="sr-only" accept="image/jpeg,image/png,image/webp,image/gif">
+              <button type="button" class="btn btn-ghost btn-small cover-remove" hidden>Remove</button>
+            </div>
+            <input type="hidden" name="banner" id="cp-banner-anchor"><p class="error" id="cp-banner-anchor-error"></p>
+          </div>
+          <p class="muted">Your round profile picture is your account picture: change it on <a href="/profile">Account settings</a>.</p>
+          <div class="hero-actions">
+            <button type="submit">Save profile</button>
+            <a class="btn btn-ghost" id="cp-view" href="/hub">View my page</a>
+          </div>
+          <p class="feedback" id="cprofile-feedback" aria-live="polite"></p>
+        </form>
+      </section>
     </div>
 
     <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-title">
@@ -569,5 +654,6 @@
   <script src="/js/admin-works.js" defer></script>
   <script src="/js/admin-stories.js" defer></script>
   <script src="/js/admin-more.js" defer></script>
+  <script src="/js/admin-moderation.js" defer></script>
 </body>
 </html>

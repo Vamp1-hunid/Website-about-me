@@ -66,6 +66,10 @@
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
       problems.push({ field: "email", message: "That email address doesn't look right (or leave it empty)." });
     }
+    var terms = form.querySelector("[name='acceptTerms']");
+    if (terms && !terms.checked) {
+      problems.push({ field: "acceptTerms", message: "Please accept the Terms of Service and Privacy Policy." });
+    }
     if (value("password2") !== value("password")) {
       problems.push({ field: "password2", message: "The two passwords don't match." });
     }
@@ -102,7 +106,8 @@
       } else {
         await MW.api("/account/register", {
           method: "POST",
-          json: { username: value("username"), displayName: value("displayName"), email: value("email"), password: value("password") }
+          json: { username: value("username"), displayName: value("displayName"), email: value("email"), password: value("password"),
+            acceptTerms: Boolean(form.querySelector("[name='acceptTerms']") && form.querySelector("[name='acceptTerms']").checked) }
         });
       }
       window.location.href = next;
