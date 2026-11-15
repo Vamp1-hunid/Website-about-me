@@ -348,6 +348,106 @@
     if (box && q) box.value = q;
   }
 
+
+  /* ---------- "Fund the heist": the support / donation button ----------
+     Shown only when the site owner switches it on in Dashboard -> Settings. */
+
+  function supportMethod(m) {
+    var card = el("li", { class: "heist-method heist-" + m.type });
+    var titles = {
+      card: "Card (Visa / Mastercard)", "mobile-money": "Mobile money", paypal: "PayPal",
+      bank: "Bank transfer", link: "Support link"
+    };
+    card.appendChild(el("p", { class: "node-label" }, m.label || titles[m.type] || "Support"));
+
+    if (m.type === "mobile-money") {
+      if (m.provider) card.appendChild(el("p", { class: "heist-provider" }, m.provider));
+      var row = el("div", { class: "heist-number-row" });
+      row.appendChild(el("span", { class: "heist-number mono" }, m.number));
+      var copy = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "Copy");
+      copy.addEventListener("click", function () {
+        var done = function () { copy.textContent = "Copied ✓"; window.setTimeout(function () { copy.textContent = "Copy"; }, 2000); };
+        if (navigator.clipboard) navigator.clipboard.writeText(m.number.replace(/\s+/g, "")).then(done, function () {});
+      });
+      row.appendChild(copy);
+      card.appendChild(row);
+      if (m.name) card.appendChild(el("p", { class: "muted" }, "Registered to " + m.name));
+      if (m.details) card.appendChild(el("p", { class: "muted" }, m.details));
+    } else if (m.type === "bank") {
+      if (m.details) {
+        card.appendChild(el("p", { class: "heist-details mono" }, m.details));
+      } else {
+        card.appendChild(el("p", { class: "muted" }, "Send a message and the account details will come to you by email."));
+        card.appendChild(el("a", { class: "btn btn-small", href: "/creator?topic=support#contact" }, "Ask for bank details"));
+      }
+    } else {
+      if (m.details) card.appendChild(el("p", { class: "muted" }, m.details));
+      var go = el("a", { class: "btn btn-small", href: m.url, target: "_blank", rel: "noopener" },
+        m.type === "card" ? "Pay by card ↗" : m.type === "paypal" ? "Open PayPal ↗" : "Open ↗");
+      card.appendChild(go);
+    }
+    return card;
+  }
+
+  function buildSupport(support) {
+    if (!support.enabled || document.getElementById("heist-dialog")) return;
+
+    var dialog = el("dialog", { id: "heist-dialog", class: "heist-dialog", "aria-labelledby": "heist-title" });
+    var top = el("div", { class: "heist-top" });
+    top.appendChild(el("span", { class: "heist-bag heist-bag-big", "aria-hidden": "true" }));
+    var heading = el("div");
+    heading.appendChild(el("p", { class: "node-label" }, "Crew // heist fund"));
+    heading.appendChild(el("h2", { id: "heist-title" }, support.title));
+    top.appendChild(heading);
+    dialog.appendChild(top);
+    if (support.message) dialog.appendChild(el("p", { class: "lead" }, support.message));
+    var list = el("ul", { class: "heist-methods" });
+    support.methods.forEach(function (m) { list.appendChild(supportMethod(m)); });
+    dialog.appendChild(list);
+    dialog.appendChild(el("p", { class: "muted heist-note" },
+      "Payments are handled by each service above; this site never sees your card or account details. Thank you for backing the crew."));
+    var close = el("form", { method: "dialog" });
+    close.appendChild(el("button", { type: "submit", class: "btn btn-ghost" }, "Close"));
+    dialog.appendChild(close);
+    document.body.appendChild(dialog);
+    dialog.addEventListener("click", function (event) { if (event.target === dialog) dialog.close(); });
+
+    function open() {
+      if (dialog.showModal) dialog.showModal();
+      else dialog.setAttribute("open", "");
+    }
+    MW.openSupport = open;
+
+    // The floating loot bag (bottom left; the console button lives bottom right).
+    var button = el("button", { type: "button", class: "heist-button", "aria-haspopup": "dialog" });
+    button.appendChild(el("span", { class: "heist-bag", "aria-hidden": "true" }));
+    button.appendChild(el("span", { class: "heist-label" }, support.title));
+    for (var i = 0; i < 3; i++) button.appendChild(el("span", { class: "heist-coin heist-coin-" + i, "aria-hidden": "true" }));
+    button.addEventListener("click", open);
+    document.body.appendChild(button);
+
+    // A link in the footer and the menu too.
+    var footer = document.querySelector(".site-footer");
+    if (footer) {
+      var p = el("p", { class: "footer-support" });
+      var link = el("button", { type: "button", class: "link-button" }, "♦ " + support.title);
+      link.addEventListener("click", open);
+      p.appendChild(link);
+      footer.appendChild(p);
+    }
+    var menuCol = document.querySelector("#site-menu .menu-col:nth-child(3) ul");
+    if (menuCol) {
+      var li = el("li");
+      var a = el("a", { href: "#fund" }, support.title);
+      a.addEventListener("click", function (event) { event.preventDefault(); open(); });
+      li.appendChild(a);
+      menuCol.appendChild(li);
+    }
+    if (window.location.hash === "#fund") open();
+  }
+
+  MW.api("/support").then(buildSupport).catch(function () {});
+
   buildMenu();
   addFooterSocials();
   fillSearch();

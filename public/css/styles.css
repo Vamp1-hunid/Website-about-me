@@ -3834,3 +3834,260 @@ main.admin-main {
     transition: none;
   }
 }
+
+/* ----- "Fund the heist": the support button -----
+   An original loot bag drawn in CSS: a cut-corner sack with a cyan tie and a ♦ mark.
+   Hovering makes three coins jump out of it. */
+.heist-button {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.9rem 0.45rem 0.55rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--on-accent);
+  background: var(--yellow);
+  border: 0;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  box-shadow: none;
+  cursor: pointer;
+  overflow: visible;
+}
+
+.heist-button:hover,
+.heist-button:focus-visible {
+  background: var(--pink);
+}
+
+.heist-bag {
+  position: relative;
+  display: inline-block;
+  width: 1.5rem;
+  height: 1.55rem;
+  background: var(--on-accent);
+  clip-path: polygon(30% 0, 70% 0, 62% 22%, 100% 55%, 100% 100%, 0 100%, 0 55%, 38% 22%);
+}
+
+.heist-bag::before {
+  /* the tie */
+  content: "";
+  position: absolute;
+  left: 28%;
+  right: 28%;
+  top: 22%;
+  height: 12%;
+  background: var(--cyan);
+}
+
+.heist-bag::after {
+  /* the ♦ mark */
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 62%;
+  width: 0.45rem;
+  height: 0.45rem;
+  background: var(--yellow);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.heist-button:hover .heist-bag::after,
+.heist-button:focus-visible .heist-bag::after {
+  background: var(--pink);
+}
+
+.heist-bag-big {
+  width: 3.2rem;
+  height: 3.3rem;
+  flex: none;
+  background: var(--yellow);
+}
+
+.heist-bag-big::after {
+  width: 0.9rem;
+  height: 0.9rem;
+  background: var(--pink);
+}
+
+.heist-coin {
+  position: absolute;
+  left: 1.15rem;
+  top: 0.6rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  background: var(--yellow);
+  border: 2px solid var(--on-accent);
+  transform: rotate(45deg) scale(0);
+  pointer-events: none;
+}
+
+.heist-button:hover .heist-coin,
+.heist-button:focus-visible .heist-coin {
+  animation: heist-coin 0.9s ease-out infinite;
+}
+
+.heist-coin-1 { animation-delay: 0.25s !important; }
+.heist-coin-2 { animation-delay: 0.5s !important; }
+
+@keyframes heist-coin {
+  0%   { transform: translate(0, 0) rotate(45deg) scale(0.4); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translate(var(--dx, 6px), -38px) rotate(225deg) scale(1); opacity: 0; }
+}
+
+.heist-coin-0 { --dx: -10px; }
+.heist-coin-1 { --dx: 4px; }
+.heist-coin-2 { --dx: 14px; }
+
+.heist-dialog {
+  width: min(560px, calc(100vw - 1.5rem));
+  max-height: calc(100vh - 2rem);
+  padding: 1.4rem 1.5rem 1.2rem;
+  color: var(--ink);
+  background: var(--panel);
+  border: 2px solid var(--yellow);
+  box-shadow: -8px 8px 0 var(--pink);
+}
+
+.heist-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(3px);
+}
+
+.heist-top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.heist-top h2 {
+  margin: 0.1rem 0 0;
+}
+
+.heist-methods {
+  list-style: none;
+  margin: 1rem 0;
+  padding: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.heist-method {
+  padding: 0.8rem 1rem;
+  background: var(--panel-2);
+  border-left: 3px solid var(--cyan);
+}
+
+.heist-method .node-label {
+  margin-bottom: 0.35rem;
+}
+
+.heist-method p {
+  margin: 0.2rem 0 0.5rem;
+}
+
+.heist-mobile-money { border-left-color: var(--yellow); }
+.heist-card { border-left-color: var(--pink); }
+
+.heist-provider {
+  font-weight: 700;
+}
+
+.heist-number-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.heist-number {
+  font-size: 1.35rem;
+  letter-spacing: 0.08em;
+}
+
+.heist-details {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.heist-note {
+  font-size: 0.85rem;
+}
+
+.footer-support {
+  margin-top: 0.4rem;
+}
+
+/* Dashboard editor */
+.support-methods {
+  list-style: none;
+  margin: 0.5rem 0 1rem;
+  padding: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.support-edit {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.7rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+}
+
+.support-edit [hidden] {
+  display: none;
+}
+
+.support-edit-head {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.support-edit-head select {
+  flex: 1;
+}
+
+.support-help {
+  margin-top: 1rem;
+  font-size: 0.92rem;
+}
+
+.support-help summary {
+  cursor: pointer;
+  color: var(--cyan);
+}
+
+@media (max-width: 520px) {
+  .heist-button {
+    left: 0.6rem;
+    bottom: 0.6rem;
+    padding: 0.5rem;
+  }
+
+  .heist-button .heist-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heist-button:hover .heist-coin,
+  .heist-button:focus-visible .heist-coin {
+    animation: none;
+  }
+}
+
+.heist-method > .node-label {
+  display: flex;
+}

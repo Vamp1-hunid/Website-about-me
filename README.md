@@ -46,7 +46,18 @@ fonts or artwork are used).
 | Products | The "More products by us" page |
 | Comments | The latest comments on every work, to reply or delete |
 | Inbox | Messages from the contact form |
-| Settings | Social media links (shown under Contact, in the menu and footer) and a check of the Render settings |
+| Settings | Social media links (shown under Contact, in the menu and footer), the **support button**, and a check of the Render settings |
+
+### The support button ("Fund the heist")
+A loot-bag button (bottom left of every page) that opens a panel with the ways people can send you
+money. Set it up in Dashboard → Settings → Support button. It stays hidden until you tick "Show the button".
+- **Mobile money** (MTN, Airtel, Zamtel): your number, network and registered name, with a Copy button.
+- **Card (Visa / Mastercard)**: paste a payment link from a payment company that pays out to you in Zambia
+  (for example Flutterwave). A website can't send money straight to a card number, so a payment company
+  always sits in between and pays out to your bank or mobile money.
+- **PayPal**: PayPal usually doesn't let Zambian accounts receive money, so only add it if yours can.
+- **Bank transfer**: leave the details empty so visitors ask for them through the contact form
+  (topic "Supporting your work"), keeping your account number off the public page.
 
 Formatting in the text: `# heading`, `**bold**`, `*italic*`, `==highlight==`, `~~crossed out~~`,
 `-> centred <-`, `> quote`, `- list`, `1. list`, `---` scene break, `[link](https://...)`,

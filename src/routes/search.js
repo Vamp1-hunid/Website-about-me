@@ -99,6 +99,37 @@ router.get("/socials", async function (req, res) {
   res.json({ links: await readSocials(), platforms: PLATFORMS });
 });
 
+
+/* ---------- "Fund the Heist": the support / donation button ---------- */
+
+const SUPPORT_TYPES = ["card", "mobile-money", "paypal", "bank", "link"];
+
+const DEFAULT_SUPPORT = {
+  enabled: false,
+  title: "Fund the heist",
+  message: "Every story here is made by one person. If you enjoy the work, you can chip in to keep the presses running.",
+  methods: []
+};
+
+async function readSupport() {
+  const { rows } = await db.query("SELECT value FROM app_settings WHERE key = 'support'");
+  try {
+    return Object.assign({}, DEFAULT_SUPPORT, rows[0] ? JSON.parse(rows[0].value) : {});
+  } catch (error) {
+    return Object.assign({}, DEFAULT_SUPPORT);
+  }
+}
+
+// GET /api/support -> what the button shows (nothing at all while it's switched off)
+router.get("/support", async function (req, res) {
+  const support = await readSupport();
+  if (!support.enabled || !support.methods.length) return res.json({ enabled: false });
+  res.json(support);
+});
+
+
 module.exports = router;
 module.exports.PLATFORMS = PLATFORMS;
 module.exports.readSocials = readSocials;
+module.exports.SUPPORT_TYPES = SUPPORT_TYPES;
+module.exports.readSupport = readSupport;
