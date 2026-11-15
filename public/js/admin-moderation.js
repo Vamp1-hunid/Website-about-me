@@ -61,7 +61,7 @@
     if (c.status === "pending") actions.appendChild(ADMIN.button("Reject", function () { review(c, "rejected").catch(function (e) { MW.toast(e.message, true); }); }));
     if (c.status === "approved") {
       var feat = ADMIN.button(c.featured ? "★ Featured" : "☆ Feature", function () { review(c, "approved", { featured: !c.featured, notify: false }).catch(function (e) { MW.toast(e.message, true); }); });
-      var news = ADMIN.button(c.canWriteNews ? "✓ Can post anime updates" : "Allow anime updates", function () { review(c, "approved", { canWriteNews: !c.canWriteNews, notify: false }).catch(function (e) { MW.toast(e.message, true); }); });
+      var news = ADMIN.button(c.canWriteNews ? "✓ Can post news posts" : "Allow news posts", function () { review(c, "approved", { canWriteNews: !c.canWriteNews, notify: false }).catch(function (e) { MW.toast(e.message, true); }); });
       actions.append(feat, news);
       actions.appendChild(ADMIN.button("Suspend", function () { review(c, "suspended").catch(function (e) { MW.toast(e.message, true); }); }));
     }

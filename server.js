@@ -213,6 +213,12 @@ app.get("/hub/c/:handle", async function (req, res) {
   } : null);
 });
 
+// God's Banditos has no public sign-up: joining happens on Chapterhive.
+app.get(["/register", "/register.html"], function (req, res) {
+  const query = req.originalUrl.indexOf("?") >= 0 ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+  res.redirect(301, "/hub/register" + query);
+});
+
 // Serves index.html, css/, js/, images/ ... and lets /gallery mean gallery.html.
 app.use(
   express.static(publicDir, {

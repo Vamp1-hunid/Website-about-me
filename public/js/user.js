@@ -66,6 +66,11 @@
     })
     .catch(function (error) {
       box.textContent = "";
+      if (error.status === 401) {
+        box.appendChild(el("h1", {}, "Members only"));
+        box.appendChild(MW.guestGate("Member pages are for people with an account. Create one for free to see who's here."));
+        return;
+      }
       box.appendChild(el("h1", { class: "glitch" }, "Signal lost"));
       box.appendChild(el("p", { class: "lead" }, error.status === 404 ? "There's no member with that username." : error.message));
     });

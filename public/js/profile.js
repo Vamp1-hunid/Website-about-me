@@ -10,7 +10,7 @@
 
   MW.me().then(async function (user) {
     if (!user) {
-      window.location.replace("/login?next=" + encodeURIComponent("/profile"));
+      window.location.replace("/hub/login?next=" + encodeURIComponent("/profile"));
       return;
     }
 

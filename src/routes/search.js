@@ -19,22 +19,45 @@ const searchLimiter = rateLimit({
   message: { error: "Searching very fast. Please wait a moment." }
 });
 
+// What the search filter can narrow results to. Each type lists the work categories it covers.
+const TYPES = {
+  all: null,
+  accounts: [],
+  posts: null,
+  episodes: ["series", "anime"],
+  films: ["film"],
+  art: ["art", "story-art", "comedy", "meme"],
+  writing: ["writing", "thoughts"],
+  stories: [],
+  characters: [],
+  news: [],
+  products: []
+};
+
 router.get("/search", searchLimiter, async function (req, res) {
   const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 80) : "";
   const hub = req.query.site === "hub";
-  if (q.length < 2) return res.json({ q: q, works: [], stories: [], characters: [], products: [], creators: [] });
+  const type = Object.prototype.hasOwnProperty.call(TYPES, req.query.type) ? req.query.type : "all";
+  const empty = { q: q, type: type, works: [], stories: [], characters: [], products: [], creators: [], accounts: [], news: [] };
+  if (q.length < 2) return res.json(empty);
+  const want = function (name) { return type === "all" || type === name; };
+  const wantWorks = type === "all" || type === "posts" || Array.isArray(TYPES[type]) && TYPES[type].length > 0;
   const like = "%" + q.replace(/[\\%_]/g, "\\$&") + "%";
   // God's Banditos searches only its own works; Chapterhive searches every creator's.
   const workScope = hub ? "" : " AND " + BANDITOS_ONLY;
   const ownerScope = function (alias) { return hub ? "" : " AND " + alias + ".user_id IN (SELECT id FROM users WHERE role = 'admin')"; };
+  const none = { rows: [] };
+  const cats = TYPES[type] && TYPES[type].length ? TYPES[type] : null;
 
-  const works = await db.query(
-    `${SELECT_POST} WHERE ${VISIBLE}${workScope} AND p.category <> 'news' AND (p.title ILIKE $1 OR p.summary ILIKE $1 OR p.logline ILIKE $1
+  const works = !wantWorks ? none : await db.query(
+    `${SELECT_POST} WHERE ${VISIBLE}${workScope} AND p.category <> 'news'
+        AND ($2::text[] IS NULL OR p.category = ANY($2::text[]) OR ($3 AND p.series_id IS NOT NULL))
+        AND (p.title ILIKE $1 OR p.summary ILIKE $1 OR p.logline ILIKE $1
         OR array_to_string(p.tags, ' ') ILIKE $1 OR p.body ILIKE $1)
-      ORDER BY (p.title ILIKE $1) DESC, p.created_at DESC LIMIT 24`,
-    [like]
+      ORDER BY (p.title ILIKE $1) DESC, p.created_at DESC LIMIT ${type === "all" ? 24 : 48}`,
+    [like, cats, type === "episodes"]
   );
-  const stories = await db.query(
+  const stories = !want("stories") ? none : await db.query(
     `SELECT s.* FROM series s
       WHERE (s.title ILIKE $1 OR s.logline ILIKE $1 OR s.description ILIKE $1)${ownerScope("s")}
         AND (EXISTS (SELECT 1 FROM posts p WHERE p.series_id = s.id AND ${VISIBLE})
@@ -42,7 +65,7 @@ router.get("/search", searchLimiter, async function (req, res) {
       ORDER BY s.title LIMIT 12`,
     [like]
   );
-  const characters = await db.query(
+  const characters = !want("characters") ? none : await db.query(
     `SELECT c.slug, c.name, c.role, c.tagline,
        (SELECT m.url FROM character_media m WHERE m.character_id = c.id ORDER BY (m.role = 'portrait') DESC, m.position LIMIT 1) AS portrait_url
        FROM characters c
@@ -50,32 +73,51 @@ router.get("/search", searchLimiter, async function (req, res) {
       ORDER BY (c.name ILIKE $1) DESC, c.name LIMIT 12`,
     [like]
   );
-  const products = await db.query(
-    `SELECT * FROM products WHERE published AND NOT $2 AND (name ILIKE $1 OR tagline ILIKE $1 OR description ILIKE $1)
+  const products = !want("products") || hub ? none : await db.query(
+    `SELECT * FROM products WHERE published AND (name ILIKE $1 OR tagline ILIKE $1 OR description ILIKE $1)
       ORDER BY sort_order NULLS LAST, name LIMIT 12`,
-    [like, hub]
+    [like]
   );
 
-  let creators = { rows: [] };
-  let news = { rows: [] };
+  let creators = none;
+  let accounts = none;
+  let news = none;
   if (hub) {
-    creators = await db.query(
-      `SELECT cp.handle, cp.name, cp.tagline, u.avatar_url FROM creator_profiles cp JOIN users u ON u.id = cp.user_id
-        WHERE cp.status = 'approved' AND (cp.name ILIKE $1 OR cp.handle ILIKE $1 OR cp.tagline ILIKE $1 OR cp.bio ILIKE $1)
-        ORDER BY (cp.name ILIKE $1) DESC, cp.name LIMIT 12`,
-      [like]
-    );
-    news = await db.query(
-      `${SELECT_POST} WHERE ${VISIBLE} AND p.category = 'news' AND (p.title ILIKE $1 OR p.summary ILIKE $1 OR p.body ILIKE $1)
-        ORDER BY p.created_at DESC LIMIT 12`,
-      [like]
-    );
+    if (want("accounts")) {
+      creators = await db.query(
+        `SELECT cp.handle, cp.name, cp.tagline, u.avatar_url FROM creator_profiles cp JOIN users u ON u.id = cp.user_id
+          WHERE cp.status = 'approved' AND (cp.name ILIKE $1 OR cp.handle ILIKE $1 OR cp.tagline ILIKE $1 OR cp.bio ILIKE $1)
+          ORDER BY (cp.name ILIKE $1) DESC, cp.name LIMIT 12`,
+        [like]
+      );
+      // Member accounts are only listed for signed-in people.
+      if (req.session && req.session.user) {
+        accounts = await db.query(
+          `SELECT u.username, u.display_name, u.avatar_url FROM users u
+            WHERE u.status = 'active' AND (u.username ILIKE $1 OR u.display_name ILIKE $1)
+              AND NOT EXISTS (SELECT 1 FROM creator_profiles cp WHERE cp.user_id = u.id AND cp.status = 'approved')
+            ORDER BY (u.username ILIKE $1) DESC, u.username LIMIT 12`,
+          [like]
+        );
+      }
+    }
+    if (want("news")) {
+      news = await db.query(
+        `${SELECT_POST} WHERE ${VISIBLE} AND p.category = 'news' AND (p.title ILIKE $1 OR p.summary ILIKE $1 OR p.body ILIKE $1)
+          ORDER BY p.created_at DESC LIMIT 12`,
+        [like]
+      );
+    }
   }
 
   res.json({
     q: q,
+    type: type,
     creators: creators.rows.map(function (c) {
       return { handle: c.handle, name: c.name, tagline: c.tagline, avatarUrl: storage.avatarUrl(c.avatar_url) || null };
+    }),
+    accounts: accounts.rows.map(function (u) {
+      return { username: u.username, displayName: u.display_name, avatarUrl: storage.avatarUrl(u.avatar_url) || null };
     }),
     news: news.rows.map(function (row) { return toPost(row, false); }),
     works: works.rows.map(function (row) { return toPost(row, false); }),

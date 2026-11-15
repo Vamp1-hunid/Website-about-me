@@ -9,7 +9,7 @@
 //  6. Pixel burst      - clicking a button or link throws a few coloured pixels
 //  7. Access stamp     - "ACCESS GRANTED" when a project file is hacked open
 //  8. Reticle          - a targeting ring that trails the mouse (desktop only)
-//  9. Page wipe        - a quick glitch wipe when moving between pages
+//  9. (removed) page wipe between pages
 //
 // Everything stays off for visitors who ask their device for reduced motion.
 
@@ -380,7 +380,8 @@
     });
   }
 
-  safe(initPageWipe);
+  // The page wipe between pages was removed: links open straight away.
+  safe(endWipe);
   safe(initDecode);
   safe(initTitleHover);
   safe(initRoles);

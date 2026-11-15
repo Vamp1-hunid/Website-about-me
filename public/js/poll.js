@@ -58,7 +58,7 @@
       if (closed || answered || !user) {
         if (!user && !closed) {
           var p = el("p");
-          p.appendChild(el("a", { href: "/login?next=" + encodeURIComponent(MW.currentPath()) }, "Log in"));
+          p.appendChild(el("a", { href: "/hub/login?next=" + encodeURIComponent(MW.currentPath()) }, "Log in"));
           p.appendChild(document.createTextNode(" to answer."));
           box.appendChild(p);
         }

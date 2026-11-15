@@ -11,7 +11,7 @@
   if (!form || !MW) return;
 
   var params = new URLSearchParams(window.location.search);
-  var next = MW.safeNext(params.get("next"), "/profile");
+  var next = MW.safeNext(params.get("next"), MW.isHub ? "/hub" : "/admin");
   var feedback = document.getElementById("form-feedback");
 
   // Keep ?next= when switching between Log in and Join.
@@ -89,7 +89,7 @@
       window.location.replace(next);
       return;
     }
-    if (MW.googleEnabled && !googlePending && params.get("google") !== "1") {
+    if (MW.googleEnabled && !googlePending && params.get("google") !== "1" && (MW.isHub || registerForm)) {
       document.getElementById("google-block").hidden = false;
       document.getElementById("google-btn").href = "/auth/google?next=" + encodeURIComponent(next);
     }
@@ -165,7 +165,7 @@
       if (loginForm) {
         await MW.api("/account/login", {
           method: "POST",
-          json: { username: value("username"), password: value("password") }
+          json: { username: value("username"), password: value("password"), adminOnly: !MW.isHub }
         });
       } else if (googlePending) {
         var done = await MW.api("/account/google-complete", { method: "POST", json: { username: value("username"), acceptTerms: !termsStep || termsStep.hidden } });

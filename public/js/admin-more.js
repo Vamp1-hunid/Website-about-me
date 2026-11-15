@@ -155,7 +155,7 @@
         if (!linksBox.children.length) linksBox.appendChild(linkRow());
         banner.reset(p.bannerUrl);
         field("cp-view").href = "/hub/c/" + encodeURIComponent(p.handle);
-        field("profile-status-line").textContent = "Your page: /hub/c/" + p.handle + (p.canWriteNews ? " · you can post anime updates" : "");
+        field("profile-status-line").textContent = "Your page: /hub/c/" + p.handle + (p.canWriteNews ? " · you can post news posts" : "");
       } catch (error) {
         MW.toast(error.message, true);
       }

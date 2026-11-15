@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Log in | God's Banditos</title>
-  <meta name="description" content="Log in to comment on, like and save works.">
+  <title>Owner login | God's Banditos</title>
+  <meta name="description" content="Site owner login.">
   <meta name="author" content="Mulenga Mwamba">
   <meta name="robots" content="noindex">
   <meta property="og:site_name" content="God's Banditos">
-  <meta property="og:title" content="Log in | God's Banditos">
-  <meta property="og:description" content="Log in to comment on, like and save works.">
+  <meta property="og:title" content="Owner login | God's Banditos">
+  <meta property="og:description" content="Site owner login.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://mulenga-mwamba-website.onrender.com/images/og-card.png">
   <meta property="og:image:width" content="1200">
@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=10">
+  <link rel="stylesheet" href="/css/styles.css?v=11">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -64,8 +64,9 @@
 
   <main id="main">
     <section class="panel narrow" aria-labelledby="login-title">
-      <p class="node-label">Auth // sign in</p>
-      <h1 id="login-title" class="glitch">Log in</h1>
+      <p class="node-label">Auth // owner only</p>
+      <h1 id="login-title" class="glitch">Owner login</h1>
+      <p class="muted">This page is only for the person who runs God's Banditos. Looking for your account? <a href="/hub/login">Log in on Chapterhive</a>.</p>
       <p class="feedback feedback-error" id="google-message" aria-live="polite"></p>
       <div class="oauth" id="google-block" hidden>
         <a class="btn btn-google" id="google-btn" href="/auth/google">
@@ -91,7 +92,7 @@
         <button type="submit">Log in</button>
         <p class="feedback feedback-error" id="form-feedback" aria-live="polite"></p>
       </form>
-      <p class="form-foot">New here? <a id="switch-link" href="/register">Create a free account</a>.</p>
+      <p class="form-foot">Want to follow, like and comment? <a href="/hub/register">Join Chapterhive</a>.</p>
     </section>
   </main>
 

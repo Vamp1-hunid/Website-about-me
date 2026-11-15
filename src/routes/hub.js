@@ -1,6 +1,6 @@
 // src/routes/hub.js
 // Chapterhive, the creator platform (/hub):
-//   GET  /api/hub/home                       featured creators, latest releases, anime updates
+//   GET  /api/hub/home                       featured creators, latest releases, news posts
 //   GET  /api/hub/creators                   the creator directory
 //   GET  /api/hub/creators/:handle           one creator's profile
 //   POST / DELETE /api/hub/creators/:handle/follow

@@ -127,7 +127,7 @@
   };
 
   MW.categoryName = function (category) {
-    return { "story-art": "Story art", anime: "Anime works", writing: "Writing", updates: "Update", news: "Anime update",
+    return { "story-art": "Story art", anime: "Anime works", writing: "Writing", updates: "Update", news: "News",
       art: "Art", comedy: "Comedy", film: "Live action film", series: "Series", meme: "Meme", thoughts: "Thoughts", poll: "Poll" }[category] || category;
   };
 
@@ -248,10 +248,17 @@
     if (!area) return;
     area.textContent = "";
 
+    // God's Banditos is view-only: visitors see no Log in / Join buttons (the owner logs in at /login),
+    // and Chapterhive members just get a link back to Chapterhive.
+    if (!MW.isHub && (!user || user.role !== "admin")) {
+      if (user) area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub" }, "@" + user.username + " · Chapterhive"));
+      return;
+    }
+
     if (!user) {
       var next = encodeURIComponent(MW.currentPath());
-      area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/login?next=" + next }, "Log in"));
-      area.appendChild(el("a", { class: "btn btn-small", href: "/register?next=" + next }, "Join"));
+      area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub/login?next=" + next }, "Log in"));
+      area.appendChild(el("a", { class: "btn btn-small", href: "/hub/register?next=" + next }, "Join"));
       return;
     }
 
@@ -309,6 +316,17 @@
     container.hidden = !links.length;
   };
 
+  // A "create an account" box shown wherever a visitor hits something reserved for members.
+  MW.guestGate = function (message) {
+    var box = el("div", { class: "guest-gate", role: "note" });
+    box.appendChild(el("p", {}, message || "Create a free account to join in."));
+    var actions = el("div", { class: "actions" });
+    actions.appendChild(el("a", { class: "btn", href: "/hub/register?next=" + encodeURIComponent(MW.currentPath()) }, "Create a free account"));
+    actions.appendChild(el("a", { class: "btn-ghost", href: "/hub/login?next=" + encodeURIComponent(MW.currentPath()) }, "Log in"));
+    box.appendChild(actions);
+    return box;
+  };
+
   function buildMenu() {
     var header = document.querySelector(".site-header");
     if (!header || document.getElementById("site-menu")) return;
@@ -324,8 +342,8 @@
     menu.appendChild(search);
 
     var groups = MW.isHub ? [
-      ["Chapterhive", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following"], ["/hub/news", "Anime updates"]]],
-      ["Create", [["/hub/collabs", "Collab board"], ["/hub/collabs#suggest", "Suggestion box"], ["/hub/apply", "Become a creator"], ["/legal/content-rules", "Content Rules"]]],
+      ["Chapterhive", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following", true], ["/hub/news", "News & updates"]]],
+      ["Create", [["/hub/collabs", "Collab board", true], ["/hub/collabs#suggest", "Suggestion box", true], ["/hub/apply", "Become a creator", true], ["/legal/content-rules", "Content Rules"]]],
       ["More", [["/help", "Help & FAQ"], ["/hub/sponsor", "Sponsor & business"], ["/", "God's Banditos"], ["/contact", "Contact"], ["/legal/terms", "Terms"]]]
     ] : [
       ["Explore", [["/", "Home"], ["/gallery", "All works"], ["/gallery?category=story-art", "Story art"],
@@ -340,6 +358,7 @@
       var ul = el("ul");
       group[1].forEach(function (item) {
         var li = el("li");
+        if (item[2]) li.setAttribute("data-members", "");
         li.appendChild(el("a", { href: item[0] }, item[1]));
         ul.appendChild(li);
       });
@@ -358,9 +377,32 @@
 
     MW.me().then(function (user) {
       var ul = account.querySelector("ul");
+      // Visitors without an account: members-only links are hidden and replaced by one join prompt.
+      if (!user) {
+        document.querySelectorAll(".site-nav a[data-nav='feed'], .site-nav a[data-nav='collabs'], .site-nav a[data-nav='apply']")
+          .forEach(function (a) { a.remove(); });
+        var hiddenAny = false;
+        menu.querySelectorAll("[data-members]").forEach(function (li) { li.remove(); hiddenAny = true; });
+        if (hiddenAny) {
+          account.appendChild(el("p", { class: "muted menu-guest-note" },
+            "Collabs, your following feed and creator tools open up once you have a free account."));
+        }
+      }
       var items = user
         ? [["/profile", "Account settings"], ["/u/" + encodeURIComponent(user.username), "Your public page"]]
-        : [["/login?next=" + encodeURIComponent(MW.currentPath()), "Log in"], ["/register", "Create a free account"]];
+        : [["/hub/login?next=" + encodeURIComponent(MW.currentPath()), "Log in"], ["/hub/register", "Create a free account"]];
+      // God's Banditos: no accounts here. Visitors are pointed to Chapterhive instead.
+      if (!MW.isHub && (!user || user.role !== "admin")) {
+        account.querySelector(".node-label").textContent = "Chapterhive";
+        items = user ? [["/hub", "Back to Chapterhive"], ["/hub/feed", "Following feed"]]
+          : [["/hub/c/gods-banditos", "Follow on Chapterhive"], ["/hub/register", "Join Chapterhive"]];
+        items.forEach(function (item) {
+          var li = el("li");
+          li.appendChild(el("a", { href: item[0] }, item[1]));
+          ul.appendChild(li);
+        });
+        return;
+      }
       var isCreator = user && (user.role === "admin" || (MW.creator && MW.creator.status === "approved"));
       if (user) items.splice(1, 0, ["/hub/feed", "Following feed"]);
       if (isCreator) {

@@ -12,6 +12,32 @@
   var summary = document.getElementById("search-summary");
   document.getElementById("search-q").value = q;
 
+  // Filter chips: narrow the results to one kind of thing.
+  var type = new URLSearchParams(window.location.search).get("type") || "all";
+  var FILTERS = MW.isHub
+    ? [["all", "Everything"], ["accounts", "Accounts"], ["posts", "Posts"], ["episodes", "Episodes & series"], ["films", "Films"],
+       ["art", "Art"], ["writing", "Writing"], ["stories", "Stories"], ["characters", "Characters"], ["news", "News"]]
+    : [["all", "Everything"], ["posts", "Works"], ["episodes", "Episodes"], ["art", "Art"], ["writing", "Writing"],
+       ["stories", "Stories"], ["characters", "Characters"], ["products", "Products"]];
+  if (!FILTERS.some(function (f) { return f[0] === type; })) type = "all";
+  var form = document.getElementById("search-form");
+  var hidden = el("input", { type: "hidden", name: "type", value: type });
+  form.appendChild(hidden);
+  var chips = el("div", { class: "search-filters", role: "group", "aria-label": "Show only" });
+  FILTERS.forEach(function (f) {
+    var chip = el("button", { type: "button", class: "chip" + (f[0] === type ? " is-active" : ""), "aria-pressed": f[0] === type ? "true" : "false" }, f[1]);
+    chip.addEventListener("click", function () {
+      hidden.value = f[0];
+      if (document.getElementById("search-q").value.trim().length >= 2) form.submit();
+      else {
+        chips.querySelectorAll(".chip").forEach(function (c) { c.classList.remove("is-active"); c.setAttribute("aria-pressed", "false"); });
+        chip.classList.add("is-active"); chip.setAttribute("aria-pressed", "true");
+      }
+    });
+    chips.appendChild(chip);
+  });
+  form.parentNode.insertBefore(chips, form.nextSibling);
+
   function section(title, label) {
     var panel = el("section", { class: "panel" });
     panel.appendChild(el("p", { class: "node-label" }, label));
@@ -42,13 +68,13 @@
   document.title = "“" + q + "” | Search | " + (MW.isHub ? "Chapterhive" : "God's Banditos");
   summary.textContent = "Searching…";
 
-  MW.api("/search?q=" + encodeURIComponent(q) + (MW.isHub ? "&site=hub" : ""))
+  MW.api("/search?q=" + encodeURIComponent(q) + "&type=" + type + (MW.isHub ? "&site=hub" : ""))
     .then(function (data) {
       var total = data.works.length + data.stories.length + data.characters.length + data.products.length +
-        (data.creators || []).length + (data.news || []).length;
+        (data.creators || []).length + (data.accounts || []).length + (data.news || []).length;
       summary.textContent = total
         ? total + (total === 1 ? " result" : " results") + " for “" + q + "”"
-        : "Nothing found for “" + q + "”. Try a shorter or different word.";
+        : "Nothing found for “" + q + "”" + (type !== "all" ? " in this filter. Try Everything." : ". Try a shorter or different word.");
 
       if (data.creators && data.creators.length) {
         var cr = section("Creators", "Results // creators");
@@ -57,6 +83,14 @@
           crg.appendChild(simpleCard("/hub/c/" + encodeURIComponent(c.handle), c.avatarUrl, "@" + c.handle, c.name, c.tagline));
         });
         cr.appendChild(crg);
+      }
+      if (data.accounts && data.accounts.length) {
+        var ac = section("Members", "Results // accounts");
+        var acg = el("div", { class: "result-grid" });
+        data.accounts.forEach(function (u) {
+          acg.appendChild(simpleCard("/u/" + encodeURIComponent(u.username), u.avatarUrl, "@" + u.username, u.displayName || u.username, "Member"));
+        });
+        ac.appendChild(acg);
       }
       if (data.stories.length) {
         var s = section("Stories", "Results // stories");
@@ -75,13 +109,13 @@
         c.appendChild(cg);
       }
       if (data.works.length) {
-        var w = section("Works", "Results // works");
+        var w = section(type === "episodes" ? "Episodes & series" : type === "films" ? "Films" : type === "art" ? "Art" : type === "writing" ? "Writing" : "Posts", "Results // posts");
         var wg = el("div", { class: "works-grid" });
         MW.renderWorks(wg, data.works);
         w.appendChild(wg);
       }
       if (data.news && data.news.length) {
-        var nw = section("Anime updates", "Results // updates");
+        var nw = section("News & updates", "Results // updates");
         var nwg = el("div", { class: "result-grid" });
         data.news.forEach(function (n) {
           nwg.appendChild(simpleCard(MW.workUrl(n), n.imageUrl, "Update · " + MW.formatDate(n.createdAt), n.title, n.logline || n.summary));

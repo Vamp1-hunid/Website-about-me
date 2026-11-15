@@ -9,7 +9,7 @@
   var list = document.getElementById("collab-list");
   if (list) {
     var params = new URLSearchParams(window.location.search);
-    MW.collabMeta().then(function (meta) {
+    MW.collabMeta().catch(function () { return { roles: [], compensation: [] }; }).then(function (meta) {
       MW.fillRoleSelect(document.getElementById("role"), meta.roles);
       meta.compensation.forEach(function (c) { document.getElementById("comp").appendChild(el("option", { value: c.key }, c.label)); });
       document.getElementById("role").value = params.get("role") || "";
@@ -20,7 +20,7 @@
       var post = document.getElementById("post-collab");
       var creator = user && (user.role === "admin" || (MW.creator && MW.creator.status === "approved"));
       if (!creator) {
-        post.href = user ? "/hub/apply" : "/register?next=/hub/apply";
+        post.href = user ? "/hub/apply" : "/hub/register?next=/hub/apply";
         post.textContent = "Become a creator to post requests";
       }
     });
@@ -39,7 +39,16 @@
         prev.hidden = data.page <= 1; prev.href = make(data.page - 1);
         next.hidden = data.page >= data.pages; next.href = make(data.page + 1);
       }
-    }).catch(function (error) { list.textContent = error.message; });
+    }).catch(function (error) {
+      list.textContent = "";
+      if (error.status === 401) {
+        var filters = list.parentNode.querySelector("form");
+        if (filters) filters.hidden = true;
+        var li = el("li");
+        li.appendChild(MW.guestGate("The collab board is for members. Create a free account to see open requests and team up with other creators."));
+        list.appendChild(li);
+      } else list.textContent = error.message;
+    });
     return;
   }
 
@@ -104,7 +113,7 @@
     if (!user) {
       form.textContent = "";
       var p = el("p");
-      p.appendChild(el("a", { class: "btn", href: "/login?next=" + encodeURIComponent(MW.currentPath()) }, "Log in to reply"));
+      p.appendChild(el("a", { class: "btn", href: "/hub/login?next=" + encodeURIComponent(MW.currentPath()) }, "Log in to reply"));
       form.appendChild(p);
       return;
     }
@@ -137,6 +146,11 @@
     });
   }).catch(function (error) {
     box.textContent = "";
+    if (error.status === 401) {
+      box.appendChild(el("h1", {}, "Members only"));
+      box.appendChild(MW.guestGate("Collab requests are for members. Create a free account to read this one and reply."));
+      return;
+    }
     box.appendChild(el("h1", {}, "Not found"));
     box.appendChild(el("p", { class: "lead" }, error.message));
     box.appendChild(el("a", { class: "btn", href: "/hub/collabs" }, "Back to the collab board"));

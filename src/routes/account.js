@@ -139,6 +139,11 @@ router.post("/login", loginLimiter, async function (req, res) {
     });
   }
 
+  // The God's Banditos login is only for the site owner; members sign in on Chapterhive.
+  if (req.body.adminOnly === true && user.role !== "admin") {
+    return res.status(403).json({ error: "This login is only for the site owner. Members log in on Chapterhive.", hub: "/hub/login" });
+  }
+
   const blocked = users.standingProblem(user);
   if (blocked) return res.status(403).json({ error: blocked });
 

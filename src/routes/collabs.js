@@ -100,7 +100,7 @@ function toCollab(row, viewerId) {
   };
 }
 
-router.get("/meta", function (req, res) {
+router.get("/meta", requireLogin, function (req, res) {
   res.json({
     roles: ROLES.map(function (r) { return { key: r[0], label: r[1] }; }),
     compensation: COMPENSATION.map(function (c) { return { key: c[0], label: c[1] }; })
@@ -108,7 +108,7 @@ router.get("/meta", function (req, res) {
 });
 
 // GET /api/collabs?role=artist&comp=paid&q=&creator=&page=
-router.get("/", async function (req, res) {
+router.get("/", requireLogin, async function (req, res) {
   const page = Math.min(1000, Math.max(1, parseInt(req.query.page, 10) || 1));
   const size = 20;
   const where = ["c.status = 'open'", "cp.status = 'approved'"];
@@ -155,7 +155,7 @@ router.get("/mine", requireCreator, async function (req, res) {
   res.json({ collabs: rows.map(function (r) { return toCollab(r, req.session.user.id); }) });
 });
 
-router.get("/:id", async function (req, res) {
+router.get("/:id", requireLogin, async function (req, res) {
   const { rows } = await db.query(COLLAB_SQL + " WHERE c.id = $1", [Number(req.params.id)]);
   const row = rows[0];
   const viewer = req.session.user;
