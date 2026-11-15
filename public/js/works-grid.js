@@ -25,13 +25,22 @@
     card.appendChild(thumb);
 
     var meta = el("div", { class: "meta" });
+    if (post.logline) meta.appendChild(el("p", { class: "logline" }, post.logline));
     meta.appendChild(el("h3", {}, post.title));
+    if (post.series) {
+      var chapter = post.seriesOrder !== null && post.seriesOrder !== undefined ? " · Ch. " + post.seriesOrder : "";
+      meta.appendChild(el("p", { class: "mono muted card-series" }, post.series.title + chapter));
+    }
     var counts = el("p", { class: "counts" });
     if (post.likes !== undefined) {
       counts.appendChild(el("span", {}, "♥ " + post.likes));
       counts.appendChild(el("span", {}, "\u{1F4AC} " + post.comments));
     }
-    if (post.published === false) counts.appendChild(el("span", { class: "draft-flag" }, "DRAFT"));
+    if (post.mediaCount > 1) counts.appendChild(el("span", {}, "▤ " + post.mediaCount));
+    if (post.hasVideo) counts.appendChild(el("span", { title: "Has video" }, "▶"));
+    if (post.hasAudio) counts.appendChild(el("span", { title: "Has audio" }, "♪"));
+    if (post.status === "draft" || post.published === false) counts.appendChild(el("span", { class: "draft-flag" }, "DRAFT"));
+    else if (post.status === "scheduled") counts.appendChild(el("span", { class: "draft-flag" }, "SCHEDULED"));
     meta.appendChild(counts);
     card.appendChild(meta);
 

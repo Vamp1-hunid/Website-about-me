@@ -56,6 +56,7 @@
       mePromise = MW.api("/account/me")
         .then(function (data) {
           MW.googleEnabled = Boolean(data.googleEnabled);
+          MW.mailEnabled = Boolean(data.mailEnabled);
           return data.user;
         })
         .catch(function () { return null; });
@@ -88,7 +89,83 @@
   };
 
   MW.categoryName = function (category) {
-    return { "story-art": "Story art", anime: "Anime works", writing: "Writing" }[category] || category;
+    return { "story-art": "Story art", anime: "Anime works", writing: "Writing", updates: "Update" }[category] || category;
+  };
+
+  // "2026-11-20T15:00:00Z" -> "20 Nov 2026, 17:00" (in the visitor's own time zone)
+  MW.formatDateTime = function (value) {
+    var date = new Date(value);
+    if (isNaN(date)) return "";
+    return date.toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  };
+
+  // A member's picture, or the first letter of their name in a coloured square.
+  MW.avatar = function (person, size) {
+    var box = el("span", { class: "avatar" + (size === "big" ? " avatar-big" : ""), "aria-hidden": "true" });
+    if (person && person.avatarUrl) {
+      box.appendChild(el("img", { src: person.avatarUrl, alt: "", loading: "lazy" }));
+    } else {
+      box.textContent = ((person && (person.displayName || person.username)) || "?").trim().charAt(0).toUpperCase();
+    }
+    return box;
+  };
+
+  /* ---------- Uploading a file for a work (admin) ----------
+     Asks the server for a "ticket", then sends the file straight to Cloudinary (on the live site)
+     or to the server (on a laptop). Resolves with what the save request needs:
+       { upload: {...} }  or  { local: {...} }, plus kind and a preview URL. */
+  MW.uploadFile = async function (file, onProgress) {
+    var isDocument = /\.(pdf|docx?|odt|txt|md|epub|pptx)$/i.test(file.name) && !/^(image|video|audio)\//.test(file.type);
+    var ticket = await MW.api("/admin/media/ticket" + (isDocument ? "?kind=document" : ""));
+    var kind = isDocument ? "document" : /^video\//.test(file.type) ? "video" : /^audio\//.test(file.type) ? "audio" : "image";
+    var limit = ticket.limitsMb && ticket.limitsMb[kind];
+    if (limit && file.size > limit * 1024 * 1024) {
+      throw new Error(file.name + " is bigger than " + limit + " MB, the limit for this kind of file.");
+    }
+
+    var form = new FormData();
+    var url;
+    if (ticket.mode === "cloudinary") {
+      Object.keys(ticket.fields).forEach(function (key) { form.append(key, ticket.fields[key]); });
+      form.append("file", file);
+      url = ticket.uploadUrl;
+    } else {
+      form.append("file", file);
+      url = "/api/admin/media";
+    }
+
+    var reply = await new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", url);
+      if (ticket.mode !== "cloudinary") xhr.withCredentials = true;
+      xhr.upload.onprogress = function (event) {
+        if (event.lengthComputable && onProgress) onProgress(event.loaded / event.total);
+      };
+      xhr.onload = function () {
+        var data = null;
+        try { data = JSON.parse(xhr.responseText); } catch (e) { data = null; }
+        if (xhr.status >= 200 && xhr.status < 300 && data) return resolve(data);
+        var message = (data && (data.error && (data.error.message || data.error))) || "Upload failed (" + xhr.status + ").";
+        reject(new Error(file.name + ": " + message));
+      };
+      xhr.onerror = function () { reject(new Error(file.name + ": the upload was interrupted. Check your connection.")); };
+      xhr.send(form);
+    });
+
+    if (ticket.mode === "cloudinary") {
+      var isRaw = reply.resource_type === "raw";
+      var detected = isRaw ? "document" : reply.resource_type === "image" ? "image" :
+        (reply.is_audio || /^(mp3|m4a|wav|ogg)$/.test(reply.format) ? "audio" : "video");
+      return {
+        kind: detected,
+        previewUrl: reply.secure_url,
+        upload: {
+          publicId: reply.public_id, version: reply.version, signature: reply.signature,
+          resourceType: reply.resource_type, format: reply.format || ""
+        }
+      };
+    }
+    return { kind: reply.local.kind, previewUrl: reply.local.url, local: reply.local };
   };
 
   // Only allow redirects to pages on this site (stops "?next=https://evil.example").
@@ -139,7 +216,10 @@
       return;
     }
 
-    area.appendChild(el("a", { class: "auth-name", href: "/profile", title: "Your profile" }, "@" + user.username));
+    var me = el("a", { class: "auth-name", href: "/profile", title: "Your profile" });
+    me.appendChild(MW.avatar(user));
+    me.appendChild(document.createTextNode(" @" + user.username));
+    area.appendChild(me);
     if (user.role === "admin") {
       area.appendChild(el("a", { class: "btn btn-small", href: "/admin" }, "Admin"));
     }
@@ -165,6 +245,112 @@
     });
   }
 
+  /* ---------- The three-bar menu (☰): every section of the site, a search box and social links ---------- */
+
+  var socialsPromise = null;
+  MW.socials = function () {
+    if (!socialsPromise) {
+      socialsPromise = MW.api("/socials").then(function (d) { return d.links; }).catch(function () { return []; });
+    }
+    return socialsPromise;
+  };
+
+  // Social links as a row of buttons (used in the menu, the footer and the contact section).
+  MW.renderSocials = function (container, links) {
+    container.textContent = "";
+    links.forEach(function (link) {
+      var a = el("a", { class: "social-link", href: link.url, "data-platform": link.platform, rel: "noopener me" });
+      if (!/^mailto:/i.test(link.url)) a.setAttribute("target", "_blank");
+      a.appendChild(el("span", { class: "social-dot", "aria-hidden": "true" }));
+      a.appendChild(document.createTextNode(link.label));
+      container.appendChild(a);
+    });
+    container.hidden = !links.length;
+  };
+
+  function buildMenu() {
+    var header = document.querySelector(".site-header");
+    if (!header || document.getElementById("site-menu")) return;
+    var menu = el("div", { id: "site-menu", class: "site-menu", hidden: "" });
+    menu.setAttribute("aria-label", "Site menu");
+
+    var search = el("form", { class: "menu-search", action: "/search", method: "get", role: "search" });
+    var label = el("label", { class: "sr-only", for: "menu-q" }, "Search the site");
+    var input = el("input", { type: "search", id: "menu-q", name: "q", placeholder: "Search works, stories, characters…", maxlength: "80" });
+    var go = el("button", { type: "submit", class: "btn-small" }, "Search");
+    search.append(label, input, go);
+    menu.appendChild(search);
+
+    var groups = [
+      ["Explore", [["/", "Home"], ["/gallery", "All works"], ["/gallery?category=story-art", "Story art"],
+        ["/gallery?category=anime", "Anime works"], ["/gallery?category=writing", "Writing"], ["/gallery?category=updates", "Updates"]]],
+      ["Stories", [["/stories", "All stories"], ["/gallery?section=concept-art", "Concept art"]]],
+      ["Studio", [["/products", "More products by us"], ["/creator", "Meet the creator"], ["/creator#contact", "Contact"]]]
+    ];
+    var grid = el("div", { class: "menu-grid" });
+    groups.forEach(function (group) {
+      var col = el("div", { class: "menu-col" });
+      col.appendChild(el("p", { class: "node-label" }, group[0]));
+      var ul = el("ul");
+      group[1].forEach(function (item) {
+        var li = el("li");
+        li.appendChild(el("a", { href: item[0] }, item[1]));
+        ul.appendChild(li);
+      });
+      col.appendChild(ul);
+      grid.appendChild(col);
+    });
+    var account = el("div", { class: "menu-col", id: "menu-account" });
+    account.appendChild(el("p", { class: "node-label" }, "Account"));
+    account.appendChild(el("ul"));
+    grid.appendChild(account);
+    menu.appendChild(grid);
+
+    var socials = el("div", { class: "social-row menu-socials", hidden: "" });
+    menu.appendChild(socials);
+    header.after(menu);
+
+    MW.me().then(function (user) {
+      var ul = account.querySelector("ul");
+      var items = user
+        ? [["/profile", "Your profile"], ["/u/" + encodeURIComponent(user.username), "Your public page"]]
+        : [["/login?next=" + encodeURIComponent(MW.currentPath()), "Log in"], ["/register", "Create a free account"]];
+      if (user && user.role === "admin") items.unshift(["/admin", "Dashboard"]);
+      items.forEach(function (item) {
+        var li = el("li");
+        li.appendChild(el("a", { href: item[0] }, item[1]));
+        ul.appendChild(li);
+      });
+    });
+    MW.socials().then(function (links) { MW.renderSocials(socials, links); });
+  }
+
+  function addFooterSocials() {
+    var footer = document.querySelector(".site-footer");
+    if (!footer) return;
+    var row = el("div", { class: "social-row footer-socials", hidden: "" });
+    footer.insertBefore(row, footer.firstChild.nextSibling);
+    MW.socials().then(function (links) {
+      MW.renderSocials(row, links);
+      // The Contact section on the Creator page lists them too.
+      var contact = document.getElementById("contact-socials");
+      if (contact) {
+        MW.renderSocials(contact, links);
+        document.getElementById("contact-socials-box").hidden = !links.length;
+      }
+    });
+  }
+
+  // Keep the header search box filled in on the results page.
+  function fillSearch() {
+    var q = window.location.pathname === "/search" ? new URLSearchParams(window.location.search).get("q") : "";
+    var box = document.getElementById("header-q");
+    if (box && q) box.value = q;
+  }
+
+  buildMenu();
+  addFooterSocials();
+  fillSearch();
   markCurrentNav();
   MW.me().then(renderAuthArea);
 })();

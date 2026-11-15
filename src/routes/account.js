@@ -5,9 +5,11 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const rateLimit = require("express-rate-limit");
 const db = require("../db");
-const { requireLogin, startSession } = require("../auth");
+const { requireLogin, startSession, publicUser } = require("../auth");
 const { googleEnabled } = require("./google");
-const { thumbnailUrl } = require("../storage");
+const crypto = require("crypto");
+const { thumbnailUrl, upload, saveImage, deleteImage, avatarUrl } = require("../storage");
+const { mailEnabled, sendMail } = require("../mail");
 
 const router = express.Router();
 
@@ -29,6 +31,7 @@ const registerLimiter = rateLimit({
 });
 
 const USERNAME_PATTERN = /^[a-z0-9_]{3,30}$/;
+const EMAIL_PATTERN = /^[^\s@<>"]{1,64}@[^\s@<>"]+\.[^\s@<>"]{2,}$/;
 
 // A hash of a random password, checked when the username does not exist.
 const DUMMY_HASH = bcrypt.hashSync(require("crypto").randomBytes(16).toString("hex"), 12);
@@ -42,8 +45,12 @@ router.post("/register", registerLimiter, async function (req, res) {
   const username = cleanText(req.body.username).toLowerCase();
   const displayName = cleanText(req.body.displayName) || username;
   const password = typeof req.body.password === "string" ? req.body.password : "";
+  const email = cleanText(req.body.email).toLowerCase();
 
   const problems = [];
+  if (email && (email.length > 254 || !EMAIL_PATTERN.test(email))) {
+    problems.push({ field: "email", message: "That email address doesn't look right (or leave it empty)." });
+  }
   if (!USERNAME_PATTERN.test(username)) {
     problems.push({ field: "username", message: "Use 3 to 30 characters: lowercase letters, numbers or _." });
   }
@@ -67,8 +74,8 @@ router.post("/register", registerLimiter, async function (req, res) {
 
   const hash = await bcrypt.hash(password, 12);
   const { rows } = await db.query(
-    "INSERT INTO users (username, display_name, password_hash, role) VALUES ($1, $2, $3, 'member') RETURNING *",
-    [username, displayName, hash]
+    "INSERT INTO users (username, display_name, password_hash, role, email) VALUES ($1, $2, $3, 'member', $4) RETURNING *",
+    [username, displayName, hash, email || null]
   );
 
   await startSession(req, rows[0]);
@@ -109,7 +116,7 @@ router.post("/logout", function (req, res) {
 
 // GET /api/account/me  -> { user } or { user: null }
 router.get("/me", function (req, res) {
-  res.json({ user: req.session.user || null, googleEnabled: googleEnabled() });
+  res.json({ user: req.session.user || null, googleEnabled: googleEnabled(), mailEnabled: mailEnabled() });
 });
 
 // GET /api/account/favourites  -> the logged-in member's saved works
@@ -118,7 +125,7 @@ router.get("/favourites", requireLogin, async function (req, res) {
     `SELECT p.id, p.slug, p.category, p.title, p.summary, p.image_url, f.created_at AS saved_at
        FROM favourites f
        JOIN posts p ON p.id = f.post_id
-      WHERE f.user_id = $1 AND p.published = TRUE
+      WHERE f.user_id = $1 AND (p.published AND (p.publish_at IS NULL OR p.publish_at <= NOW()))
       ORDER BY f.created_at DESC`,
     [req.session.user.id]
   );
@@ -147,9 +154,13 @@ router.get("/stats", requireLogin, async function (req, res) {
        (SELECT COUNT(*) FROM favourites WHERE user_id = $1)::int AS favourites,
        (SELECT created_at FROM users WHERE id = $1)              AS joined,
        (SELECT password_hash IS NOT NULL FROM users WHERE id = $1) AS "hasPassword",
-       (SELECT google_sub IS NOT NULL FROM users WHERE id = $1)    AS "googleLinked"`,
+       (SELECT google_sub IS NOT NULL FROM users WHERE id = $1)    AS "googleLinked",
+       (SELECT email FROM users WHERE id = $1)                     AS email,
+       (SELECT avatar_url FROM users WHERE id = $1)                AS "avatarUrl"`,
     [id]
   );
+  rows[0].avatarUrl = avatarUrl(rows[0].avatarUrl) || null;
+  rows[0].mailEnabled = mailEnabled();
   res.json(rows[0]);
 });
 
@@ -236,6 +247,184 @@ router.delete("/", requireLogin, async function (req, res) {
     res.clearCookie("mm.sid");
     res.json({ ok: true });
   });
+});
+
+/* ---------- Email address (needed for "forgot password") ---------- */
+
+// PUT /api/account/email  { email, currentPassword }  (empty email removes it)
+router.put("/email", requireLogin, passwordLimiter, async function (req, res) {
+  const email = cleanText(req.body.email).toLowerCase();
+  const currentPassword = typeof req.body.currentPassword === "string" ? req.body.currentPassword : "";
+  if (email && (email.length > 254 || !EMAIL_PATTERN.test(email))) {
+    return res.status(400).json({
+      error: "That email address doesn't look right.",
+      problems: [{ field: "email", message: "That email address doesn't look right." }]
+    });
+  }
+  // Changing where reset links go is sensitive, so accounts with a password must confirm it.
+  const { rows } = await db.query("SELECT password_hash FROM users WHERE id = $1", [req.session.user.id]);
+  if (rows[0] && rows[0].password_hash && !(await bcrypt.compare(currentPassword, rows[0].password_hash))) {
+    return res.status(401).json({
+      error: "Your current password is not correct.",
+      problems: [{ field: "emailPassword", message: "Enter your current password to change your email." }]
+    });
+  }
+  await db.query("UPDATE users SET email = $1 WHERE id = $2", [email || null, req.session.user.id]);
+  res.json({ email: email || null });
+});
+
+/* ---------- Profile picture ---------- */
+
+// POST /api/account/avatar  (multipart "image", up to 8 MB)
+router.post("/avatar", requireLogin, function (req, res, next) {
+  upload.single("image")(req, res, async function (error) {
+    if (error) {
+      const message = error.code === "LIMIT_FILE_SIZE" ? "Pictures must be 8 MB or smaller." : error.message;
+      return res.status(400).json({ error: message });
+    }
+    if (!req.file) return res.status(400).json({ error: "Choose a picture first." });
+    try {
+      const saved = await saveImage(req.file);
+      const old = await db.query("SELECT avatar_public_id FROM users WHERE id = $1", [req.session.user.id]);
+      const { rows } = await db.query(
+        "UPDATE users SET avatar_url = $1, avatar_public_id = $2 WHERE id = $3 RETURNING *",
+        [saved.url, saved.publicId, req.session.user.id]
+      );
+      if (old.rows[0] && old.rows[0].avatar_public_id) await deleteImage(old.rows[0].avatar_public_id);
+      req.session.user = publicUser(rows[0]);
+      res.json({ avatarUrl: req.session.user.avatarUrl });
+    } catch (saveError) {
+      if (/Cloudinary|valid image/.test(saveError.message || "")) {
+        return res.status(400).json({ error: saveError.message });
+      }
+      next(saveError);
+    }
+  });
+});
+
+// DELETE /api/account/avatar
+router.delete("/avatar", requireLogin, async function (req, res) {
+  const old = await db.query("SELECT avatar_public_id FROM users WHERE id = $1", [req.session.user.id]);
+  const { rows } = await db.query(
+    "UPDATE users SET avatar_url = NULL, avatar_public_id = NULL WHERE id = $1 RETURNING *",
+    [req.session.user.id]
+  );
+  if (old.rows[0] && old.rows[0].avatar_public_id) await deleteImage(old.rows[0].avatar_public_id);
+  req.session.user = publicUser(rows[0]);
+  res.json({ avatarUrl: null });
+});
+
+/* ---------- Forgot password ---------- */
+
+const forgotLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Too many reset requests. Please wait 15 minutes and try again." }
+});
+
+const RESET_MINUTES = 60;
+
+function hashToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function siteUrl(req) {
+  return (process.env.PUBLIC_URL || req.protocol + "://" + req.get("host")).replace(/\/+$/, "");
+}
+
+// POST /api/account/forgot  { identifier }  (username or email)
+// Always gives the same answer, so nobody can use it to find out which accounts exist.
+router.post("/forgot", forgotLimiter, async function (req, res) {
+  if (!mailEnabled()) {
+    return res.status(503).json({
+      error: "Password reset by email isn't switched on yet. Please contact the site owner through the contact form."
+    });
+  }
+  const identifier = cleanText(req.body.identifier).toLowerCase();
+  const answer = {
+    ok: true,
+    message: "If an account with that username or email has an email address saved, a reset link is on its way. " +
+      "It works for " + RESET_MINUTES + " minutes. Check your spam folder too."
+  };
+  if (!identifier || identifier.length > 254) return res.json(answer);
+
+  const { rows } = await db.query(
+    "SELECT id, username, display_name, email FROM users WHERE email IS NOT NULL AND (username = $1 OR LOWER(email) = $1) LIMIT 3",
+    [identifier]
+  );
+
+  for (const user of rows) {
+    // At most 3 links per account per hour, so the form can't be used to flood someone's inbox.
+    const recent = await db.query(
+      "SELECT COUNT(*)::int AS n FROM password_resets WHERE user_id = $1 AND created_at > NOW() - INTERVAL '1 hour'",
+      [user.id]
+    );
+    if (recent.rows[0].n >= 3) continue;
+
+    const token = crypto.randomBytes(32).toString("base64url");
+    await db.query(
+      "INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES ($1, $2, NOW() + ($3 || ' minutes')::interval)",
+      [hashToken(token), user.id, String(RESET_MINUTES)]
+    );
+    const link = siteUrl(req) + "/reset?token=" + encodeURIComponent(token);
+    const text =
+      "Hi " + user.display_name + ",\n\n" +
+      "Someone (hopefully you) asked to reset the password for @" + user.username + " on God's Banditos.\n\n" +
+      "Choose a new password here (the link works for " + RESET_MINUTES + " minutes, once):\n" + link + "\n\n" +
+      "If you didn't ask for this, ignore this email: your password stays the same.\n";
+    const safeName = String(user.display_name).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+    const html =
+      "<p>Hi " + safeName + ",</p>" +
+      "<p>Someone (hopefully you) asked to reset the password for <b>@" + user.username + "</b> on God's Banditos.</p>" +
+      "<p><a href=\"" + link + "\" style=\"background:#ff2e97;color:#0b0a10;padding:10px 18px;text-decoration:none;font-weight:bold\">Choose a new password</a></p>" +
+      "<p>The link works for " + RESET_MINUTES + " minutes, once. If you didn't ask for this, ignore this email.</p>";
+    try {
+      await sendMail(user.email, "Reset your God's Banditos password", text, html);
+    } catch (error) {
+      console.error("Password reset email failed:", error.message);
+    }
+  }
+  res.json(answer);
+});
+
+async function findValidReset(token) {
+  if (typeof token !== "string" || token.length < 20 || token.length > 100) return null;
+  const { rows } = await db.query(
+    `SELECT r.user_id, u.username, u.role FROM password_resets r JOIN users u ON u.id = r.user_id
+      WHERE r.token_hash = $1 AND r.used_at IS NULL AND r.expires_at > NOW()`,
+    [hashToken(token)]
+  );
+  return rows[0] || null;
+}
+
+// GET /api/account/reset?token=...  -> is this link still good?
+router.get("/reset", forgotLimiter, async function (req, res) {
+  const reset = await findValidReset(req.query.token);
+  if (!reset) return res.status(400).json({ error: "This reset link has expired or was already used. Ask for a new one." });
+  res.json({ ok: true, username: reset.username, minLength: reset.role === "admin" ? 10 : 8 });
+});
+
+// POST /api/account/reset  { token, password }
+router.post("/reset", forgotLimiter, async function (req, res) {
+  const reset = await findValidReset(req.body.token);
+  if (!reset) return res.status(400).json({ error: "This reset link has expired or was already used. Ask for a new one." });
+  const password = typeof req.body.password === "string" ? req.body.password : "";
+  const minLength = reset.role === "admin" ? 10 : 8;
+  if (password.length < minLength || password.length > 200) {
+    return res.status(400).json({
+      error: "Please fix the highlighted fields.",
+      problems: [{ field: "password", message: "The new password must be at least " + minLength + " characters." }]
+    });
+  }
+  await db.query("UPDATE users SET password_hash = $1 WHERE id = $2", [await bcrypt.hash(password, 12), reset.user_id]);
+  // Every link for this account stops working, and every device is signed out.
+  await db.query("UPDATE password_resets SET used_at = NOW() WHERE user_id = $1 AND used_at IS NULL", [reset.user_id]);
+  await db.query("DELETE FROM user_sessions WHERE (sess -> 'user' ->> 'id')::int = $1", [reset.user_id]);
+  res.json({ ok: true, username: reset.username });
 });
 
 module.exports = router;

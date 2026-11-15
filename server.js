@@ -39,8 +39,9 @@ app.use(
         styleSrc: ["'self'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com"],
-        mediaSrc: ["'self'"],
-        connectSrc: ["'self'"],
+        mediaSrc: ["'self'", "blob:", "https://res.cloudinary.com"],
+        // api.cloudinary.com: the admin page uploads big files straight to Cloudinary.
+        connectSrc: ["'self'", "https://api.cloudinary.com"],
         objectSrc: ["'none'"],
         frameAncestors: ["'none'"],
         formAction: ["'self'"],
@@ -50,6 +51,8 @@ app.use(
   })
 );
 
+// Saving a work can carry a long chapter of text; everything else is small.
+app.use(["/api/posts", "/api/admin"], express.json({ limit: "1mb" }));
 app.use(express.json({ limit: "100kb" }));
 
 app.use(
@@ -76,6 +79,11 @@ api.use(sameOriginOnly);
 api.use("/account", require("./src/routes/account"));
 api.use("/posts", require("./src/routes/posts"));
 api.use("/comments", require("./src/routes/comments"));
+api.use("/users", require("./src/routes/users"));
+api.use("/contact", require("./src/routes/contact"));
+api.use("/stories", require("./src/routes/stories"));
+api.use(require("./src/routes/search"));
+api.use("/admin", require("./src/routes/admin"));
 api.get("/health", function (req, res) {
   res.json({ ok: true });
 });
@@ -100,6 +108,22 @@ const publicDir = path.join(__dirname, "public");
 app.get("/work/:slug", function (req, res) {
   res.setHeader("Cache-Control", "no-cache");
   res.sendFile(path.join(publicDir, "work.html"));
+});
+
+// /stories/a-year-to-burn shows one story; /characters/<name> one character's profile.
+app.get("/stories/:slug", function (req, res) {
+  res.setHeader("Cache-Control", "no-cache");
+  res.sendFile(path.join(publicDir, "story.html"));
+});
+app.get("/characters/:slug", function (req, res) {
+  res.setHeader("Cache-Control", "no-cache");
+  res.sendFile(path.join(publicDir, "character.html"));
+});
+
+// /u/mwamba shows a member's public page.
+app.get("/u/:username", function (req, res) {
+  res.setHeader("Cache-Control", "no-cache");
+  res.sendFile(path.join(publicDir, "user.html"));
 });
 
 // Serves index.html, css/, js/, images/ ... and lets /gallery mean gallery.html.

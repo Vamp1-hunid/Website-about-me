@@ -7,12 +7,11 @@ The website of **God's Banditos**, the story creation brand of Mulenga Mwamba.
 Live website: https://mulenga-mwamba-website.onrender.com
 
 ## About this website
-[Two or three sentences in your own words: what the site is and who it is for.]
-
-It started as my ICT251 Activity 3 portfolio page and is now a full website: the God's Banditos
-brand home, an archive of **story art, anime works and writing**, and a creator page about me.
-Visitors can create a free account to **comment, like and save favourites**. Only my admin
-account can post.
+God's Banditos is my story creation brand, and this is its home on the web: an archive of
+**story art, anime works and writing**, a page for every **story** with its chapters, characters
+and concept art, **updates** for readers, my **other products**, and a creator page about me.
+Visitors can create a free account to **comment, reply, like and save favourites**. Only my admin
+account can post, from a dashboard at `/admin`.
 
 The look is an original street-hacker theme inspired by Watch Dogs 2 (no game logos,
 fonts or artwork are used).
@@ -23,17 +22,41 @@ fonts or artwork are used).
 |---|---|
 | `/` | God's Banditos home: logo, what we make, latest works, meet the creator |
 | `/creator` | About me, hobbies, learning plan + calculator, projects, photos, media, contact |
-| `/gallery` | All works, with filters: `?category=story-art`, `anime` or `writing` |
-| `/work/<name>` | One work: image or text, likes, save, comments |
-| `/login`, `/register` | Log in / create a free account |
-| `/profile` | A member's stats and saved favourites; change password, link Google, delete account |
-| `/admin` | Site owner only: post, edit (or save as draft) and delete works |
+| `/gallery` | All works: search, sort (newest, oldest, most liked) and filter by category, story, tag or `?section=concept-art` |
+| `/work/<name>` | One work: pictures (read top to bottom), video, audio, formatted text, downloads, likes, save, comments with replies, next/previous |
+| `/stories` and `/stories/<name>` | Every story, and one story's cover, logline, chapters, characters and concept art |
+| `/characters/<name>` | A character profile: portrait, role, tagline, profile, concept art |
+| `/products` | More products by us: my other projects |
+| `/search?q=` | Searches works, stories, characters and products |
+| `/u/<username>` | A member's public page: picture, join date, recent comments |
+| `/login`, `/register`, `/forgot`, `/reset` | Log in, create an account, reset a forgotten password by email |
+| `/profile` | Picture, email, stats, favourites, password, Google, delete account |
+| `/admin` | Site owner's dashboard (see below) |
+
+## The dashboard (`/admin`)
+
+| Tab | What it's for |
+|---|---|
+| Overview | Numbers at a glance, what's scheduled next, setup status, quick buttons |
+| Compose | Write a work or update with a formatting toolbar, font choice and live preview; upload pictures, video, audio and documents (drag and drop); choose a cover; import a Word/text file; publish now, schedule or save as a draft |
+| Works | Every work, filtered by live / scheduled / draft |
+| Stories | Create stories with a title, logline, description and cover photo |
+| Characters | Character profiles with a portrait and concept art; draft, publish or schedule |
+| Drafts & scheduled | Everything the public can't see yet, in one list |
+| Products | The "More products by us" page |
+| Comments | The latest comments on every work, to reply or delete |
+| Inbox | Messages from the contact form |
+| Settings | Social media links (shown under Contact, in the menu and footer) and a check of the Render settings |
+
+Formatting in the text: `# heading`, `**bold**`, `*italic*`, `==highlight==`, `~~crossed out~~`,
+`-> centred <-`, `> quote`, `- list`, `1. list`, `---` scene break, `[link](https://...)`,
+and pictures with the 🖼 button. The **Formatting help** link in Compose shows them all.
 
 ## Features
 
 **The four ICT251 JavaScript features (js/script.js)**
-1. **Contact form validation and preview (compulsory):** checks name, email and message, rejects spaces-only text and badly formatted emails, shows a local preview. No message is sent.
-2. **Mobile navigation:** a Menu button opens and closes the links on narrow screens.
+1. **Contact form validation and preview:** checks name, email and message, rejects spaces-only text and badly formatted emails, and shows a preview. Pressing **Send message** then delivers it to my inbox (and the dashboard Inbox).
+2. **Menu:** the three-bar ☰ button opens a menu with every section, a search box and social links (on phones it replaces the link bar).
 3. **Theme switch:** dark / light, remembered after a refresh.
 4. **Study hours calculator:** hours per day × days per week, rejects blank, non-numeric, negative or out-of-range values.
 
@@ -48,8 +71,9 @@ fonts or artwork are used).
 - Sign up / log in with a username and password, or with Google.
 - Passwords are stored as bcrypt hashes; logins use secure, http-only session cookies kept in the database.
 - Login and sign-up are rate-limited; requests from other websites are blocked.
-- Only image files (JPG, PNG, WebP, GIF, up to 8 MB) can be uploaded, and only by the admin.
-- Everything visitors type is shown as plain text, never as HTML.
+- Only the admin can upload works. Pictures, video, audio and documents go straight from the browser to Cloudinary with a signed, one-time permission from the server, and the server checks Cloudinary's receipt before saving. Members can upload a profile picture (8 MB).
+- Everything visitors type is shown as plain text, never as HTML. Works' formatting is turned into page elements by `js/markup.js` without ever using HTML, and links must start with `https://`.
+- Scheduled works and drafts are hidden everywhere (lists, search, sitemap, comments) until their time comes.
 
 ## How it is built
 
@@ -63,8 +87,10 @@ server.js            starts the site
 src/db.js            database connection
 src/migrate.js       creates tables + your admin account
 src/auth.js          "must be logged in" / "must be admin" checks
-src/storage.js       image uploads (Cloudinary)
-src/routes/          the /api addresses: account, posts, comments
+src/storage.js       uploads (Cloudinary, or public/uploads/ on a laptop)
+src/media.js         checks the files attached to works and characters
+src/mail.js          sends emails (Brevo or Resend)
+src/routes/          the /api addresses: account, posts, comments, stories, admin, search, contact, users
 db/schema.sql        the database tables
 public/              every page, css/, js/, images/, videos/
 ```
@@ -102,12 +128,25 @@ Your old Render service is a **Static Site**, which can't run a server. Replace 
    | `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` | turns on "Continue with Google" (see below) |
    | `GOOGLE_VERIFICATION` | proves to Google Search Console that the site is yours (see below) |
    | `PUBLIC_URL` | your site's address, e.g. `https://mulenga-mwamba-website.onrender.com` (only needed if you add your own domain) |
+   | `BREVO_API_KEY` (or `RESEND_API_KEY`) and `MAIL_FROM` | turns on email: "Forgot password" links and contact-form messages (see below) |
+   | `CONTACT_EMAIL` | your own address: where contact-form messages are delivered |
 
 5. Deploy. Open `/login`, sign in with your admin username and password, then go to `/admin`
    and post your first work.
 
 **Passwords:** anyone (you included) can change their password on `/profile`. If you forget
 the admin password, change `ADMIN_PASSWORD` on Render and redeploy: a *new* value resets it.
+
+## Email: "Forgot password" and the contact form (one-time setup)
+
+1. Create a free account at https://www.brevo.com (300 emails a day).
+2. **Senders & IP → Senders → Add a sender:** your Gmail address. Brevo emails you a link: click it.
+3. **SMTP & API → API Keys → Generate a new API key.** Copy it.
+4. On Render → Environment add `BREVO_API_KEY` (the key), `MAIL_FROM` (e.g. `God's Banditos <yourname@gmail.com>`,
+   the address you verified) and `CONTACT_EMAIL` (where you want contact messages). Deploy.
+5. Open the dashboard → Settings: "Email" and "Contact form" should be green.
+
+Members who want password resets add an email when they sign up, or on their profile page.
 
 ## "Continue with Google" (one-time setup)
 
@@ -157,6 +196,8 @@ Then open http://localhost:3000. Without `CLOUDINARY_URL`, uploads are saved in
 - **Calculator:** 2 hours × 5 days = 10; then try blank, "abc", -2, 0 days and 8 days.
 - **Accounts:** create an account, like and save a work, comment, then check `/profile`.
 - **Permissions:** as a member, `/admin` says "Access denied"; the server also refuses member uploads.
+- **Scheduling:** in Compose choose "Schedule for later" a few minutes ahead; the work is hidden (log out to check) until then.
+- **Stories:** create a story, give a chapter that story and a chapter number, add a character with a portrait, then open `/stories`.
 
 ## Sources
 - Learning Web Design by Jennifer Niederst Robbins (my main learning book)

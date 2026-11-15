@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=7">
+  <link rel="stylesheet" href="/css/styles.css?v=8">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -37,9 +37,16 @@
     <div class="header-actions">
       <!-- Filled in by js/api.js: "Log in / Join", or your name, Profile and Log out -->
       <div class="auth-area" id="auth-area"></div>
-      <!-- Feature: mobile navigation button (shown only on narrow screens) -->
+      <!-- Search the whole site -->
+      <form class="header-search" action="/search" method="get" role="search">
+        <label class="sr-only" for="header-q">Search the site</label>
+        <input type="search" id="header-q" name="q" placeholder="Search&hellip;" maxlength="80" autocomplete="off">
+      </form>
+      <!-- Feature: the three-bar menu button opens the full site menu (all screen sizes) -->
       <button id="menu-toggle" class="btn btn-ghost btn-small menu-toggle" type="button"
-              aria-expanded="false" aria-controls="site-nav">Menu</button>
+              aria-expanded="false" aria-controls="site-menu" aria-label="Open menu">
+        <span class="bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
       <!-- Feature: light and dark theme switch -->
       <button id="theme-toggle" class="btn btn-ghost btn-small" type="button">Light mode</button>
     </div>
@@ -48,9 +55,9 @@
   <nav id="site-nav" class="site-nav" aria-label="Main navigation">
     <a href="/" data-nav="home">Home</a>
     <a href="/gallery" data-nav="works">Works</a>
-    <a href="/gallery?category=story-art">Story art</a>
-    <a href="/gallery?category=anime">Anime</a>
-    <a href="/gallery?category=writing">Writing</a>
+    <a href="/stories" data-nav="stories">Stories</a>
+    <a href="/gallery?category=updates" data-nav="updates">Updates</a>
+    <a href="/products" data-nav="products">More products</a>
     <a href="/creator" data-nav="creator">Creator</a>
     <a href="/creator#contact">Contact</a>
   </nav>
@@ -71,7 +78,7 @@
   <footer class="site-footer">
     <p class="footer-brand"><img src="/images/gods-banditos-icon.svg" alt="" width="28" height="28"> &copy; 2026 God's Banditos &middot; created by <a href="/creator">Mulenga Mwamba</a></p>
     <p><a href="https://github.com/Vamp1-hunid/Website-about-me">View source on GitHub</a> &middot; <a href="https://developer.mozilla.org/en-US/docs/Learn" target="_blank" rel="noopener">MDN Web Docs (external)</a></p>
-    <p>Last updated: 14 November 2026</p>
+    <p>Last updated: 15 November 2026</p>
   </footer>
 
   <script src="/js/api.js" defer></script>

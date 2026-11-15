@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin | God's Banditos</title>
+  <title>Dashboard | God's Banditos</title>
   <meta name="description" content="Admin area.">
   <meta name="author" content="Mulenga Mwamba">
   <meta name="robots" content="noindex">
@@ -20,8 +20,8 @@
   <link rel="apple-touch-icon" href="/images/gods-banditos-icon-180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=7">
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Caveat:wght@500;700&family=Chakra+Petch:wght@400;600;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css?v=8">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -37,9 +37,16 @@
     <div class="header-actions">
       <!-- Filled in by js/api.js: "Log in / Join", or your name, Profile and Log out -->
       <div class="auth-area" id="auth-area"></div>
-      <!-- Feature: mobile navigation button (shown only on narrow screens) -->
+      <!-- Search the whole site -->
+      <form class="header-search" action="/search" method="get" role="search">
+        <label class="sr-only" for="header-q">Search the site</label>
+        <input type="search" id="header-q" name="q" placeholder="Search&hellip;" maxlength="80" autocomplete="off">
+      </form>
+      <!-- Feature: the three-bar menu button opens the full site menu (all screen sizes) -->
       <button id="menu-toggle" class="btn btn-ghost btn-small menu-toggle" type="button"
-              aria-expanded="false" aria-controls="site-nav">Menu</button>
+              aria-expanded="false" aria-controls="site-menu" aria-label="Open menu">
+        <span class="bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
       <!-- Feature: light and dark theme switch -->
       <button id="theme-toggle" class="btn btn-ghost btn-small" type="button">Light mode</button>
     </div>
@@ -48,78 +55,186 @@
   <nav id="site-nav" class="site-nav" aria-label="Main navigation">
     <a href="/" data-nav="home">Home</a>
     <a href="/gallery" data-nav="works">Works</a>
-    <a href="/gallery?category=story-art">Story art</a>
-    <a href="/gallery?category=anime">Anime</a>
-    <a href="/gallery?category=writing">Writing</a>
+    <a href="/stories" data-nav="stories">Stories</a>
+    <a href="/gallery?category=updates" data-nav="updates">Updates</a>
+    <a href="/products" data-nav="products">More products</a>
     <a href="/creator" data-nav="creator">Creator</a>
     <a href="/creator#contact">Contact</a>
   </nav>
 
-  <main id="main">
+  <main id="main" class="admin-main">
     <section class="panel" id="admin-gate">
-      <p class="node-label">Admin // restricted</p>
-      <h1 class="glitch">Admin</h1>
+      <p class="node-label">Dashboard // restricted</p>
+      <h1 class="glitch">Dashboard</h1>
       <p id="gate-message" class="loading">Checking access&hellip;</p>
     </section>
 
-    <div class="admin-layout" id="admin-area" hidden>
-      <section class="panel" aria-labelledby="editor-title">
-        <p class="node-label" id="editor-kicker">Upload // new file</p>
-        <h2 id="editor-title">Post a new work</h2>
-        <form id="post-form" novalidate>
-          <input type="hidden" id="post-id" name="id">
-          <div class="form-row">
-            <label for="title">Title</label>
-            <input type="text" id="title" name="title" maxlength="120" required aria-describedby="title-error">
-            <p class="error" id="title-error"></p>
+    <div id="admin-area" hidden>
+      <nav class="dash-tabs" role="tablist" aria-label="Dashboard sections">
+        <button role="tab" type="button" data-tab="overview" aria-selected="true">Overview</button>
+        <button role="tab" type="button" data-tab="compose" aria-selected="false">Compose</button>
+        <button role="tab" type="button" data-tab="works" aria-selected="false">Works</button>
+        <button role="tab" type="button" data-tab="stories" aria-selected="false">Stories</button>
+        <button role="tab" type="button" data-tab="characters" aria-selected="false">Characters</button>
+        <button role="tab" type="button" data-tab="drafts" aria-selected="false">Drafts &amp; scheduled</button>
+        <button role="tab" type="button" data-tab="products" aria-selected="false">Products</button>
+        <button role="tab" type="button" data-tab="comments" aria-selected="false">Comments</button>
+        <button role="tab" type="button" data-tab="inbox" aria-selected="false">Inbox <span class="tab-badge" id="inbox-badge" hidden></span></button>
+        <button role="tab" type="button" data-tab="settings" aria-selected="false">Settings</button>
+      </nav>
+
+      <!-- ===== Overview ===== -->
+      <section class="panel dash-panel" role="tabpanel" data-panel="overview" aria-label="Overview">
+        <p class="node-label">Dashboard // overview</p>
+        <h2>Overview</h2>
+        <dl class="stat-row" id="overview-stats"></dl>
+        <div class="hero-actions">
+          <button type="button" class="btn" data-go="compose">＋ New post</button>
+          <button type="button" class="btn btn-ghost" data-go="characters" data-new="1">＋ New character</button>
+          <button type="button" class="btn btn-ghost" data-go="stories">＋ New story</button>
+          <button type="button" class="btn btn-ghost" data-go="products">＋ New product</button>
+        </div>
+        <div class="dash-two">
+          <div>
+            <h3>Coming up</h3>
+            <ul id="overview-upcoming" class="plain-list"><li class="muted">Nothing scheduled.</li></ul>
           </div>
-          <div class="form-row">
-            <label for="category">Category</label>
-            <select id="category" name="category" aria-describedby="category-error">
-              <option value="story-art">Story art</option>
-              <option value="anime">Anime works</option>
-              <option value="writing">Writing</option>
-            </select>
-            <p class="error" id="category-error"></p>
+          <div>
+            <h3>Setup status</h3>
+            <ul id="overview-status" class="status-list"><li class="muted">Checking&hellip;</li></ul>
           </div>
-          <div class="form-row">
-            <label for="image">Image (JPG, PNG, WebP or GIF, up to 8 MB)</label>
-            <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/webp,image/gif"
-                   aria-describedby="image-hint image-error">
-            <p class="muted" id="image-hint">Needed for story art and anime works; optional for writing.</p>
-            <p class="error" id="image-error"></p>
-            <img id="image-preview" class="image-preview" alt="Preview of the chosen image" hidden>
-          </div>
-          <div class="check-row" id="remove-image-row" hidden>
-            <input type="checkbox" id="removeImage" name="removeImage">
-            <label for="removeImage">Remove the current image</label>
-          </div>
-          <div class="form-row">
-            <label for="summary">Short description (shown on the card)</label>
-            <input type="text" id="summary" name="summary" maxlength="300" aria-describedby="summary-error">
-            <p class="error" id="summary-error"></p>
-          </div>
-          <div class="form-row">
-            <label for="body">Text (story, notes about the piece &hellip;)</label>
-            <textarea id="body" name="body" rows="10" aria-describedby="body-error"></textarea>
-            <p class="error" id="body-error"></p>
-          </div>
-          <div class="check-row">
-            <input type="checkbox" id="published" name="published" checked>
-            <label for="published">Published (untick to save as a hidden draft)</label>
-          </div>
-          <div class="hero-actions">
-            <button type="submit" id="save-btn">Publish</button>
-            <button type="button" id="cancel-edit" class="btn btn-ghost" hidden>Cancel editing</button>
-          </div>
-          <p class="feedback" id="form-feedback" aria-live="polite"></p>
-        </form>
+        </div>
       </section>
 
-      <section class="panel" aria-labelledby="list-title">
+      <!-- ===== Compose (works, chapters, concept art, updates) ===== -->
+      <section class="dash-panel compose-layout" role="tabpanel" data-panel="compose" aria-label="Compose" hidden>
+        <div class="panel">
+          <p class="node-label" id="editor-kicker">Compose // new post</p>
+          <h2 id="editor-title">New post</h2>
+          <form id="post-form" novalidate>
+            <div class="form-row">
+              <label for="title">Title</label>
+              <input type="text" id="title" name="title" maxlength="120" required aria-describedby="title-error">
+              <p class="error" id="title-error"></p>
+            </div>
+            <div class="form-row">
+              <label for="logline">Logline <span class="muted">(one sentence shown above the title)</span></label>
+              <input type="text" id="logline" name="logline" maxlength="200" aria-describedby="logline-error">
+              <p class="error" id="logline-error"></p>
+            </div>
+            <div class="form-grid">
+              <div class="form-row">
+                <label for="category">Category</label>
+                <select id="category" name="category" aria-describedby="category-error">
+                  <option value="story-art">Story art</option>
+                  <option value="anime">Anime works</option>
+                  <option value="writing">Writing</option>
+                  <option value="updates">Update / news</option>
+                </select>
+                <p class="error" id="category-error"></p>
+              </div>
+              <div class="form-row">
+                <label for="section">Section</label>
+                <select id="section" name="section">
+                  <option value="main">Chapter / finished piece</option>
+                  <option value="concept-art">Concept art</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <label for="seriesId">Story</label>
+                <select id="seriesId" name="seriesId" aria-describedby="seriesId-error"><option value="">No story</option></select>
+                <p class="error" id="seriesId-error"></p>
+              </div>
+              <div class="form-row">
+                <label for="seriesOrder">Chapter no.</label>
+                <input type="number" id="seriesOrder" name="seriesOrder" min="0" max="100000" step="1" aria-describedby="seriesOrder-error">
+                <p class="error" id="seriesOrder-error"></p>
+              </div>
+            </div>
+            <div class="form-row">
+              <label for="summary">Short description <span class="muted">(shown on cards)</span></label>
+              <input type="text" id="summary" name="summary" maxlength="300" aria-describedby="summary-error">
+              <p class="error" id="summary-error"></p>
+            </div>
+            <div class="form-row">
+              <label for="tags">Tags <span class="muted">(comma separated, e.g. aldenmere, sketch)</span></label>
+              <input type="text" id="tags" name="tags" maxlength="400">
+            </div>
+
+            <div class="form-row">
+              <div class="label-row">
+                <label for="body">Text</label>
+                <label for="font" class="inline-label">Font
+                  <select id="font" name="font">
+                    <option value="theme">Theme</option>
+                    <option value="serif">Serif (book)</option>
+                    <option value="typewriter">Typewriter</option>
+                    <option value="handwritten">Handwritten</option>
+                    <option value="clean">Clean</option>
+                  </select>
+                </label>
+              </div>
+              <div class="toolbar" data-toolbar-for="body"></div>
+              <textarea id="body" name="body" rows="16" aria-describedby="body-hint body-error"></textarea>
+              <p class="muted" id="body-hint">Select text, then use the buttons. <button type="button" class="link-button" data-help>Formatting help</button> · <label class="link-button" for="import-file">Import a .docx / .txt / .md file</label><input type="file" id="import-file" class="sr-only" accept=".docx,.txt,.md,.markdown"> · <span id="word-count"></span></p>
+              <p class="error" id="body-error"></p>
+            </div>
+
+            <fieldset class="form-row media-field">
+              <legend>Pictures, video, audio &amp; documents</legend>
+              <div class="dropzone" id="dropzone">
+                <p>Drag files here, or</p>
+                <div class="hero-actions">
+                  <label class="btn btn-small" for="media-files">Add pictures / video / audio</label>
+                  <label class="btn btn-ghost btn-small" for="doc-files">Attach documents</label>
+                  <label class="btn btn-ghost btn-small" for="cover-file">Upload a cover only</label>
+                </div>
+                <input type="file" id="media-files" class="sr-only" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/ogg">
+                <input type="file" id="doc-files" class="sr-only" multiple accept=".pdf,.docx,.doc,.odt,.txt,.md,.epub,.pptx">
+                <input type="file" id="cover-file" class="sr-only" accept="image/jpeg,image/png,image/webp,image/gif">
+                <p class="muted">Pictures up to 10 MB, video up to 100 MB, audio up to 50 MB, documents up to 10 MB. Several pictures read top to bottom like a manga chapter. Mark one picture ★ as the cover.</p>
+              </div>
+              <ol class="media-list" id="media-list" aria-live="polite"></ol>
+              <p class="error" id="media-anchor-error"></p>
+              <input type="hidden" name="media" id="media-anchor">
+            </fieldset>
+
+            <fieldset class="form-row visibility">
+              <legend>Visibility</legend>
+              <div class="check-row"><input type="radio" name="visibility" id="vis-now" value="now" checked><label for="vis-now">Publish now</label></div>
+              <div class="check-row"><input type="radio" name="visibility" id="vis-schedule" value="schedule"><label for="vis-schedule">Schedule for later</label></div>
+              <div class="form-row schedule-row" id="schedule-row" hidden>
+                <label for="publishAt">Goes public at (your time)</label>
+                <input type="datetime-local" id="publishAt" name="publishAt" aria-describedby="publishAt-error">
+                <p class="error" id="publishAt-error"></p>
+              </div>
+              <div class="check-row"><input type="radio" name="visibility" id="vis-draft" value="draft"><label for="vis-draft">Save as draft (only you can see it)</label></div>
+            </fieldset>
+
+            <div class="hero-actions sticky-actions">
+              <button type="submit" id="save-btn">Publish</button>
+              <button type="button" id="cancel-edit" class="btn btn-ghost" hidden>Cancel editing</button>
+              <span class="mono muted" id="autosave-note"></span>
+            </div>
+            <p class="feedback" id="form-feedback" aria-live="polite"></p>
+          </form>
+        </div>
+        <aside class="panel preview-pane" aria-label="Live preview">
+          <p class="node-label">Preview // live</p>
+          <div id="live-preview" class="live-preview"></div>
+        </aside>
+      </section>
+
+      <!-- ===== Works list ===== -->
+      <section class="panel dash-panel" role="tabpanel" data-panel="works" aria-label="Works" hidden>
         <p class="node-label">Archive // all files</p>
-        <h2 id="list-title">Your works</h2>
-        <p class="muted">Drafts are only visible to you.</p>
+        <h2>Your works</h2>
+        <div class="filters" id="works-filter">
+          <button type="button" class="btn btn-ghost btn-small" data-status="" aria-pressed="true">All</button>
+          <button type="button" class="btn btn-ghost btn-small" data-status="live" aria-pressed="false">Live</button>
+          <button type="button" class="btn btn-ghost btn-small" data-status="scheduled" aria-pressed="false">Scheduled</button>
+          <button type="button" class="btn btn-ghost btn-small" data-status="draft" aria-pressed="false">Drafts</button>
+        </div>
         <ul id="admin-list" class="admin-list" aria-live="polite"></ul>
         <nav class="pager" aria-label="Pages">
           <button id="admin-prev" class="btn btn-ghost btn-small" type="button" hidden>Previous</button>
@@ -127,19 +242,300 @@
           <button id="admin-next" class="btn btn-ghost btn-small" type="button" hidden>Next</button>
         </nav>
       </section>
+
+      <!-- ===== Stories ===== -->
+      <section class="dash-panel dash-two" role="tabpanel" data-panel="stories" aria-label="Stories" hidden>
+        <div class="panel">
+          <p class="node-label" id="story-kicker">Stories // new</p>
+          <h2 id="story-form-title">New story</h2>
+          <form id="story-form" novalidate>
+            <div class="form-row">
+              <label for="story-title">Title</label>
+              <input type="text" id="story-title" name="title" maxlength="120" aria-describedby="story-title-error">
+              <p class="error" id="story-title-error"></p>
+            </div>
+            <div class="form-row">
+              <label for="story-logline">Logline</label>
+              <input type="text" id="story-logline" name="logline" maxlength="200" aria-describedby="story-logline-error">
+              <p class="error" id="story-logline-error"></p>
+            </div>
+            <div class="form-row">
+              <label for="story-description">Description</label>
+              <textarea id="story-description" name="description" rows="4" maxlength="600" aria-describedby="story-description-error"></textarea>
+              <p class="error" id="story-description-error"></p>
+            </div>
+            <div class="form-row" data-cover-picker="story">
+              <span class="label">Cover photo</span>
+              <div class="cover-picker">
+                <img class="cover-preview" alt="" hidden>
+                <label class="btn btn-ghost btn-small" for="story-cover">Choose picture</label>
+                <input type="file" id="story-cover" class="sr-only" accept="image/jpeg,image/png,image/webp,image/gif">
+                <button type="button" class="btn btn-ghost btn-small cover-remove" hidden>Remove</button>
+              </div>
+              <p class="error" id="story-cover-anchor-error"></p>
+              <input type="hidden" name="cover" id="story-cover-anchor">
+            </div>
+            <div class="hero-actions">
+              <button type="submit">Save story</button>
+              <button type="button" class="btn btn-ghost" id="story-cancel" hidden>Cancel editing</button>
+            </div>
+            <p class="feedback" id="story-feedback" aria-live="polite"></p>
+          </form>
+        </div>
+        <div class="panel">
+          <p class="node-label">Stories // all</p>
+          <h2>Your stories</h2>
+          <ul id="story-list" class="admin-list"></ul>
+        </div>
+      </section>
+
+      <!-- ===== Characters ===== -->
+      <section class="dash-panel compose-layout" role="tabpanel" data-panel="characters" aria-label="Characters" hidden>
+        <div class="panel">
+          <p class="node-label" id="char-kicker">Characters // new</p>
+          <h2 id="char-form-title">New character</h2>
+          <form id="char-form" novalidate>
+            <div class="form-grid">
+              <div class="form-row">
+                <label for="char-name">Name</label>
+                <input type="text" id="char-name" name="name" maxlength="120" aria-describedby="char-name-error">
+                <p class="error" id="char-name-error"></p>
+              </div>
+              <div class="form-row">
+                <label for="char-role">Role <span class="muted">(e.g. Protagonist)</span></label>
+                <input type="text" id="char-role" name="role" maxlength="80" aria-describedby="char-role-error">
+                <p class="error" id="char-role-error"></p>
+              </div>
+              <div class="form-row">
+                <label for="char-series">Story</label>
+                <select id="char-series" name="seriesId" aria-describedby="char-series-error"><option value="">No story</option></select>
+                <p class="error" id="char-series-error"></p>
+              </div>
+              <div class="form-row">
+                <label for="char-order">Order</label>
+                <input type="number" id="char-order" name="sortOrder" min="0" max="10000" aria-describedby="char-order-error">
+                <p class="error" id="char-order-error"></p>
+              </div>
+            </div>
+            <div class="form-row">
+              <label for="char-tagline">Tagline <span class="muted">(one line)</span></label>
+              <input type="text" id="char-tagline" name="tagline" maxlength="200" aria-describedby="char-tagline-error">
+              <p class="error" id="char-tagline-error"></p>
+            </div>
+            <div class="form-row">
+              <label for="char-profile">Profile <span class="muted">(background, personality, abilities&hellip;)</span></label>
+              <div class="toolbar" data-toolbar-for="char-profile"></div>
+              <textarea id="char-profile" name="profile" rows="12" aria-describedby="char-profile-error"></textarea>
+              <p class="error" id="char-profile-error"></p>
+            </div>
+            <fieldset class="form-row media-field">
+              <legend>Portrait &amp; concept art</legend>
+              <div class="dropzone" id="char-dropzone">
+                <label class="btn btn-small" for="char-files">Add pictures</label>
+                <input type="file" id="char-files" class="sr-only" multiple accept="image/jpeg,image/png,image/webp,image/gif">
+                <p class="muted">Mark one picture ★ as the portrait; the rest show as concept art and design sheets.</p>
+              </div>
+              <ol class="media-list" id="char-media" aria-live="polite"></ol>
+              <p class="error" id="char-media-anchor-error"></p>
+              <input type="hidden" name="media" id="char-media-anchor">
+            </fieldset>
+            <fieldset class="form-row visibility">
+              <legend>Visibility</legend>
+              <div class="check-row"><input type="radio" name="char-visibility" id="char-vis-draft" value="draft" checked><label for="char-vis-draft">Draft (only you can see it)</label></div>
+              <div class="check-row"><input type="radio" name="char-visibility" id="char-vis-now" value="now"><label for="char-vis-now">Publish now</label></div>
+              <div class="check-row"><input type="radio" name="char-visibility" id="char-vis-schedule" value="schedule"><label for="char-vis-schedule">Schedule for later</label></div>
+              <div class="form-row schedule-row" id="char-schedule-row" hidden>
+                <label for="char-publishAt">Goes public at (your time)</label>
+                <input type="datetime-local" id="char-publishAt" name="publishAt" aria-describedby="char-publishAt-error">
+                <p class="error" id="char-publishAt-error"></p>
+              </div>
+            </fieldset>
+            <div class="hero-actions">
+              <button type="submit" id="char-save">Save character</button>
+              <button type="button" class="btn btn-ghost" id="char-cancel" hidden>Cancel editing</button>
+            </div>
+            <p class="feedback" id="char-feedback" aria-live="polite"></p>
+          </form>
+        </div>
+        <aside class="panel">
+          <p class="node-label">Characters // all</p>
+          <h2>Your characters</h2>
+          <ul id="char-list" class="admin-list"></ul>
+          <h3 class="preview-heading">Profile preview</h3>
+          <div id="char-preview" class="live-preview"></div>
+        </aside>
+      </section>
+
+      <!-- ===== Drafts & scheduled ===== -->
+      <section class="panel dash-panel" role="tabpanel" data-panel="drafts" aria-label="Drafts and scheduled" hidden>
+        <p class="node-label">Workshop // unpublished</p>
+        <h2>Drafts &amp; scheduled</h2>
+        <p class="muted">Everything the public can't see yet: draft stories and artwork, character designs and posts waiting for their publish time.</p>
+        <h3>Works</h3>
+        <ul id="draft-works" class="admin-list"></ul>
+        <h3>Characters &amp; designs</h3>
+        <ul id="draft-chars" class="admin-list"></ul>
+      </section>
+
+      <!-- ===== Products ===== -->
+      <section class="dash-panel dash-two" role="tabpanel" data-panel="products" aria-label="More products" hidden>
+        <div class="panel">
+          <p class="node-label" id="product-kicker">Products // new</p>
+          <h2 id="product-form-title">New product</h2>
+          <form id="product-form" novalidate>
+            <div class="form-row">
+              <label for="product-name">Name</label>
+              <input type="text" id="product-name" name="name" maxlength="120" aria-describedby="product-name-error">
+              <p class="error" id="product-name-error"></p>
+            </div>
+            <div class="form-row">
+              <label for="product-tagline">Tagline</label>
+              <input type="text" id="product-tagline" name="tagline" maxlength="200" aria-describedby="product-tagline-error">
+              <p class="error" id="product-tagline-error"></p>
+            </div>
+            <div class="form-grid">
+              <div class="form-row">
+                <label for="product-status">Status <span class="muted">(e.g. In development)</span></label>
+                <input type="text" id="product-status" name="status" maxlength="40" list="status-ideas" aria-describedby="product-status-error">
+                <datalist id="status-ideas"><option value="In development"><option value="Beta"><option value="Live"><option value="Coming soon"><option value="Archived"></datalist>
+                <p class="error" id="product-status-error"></p>
+              </div>
+              <div class="form-row">
+                <label for="product-order">Order</label>
+                <input type="number" id="product-order" name="sortOrder" min="0" max="10000" aria-describedby="product-order-error">
+                <p class="error" id="product-order-error"></p>
+              </div>
+            </div>
+            <div class="form-row">
+              <label for="product-description">Description</label>
+              <div class="toolbar" data-toolbar-for="product-description"></div>
+              <textarea id="product-description" name="description" rows="8" aria-describedby="product-description-error"></textarea>
+              <p class="error" id="product-description-error"></p>
+            </div>
+            <div class="form-grid">
+              <div class="form-row">
+                <label for="product-link">Link <span class="muted">(optional, https://&hellip;)</span></label>
+                <input type="url" id="product-link" name="link" maxlength="500" aria-describedby="product-link-error">
+                <p class="error" id="product-link-error"></p>
+              </div>
+              <div class="form-row">
+                <label for="product-link-label">Button text</label>
+                <input type="text" id="product-link-label" name="linkLabel" maxlength="40" placeholder="Visit">
+                <p class="error" id="product-link-label-error"></p>
+              </div>
+            </div>
+            <div class="form-row" data-cover-picker="product">
+              <span class="label">Picture</span>
+              <div class="cover-picker">
+                <img class="cover-preview" alt="" hidden>
+                <label class="btn btn-ghost btn-small" for="product-image">Choose picture</label>
+                <input type="file" id="product-image" class="sr-only" accept="image/jpeg,image/png,image/webp,image/gif">
+                <button type="button" class="btn btn-ghost btn-small cover-remove" hidden>Remove</button>
+              </div>
+              <p class="error" id="product-image-anchor-error"></p>
+              <input type="hidden" name="image" id="product-image-anchor">
+            </div>
+            <div class="check-row"><input type="checkbox" id="product-published" checked><label for="product-published">Show on the products page</label></div>
+            <div class="hero-actions">
+              <button type="submit">Save product</button>
+              <button type="button" class="btn btn-ghost" id="product-cancel" hidden>Cancel editing</button>
+            </div>
+            <p class="feedback" id="product-feedback" aria-live="polite"></p>
+          </form>
+        </div>
+        <div class="panel">
+          <p class="node-label">Products // all</p>
+          <h2>More products by us</h2>
+          <ul id="product-list-admin" class="admin-list"></ul>
+          <p><a href="/products" class="mono">View the public page &rarr;</a></p>
+        </div>
+      </section>
+
+      <!-- ===== Comments ===== -->
+      <section class="panel dash-panel" role="tabpanel" data-panel="comments" aria-label="Comments" hidden>
+        <p class="node-label">Comms // moderation</p>
+        <h2>Latest comments</h2>
+        <ol id="mod-list" class="comments"></ol>
+        <nav class="pager" aria-label="Pages">
+          <button id="mod-prev" class="btn btn-ghost btn-small" type="button" hidden>Newer</button>
+          <span id="mod-page"></span>
+          <button id="mod-next" class="btn btn-ghost btn-small" type="button" hidden>Older</button>
+        </nav>
+      </section>
+
+      <!-- ===== Inbox ===== -->
+      <section class="panel dash-panel" role="tabpanel" data-panel="inbox" aria-label="Inbox" hidden>
+        <p class="node-label">Comms // contact form</p>
+        <h2>Inbox</h2>
+        <p class="muted" id="inbox-note">Messages people send with the contact form.</p>
+        <ol id="inbox-list" class="comments"></ol>
+        <nav class="pager" aria-label="Pages">
+          <button id="inbox-prev" class="btn btn-ghost btn-small" type="button" hidden>Newer</button>
+          <span id="inbox-page"></span>
+          <button id="inbox-next" class="btn btn-ghost btn-small" type="button" hidden>Older</button>
+        </nav>
+      </section>
+
+      <!-- ===== Settings ===== -->
+      <section class="dash-panel dash-two" role="tabpanel" data-panel="settings" aria-label="Settings" hidden>
+        <div class="panel">
+          <p class="node-label">Settings // social links</p>
+          <h2>Social media links</h2>
+          <p class="muted">Shown under Contact, in the ☰ menu and in the footer.</p>
+          <form id="socials-form" novalidate>
+            <ol id="socials-list" class="socials-list"></ol>
+            <div class="hero-actions">
+              <button type="button" class="btn btn-ghost btn-small" id="social-add">＋ Add a link</button>
+              <button type="submit">Save links</button>
+            </div>
+            <p class="feedback" id="socials-feedback" aria-live="polite"></p>
+          </form>
+        </div>
+        <div class="panel">
+          <p class="node-label">Settings // setup</p>
+          <h2>Setup status</h2>
+          <p class="muted">Checks the settings on Render. Anything red needs fixing there (Render &rarr; your service &rarr; Environment).</p>
+          <ul id="status-list" class="status-list"><li class="muted">Checking&hellip;</li></ul>
+        </div>
+      </section>
     </div>
+
+    <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-title">
+      <h2 id="help-title">Formatting help</h2>
+      <table>
+        <tbody>
+          <tr><td><code># Heading</code></td><td>Big heading (## and ### for smaller)</td></tr>
+          <tr><td><code>**bold**</code></td><td><strong>bold</strong></td></tr>
+          <tr><td><code>*italic*</code></td><td><em>italic</em></td></tr>
+          <tr><td><code>==highlight==</code></td><td><mark>highlight</mark></td></tr>
+          <tr><td><code>~~crossed out~~</code></td><td><s>crossed out</s></td></tr>
+          <tr><td><code>-&gt; centred &lt;-</code></td><td>A centred line</td></tr>
+          <tr><td><code>&gt; quote</code></td><td>Quote or inner thought</td></tr>
+          <tr><td><code>- item</code> / <code>1. item</code></td><td>Lists</td></tr>
+          <tr><td><code>---</code></td><td>Scene break</td></tr>
+          <tr><td><code>[text](https://&hellip;)</code></td><td>Link</td></tr>
+          <tr><td><code>![caption](picture)</code></td><td>A picture inside the text (use the 🖼 button)</td></tr>
+        </tbody>
+      </table>
+      <p class="muted">A blank line starts a new paragraph. A single line break is kept.</p>
+      <form method="dialog"><button type="submit">Close</button></form>
+    </dialog>
   </main>
 
   <footer class="site-footer">
     <p class="footer-brand"><img src="/images/gods-banditos-icon.svg" alt="" width="28" height="28"> &copy; 2026 God's Banditos &middot; created by <a href="/creator">Mulenga Mwamba</a></p>
     <p><a href="https://github.com/Vamp1-hunid/Website-about-me">View source on GitHub</a> &middot; <a href="https://developer.mozilla.org/en-US/docs/Learn" target="_blank" rel="noopener">MDN Web Docs (external)</a></p>
-    <p>Last updated: 14 November 2026</p>
+    <p>Last updated: 15 November 2026</p>
   </footer>
 
   <script src="/js/api.js" defer></script>
   <script src="/js/script.js" defer></script>
   <script src="/js/fx.js" defer></script>
   <script src="/js/flair.js" defer></script>
+  <script src="/js/markup.js" defer></script>
   <script src="/js/admin.js" defer></script>
+  <script src="/js/admin-works.js" defer></script>
+  <script src="/js/admin-stories.js" defer></script>
+  <script src="/js/admin-more.js" defer></script>
 </body>
 </html>

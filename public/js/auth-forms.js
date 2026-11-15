@@ -62,6 +62,10 @@
     if (value("password").length < 8) {
       problems.push({ field: "password", message: "Password must be at least 8 characters." });
     }
+    var email = value("email").trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      problems.push({ field: "email", message: "That email address doesn't look right (or leave it empty)." });
+    }
     if (value("password2") !== value("password")) {
       problems.push({ field: "password2", message: "The two passwords don't match." });
     }
@@ -98,7 +102,7 @@
       } else {
         await MW.api("/account/register", {
           method: "POST",
-          json: { username: value("username"), displayName: value("displayName"), password: value("password") }
+          json: { username: value("username"), displayName: value("displayName"), email: value("email"), password: value("password") }
         });
       }
       window.location.href = next;

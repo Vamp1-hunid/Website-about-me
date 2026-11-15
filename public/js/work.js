@@ -1,5 +1,6 @@
 // js/work.js
-// Single work page (/work/<slug>): the image or text, likes, favourites and comments.
+// Single work page (/work/<slug>): pictures / video / audio, formatted text, series and tags,
+// next and previous links, likes, favourites and comments (with replies and editing).
 
 (function () {
   "use strict";
@@ -22,8 +23,7 @@
     article.appendChild(el("p", { class: "node-label" }, "Error // file missing"));
     article.appendChild(el("h1", { class: "glitch" }, "Signal lost"));
     article.appendChild(el("p", { class: "lead" }, message));
-    var back = el("a", { class: "btn", href: "/gallery" }, "Back to all works");
-    article.appendChild(back);
+    article.appendChild(el("a", { class: "btn", href: "/gallery" }, "Back to all works"));
   }
 
   /* ---------- Like and save buttons ---------- */
@@ -49,7 +49,7 @@
         var label = nowOn ? labelOn : labelOff;
         button.textContent = showCount ? label + " · " + data.count : label;
         if (kind === "favourite") MW.toast(nowOn ? "Saved to your favourites." : "Removed from your favourites.");
-        if (kind === "like" && nowOn) MW.glitch(article.querySelector("h1"));
+        if (kind === "like" && nowOn && MW.glitch) MW.glitch(article.querySelector("h1"));
       } catch (error) {
         MW.toast(error.message, true);
       }
@@ -59,48 +59,49 @@
 
   /* ---------- The work itself ---------- */
 
-  function renderPost() {
-    document.title = post.title + " | Mulenga Mwamba";
-    var metaDesc = document.querySelector("meta[name='description']");
-    if (metaDesc) metaDesc.setAttribute("content", post.summary || MW.categoryName(post.category) + " by Mulenga Mwamba");
-    article.textContent = "";
+  function seriesLabel() {
+    if (!post.series) return "";
+    var nav = post.nav && post.nav.series;
+    if (post.seriesOrder !== null && post.seriesOrder !== undefined) return "Chapter " + post.seriesOrder;
+    return nav ? "Part " + nav.position + " of " + nav.count : "";
+  }
 
-    var layout = el("div", { class: "work-layout" + (post.imageUrl ? "" : " no-image") });
-
-    if (post.imageUrl) {
-      var figure = el("figure", { class: "work-image" });
-      var link = el("a", { href: post.imageUrl, target: "_blank", rel: "noopener", title: "Open full size" });
-      link.appendChild(el("img", { src: post.imageUrl, alt: post.title }));
-      figure.appendChild(link);
-      layout.appendChild(figure);
-      MW.profile(figure, {
-        name: post.title,
-        kicker: "FILE SCAN",
-        id: "FILE " + String(post.id).padStart(3, "0"),
-        rows: [
-          ["TYPE", MW.categoryName(post.category)],
-          ["ARTIST", "Mulenga Mwamba"],
-          ["UPLOADED", MW.formatDate(post.createdAt)],
-          ["LIKES", String(post.likes)]
-        ]
-      });
+  function renderHeader(info) {
+    var stickers = el("div", { class: "sticker-row" });
+    stickers.appendChild(el("span", { class: "sticker", "data-category": post.category }, MW.categoryName(post.category)));
+    if (post.series) {
+      var s = el("a", { class: "sticker sticker-series", href: "/gallery?series=" + encodeURIComponent(post.series.slug) });
+      s.textContent = post.series.title + (seriesLabel() ? " · " + seriesLabel() : "");
+      stickers.appendChild(s);
     }
+    info.appendChild(stickers);
 
-    var info = el("div");
-    info.appendChild(el("span", { class: "sticker", "data-category": post.category }, MW.categoryName(post.category)));
-    var title = el("h1", { class: "glitch" }, post.title);
-    title.style.fontSize = "clamp(1.8rem, 5vw, 3rem)";
-    title.style.marginTop = "0.75rem";
+    if (post.logline) info.appendChild(el("p", { class: "logline logline-big" }, post.logline));
+    var title = el("h1", { class: "glitch work-title" }, post.title);
     info.appendChild(title);
 
     var dateLine = "Posted " + MW.formatDate(post.createdAt);
     if (post.updatedAt && Math.abs(new Date(post.updatedAt) - new Date(post.createdAt)) > 60000) {
       dateLine += " · edited " + MW.formatDate(post.updatedAt);
     }
-    if (!post.published) dateLine += " · DRAFT (only you can see this)";
+    var pages = post.media.filter(function (m) { return m.kind === "image"; }).length;
+    if (pages > 1) dateLine += " · " + pages + " pages";
+    if (post.body && post.category === "writing") dateLine += " · " + MW.readingStats(post.body);
+    if (post.status === "draft") dateLine += " · DRAFT (only you can see this)";
+    if (post.status === "scheduled") dateLine += " · SCHEDULED for " + MW.formatDateTime(post.publishAt) + " (only you can see this)";
     info.appendChild(el("p", { class: "mono muted" }, dateLine));
 
     if (post.summary) info.appendChild(el("p", { class: "lead" }, post.summary));
+
+    if (post.tags && post.tags.length) {
+      var tags = el("ul", { class: "tag-list", "aria-label": "Tags" });
+      post.tags.forEach(function (tag) {
+        var li = el("li");
+        li.appendChild(el("a", { href: "/gallery?tag=" + encodeURIComponent(tag) }, "#" + tag));
+        tags.appendChild(li);
+      });
+      info.appendChild(tags);
+    }
 
     var actions = el("div", { class: "work-actions" });
     var likeBtn = actionButton(post.liked ? "♥ Liked" : "♡ Like", post.liked, post.likes);
@@ -111,60 +112,309 @@
     }
     info.appendChild(actions);
 
-    if (post.published) {
+    if (post.status === "live") {
       wireToggle(likeBtn, "like", "♥ Liked", "♡ Like", true);
       wireToggle(saveBtn, "favourite", "★ Saved", "☆ Save", false);
     } else {
       likeBtn.disabled = true;
       saveBtn.disabled = true;
     }
+  }
 
-    if (post.body) {
-      var body = el("div", { class: "work-body" + (post.imageUrl ? "" : " reading") });
-      body.textContent = post.body; // white-space: pre-wrap keeps the line breaks
-      info.appendChild(body);
+  function renderBody(parent, reading) {
+    if (!post.body) return;
+    var body = el("div", { class: "work-body prose font-" + (post.font || "theme") + (reading ? " reading" : "") });
+    MW.renderMarkup(body, post.body);
+    parent.appendChild(body);
+  }
+
+  function renderDocuments(parent) {
+    var docs = MW.renderDocuments(post.media || []);
+    if (docs) parent.appendChild(docs);
+  }
+
+  function renderPost() {
+    document.title = post.title + " | God's Banditos";
+    var metaDesc = document.querySelector("meta[name='description']");
+    if (metaDesc) metaDesc.setAttribute("content", post.summary || MW.categoryName(post.category) + " by Mulenga Mwamba");
+    article.textContent = "";
+
+    // Pages, clips and audio shown in the work (cover-only pictures and downloads are handled separately).
+    var media = (post.media || []).filter(function (m) { return m.role !== "cover" && m.kind !== "document"; });
+    var single = media.length === 1 && media[0].kind === "image";
+    if (post.font && post.font !== "theme") document.body.classList.add("uses-font-" + post.font);
+
+    if (single) {
+      // One picture: picture on the left, details on the right (as before).
+      var layout = el("div", { class: "work-layout" });
+      var figure = el("figure", { class: "work-image" });
+      var link = el("a", { href: media[0].originalUrl, target: "_blank", rel: "noopener", title: "Open full size" });
+      link.appendChild(el("img", { src: media[0].url, alt: media[0].caption || post.title }));
+      figure.appendChild(link);
+      if (media[0].caption) figure.appendChild(el("figcaption", { class: "mono muted" }, media[0].caption));
+      layout.appendChild(figure);
+      if (MW.profile) {
+        MW.profile(figure, {
+          name: post.title,
+          kicker: "FILE SCAN",
+          id: "FILE " + String(post.id).padStart(3, "0"),
+          rows: [
+            ["TYPE", MW.categoryName(post.category)],
+            ["ARTIST", "Mulenga Mwamba"],
+            ["UPLOADED", MW.formatDate(post.createdAt)],
+            ["LIKES", String(post.likes)]
+          ]
+        });
+      }
+      var info = el("div");
+      renderHeader(info);
+      renderBody(info, false);
+      renderDocuments(info);
+      layout.appendChild(info);
+      article.appendChild(layout);
+    } else {
+      // Several files (a chapter, a clip, audio) or none (writing): details on top, then the media, then the text.
+      var head = el("div", { class: "work-head" });
+      renderHeader(head);
+      article.appendChild(head);
+      if (media.length) article.appendChild(MW.renderMedia(media, post.title));
+      renderBody(article, true);
+      renderDocuments(article);
     }
 
-    layout.appendChild(info);
-    article.appendChild(layout);
+    renderNav();
+  }
+
+  /* ---------- Next / previous ---------- */
+
+  function navLink(target, label, direction) {
+    var a = el("a", { class: "work-nav-link work-nav-" + direction, href: "/work/" + encodeURIComponent(target.slug) });
+    a.appendChild(el("span", { class: "mono muted" }, label));
+    a.appendChild(el("span", { class: "work-nav-title" }, target.title));
+    return a;
+  }
+
+  function renderNav() {
+    var box = document.getElementById("work-nav");
+    if (!box || !post.nav) return;
+    box.textContent = "";
+    var nav = post.nav;
+
+    if (nav.series && nav.series.count > 1) {
+      var row = el("div", { class: "work-nav-row" });
+      row.appendChild(el("p", { class: "node-label work-nav-heading" }, "Series // " + nav.series.title + " · " + nav.series.position + " / " + nav.series.count));
+      var links = el("div", { class: "work-nav-links" });
+      links.appendChild(nav.series.prev ? navLink(nav.series.prev, "← Previous chapter", "prev") : el("span"));
+      var all = el("a", { class: "btn btn-ghost btn-small", href: "/gallery?series=" + encodeURIComponent(nav.series.slug) }, "All chapters");
+      links.appendChild(all);
+      links.appendChild(nav.series.next ? navLink(nav.series.next, "Next chapter →", "next") : el("span"));
+      row.appendChild(links);
+      box.appendChild(row);
+    }
+
+    if (nav.older || nav.newer) {
+      var row2 = el("div", { class: "work-nav-row" });
+      row2.appendChild(el("p", { class: "node-label work-nav-heading" }, "Archive // keep browsing"));
+      var links2 = el("div", { class: "work-nav-links" });
+      links2.appendChild(nav.newer ? navLink(nav.newer, "← Newer work", "prev") : el("span"));
+      links2.appendChild(el("span"));
+      links2.appendChild(nav.older ? navLink(nav.older, "Older work →", "next") : el("span"));
+      row2.appendChild(links2);
+      box.appendChild(row2);
+    }
+    box.hidden = !box.children.length;
+
+    // Arrow keys move between works (only when not typing in a box).
+    document.addEventListener("keydown", function (event) {
+      if (event.altKey || event.ctrlKey || event.metaKey || /input|textarea|select/i.test(event.target.tagName)) return;
+      var target = null;
+      var sNav = nav.series && nav.series.count > 1 ? nav.series : null;
+      if (event.key === "ArrowLeft") target = (sNav && sNav.prev) || nav.newer;
+      if (event.key === "ArrowRight") target = (sNav && sNav.next) || nav.older;
+      if (target) window.location.href = "/work/" + encodeURIComponent(target.slug);
+    });
   }
 
   /* ---------- Comments ---------- */
 
   var list = document.getElementById("comments");
+  var commentCount = 0;
+
+  MW.avatar = MW.avatar || function (author, size) {
+    var box = el("span", { class: "avatar" + (size === "big" ? " avatar-big" : ""), "aria-hidden": "true" });
+    if (author.avatarUrl) {
+      box.appendChild(el("img", { src: author.avatarUrl, alt: "", loading: "lazy" }));
+    } else {
+      box.textContent = (author.displayName || author.username || "?").trim().charAt(0).toUpperCase();
+    }
+    return box;
+  };
+
+  function updateCount() {
+    var title = document.getElementById("comments-title");
+    if (title) title.textContent = commentCount ? "Comments (" + commentCount + ")" : "Comments";
+  }
+
+  function confirmButton(button, label, action) {
+    button.addEventListener("click", async function () {
+      if (button.getAttribute("data-confirm") !== "yes") {
+        button.setAttribute("data-confirm", "yes");
+        button.textContent = label;
+        window.setTimeout(function () {
+          button.removeAttribute("data-confirm");
+          button.textContent = "Delete";
+        }, 4000);
+        return;
+      }
+      button.disabled = true;
+      try {
+        await action();
+      } catch (error) {
+        MW.toast(error.message, true);
+        button.disabled = false;
+      }
+    });
+  }
+
+  function commentText(comment) {
+    var p = el("p", { class: "comment-text" }, comment.body);
+    return p;
+  }
 
   function renderComment(comment) {
-    var item = el("li", { class: "comment" + (comment.author.role === "admin" ? " by-admin" : "") });
+    var isReply = Boolean(comment.parentId);
+    var item = el("li", {
+      class: "comment" + (comment.author.role === "admin" ? " by-admin" : "") + (isReply ? " is-reply" : ""),
+      id: "comment-" + comment.id
+    });
     var header = el("header");
-    header.appendChild(el("span", { class: "who" }, comment.author.displayName));
+    header.appendChild(MW.avatar(comment.author));
+    var who = el("a", { class: "who", href: "/u/" + encodeURIComponent(comment.author.username) }, comment.author.displayName);
+    header.appendChild(who);
     header.appendChild(el("span", {}, "@" + comment.author.username));
     if (comment.author.role === "admin") header.appendChild(el("span", { class: "sticker sticker-pink" }, "Artist"));
-    header.appendChild(el("time", { datetime: comment.createdAt }, MW.formatDate(comment.createdAt)));
+    var time = el("time", { datetime: comment.createdAt }, MW.formatDate(comment.createdAt));
+    header.appendChild(time);
+    var edited = el("span", { class: "edited", title: comment.editedAt ? "Edited " + MW.formatDate(comment.editedAt) : "" }, comment.editedAt ? "(edited)" : "");
+    header.appendChild(edited);
+
+    var tools = el("span", { class: "comment-tools" });
+    header.appendChild(tools);
+    item.appendChild(header);
+
+    var text = commentText(comment);
+    item.appendChild(text);
+
+    // Reply (on every comment; replies to a reply join the same thread)
+    if (user) {
+      var reply = el("button", { class: "btn btn-ghost btn-small", type: "button" }, "Reply");
+      reply.addEventListener("click", function () {
+        var top = isReply ? document.getElementById("comment-" + comment.parentId) : item;
+        if (top) openReplyForm(top, comment);
+      });
+      tools.appendChild(reply);
+    }
+
+    // Edit (own comments only)
+    if (comment.canEdit) {
+      var edit = el("button", { class: "btn btn-ghost btn-small", type: "button" }, "Edit");
+      edit.addEventListener("click", function () {
+        if (item.querySelector(".edit-form")) return;
+        var form = el("form", { class: "edit-form", novalidate: "" });
+        var area = el("textarea", { rows: "3", maxlength: "1000", "aria-label": "Edit your comment" });
+        area.value = comment.body;
+        var row = el("div", { class: "hero-actions" });
+        var save = el("button", { type: "submit", class: "btn-small" }, "Save");
+        var cancel = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "Cancel");
+        var error = el("p", { class: "error" });
+        row.append(save, cancel);
+        form.append(area, error, row);
+        text.hidden = true;
+        text.after(form);
+        area.focus();
+        cancel.addEventListener("click", function () { form.remove(); text.hidden = false; });
+        form.addEventListener("submit", async function (event) {
+          event.preventDefault();
+          var value = area.value.trim();
+          if (!value) { error.textContent = "Write something, or delete the comment instead."; return; }
+          save.disabled = true;
+          try {
+            var data = await MW.api("/comments/" + comment.id, { method: "PUT", json: { body: value } });
+            comment.body = data.comment.body;
+            comment.editedAt = data.comment.editedAt;
+            text.textContent = comment.body;
+            edited.textContent = comment.editedAt ? "(edited)" : "";
+            form.remove();
+            text.hidden = false;
+            if (data.changed) MW.toast("Comment updated.");
+          } catch (err) {
+            error.textContent = err.message;
+            save.disabled = false;
+          }
+        });
+      });
+      tools.appendChild(edit);
+    }
 
     if (comment.canDelete) {
       var del = el("button", { class: "btn btn-ghost btn-small", type: "button" }, "Delete");
-      del.addEventListener("click", async function () {
-        if (del.getAttribute("data-confirm") !== "yes") {
-          del.setAttribute("data-confirm", "yes");
-          del.textContent = "Confirm delete";
-          return;
-        }
-        del.disabled = true;
-        try {
-          await MW.api("/comments/" + comment.id, { method: "DELETE" });
-          item.remove();
-          if (!list.children.length) showNoComments();
-        } catch (error) {
-          MW.toast(error.message, true);
-          del.disabled = false;
-        }
+      var replies = function () { return item.querySelectorAll(".comment").length; };
+      confirmButton(del, isReply ? "Confirm delete" : "Confirm delete", async function () {
+        await MW.api("/comments/" + comment.id, { method: "DELETE" });
+        commentCount -= 1 + replies();
+        item.remove();
+        updateCount();
+        if (!list.children.length) showNoComments();
       });
-      header.appendChild(del);
+      tools.appendChild(del);
     }
 
-    item.appendChild(header);
-    item.appendChild(el("p", {}, comment.body));
+    if (!isReply) item.appendChild(el("ol", { class: "replies" }));
     return item;
+  }
+
+  function openReplyForm(topItem, target) {
+    var existing = topItem.querySelector(":scope > .reply-form");
+    if (existing) existing.remove();
+
+    var form = el("form", { class: "reply-form", novalidate: "" });
+    var label = el("label", {}, "Reply to " + target.author.displayName);
+    var area = el("textarea", { rows: "2", maxlength: "1000" });
+    var id = "reply-" + target.id;
+    area.id = id;
+    label.setAttribute("for", id);
+    if (target.parentId) area.value = "@" + target.author.username + " ";
+    var error = el("p", { class: "error" });
+    var row = el("div", { class: "hero-actions" });
+    var send = el("button", { type: "submit", class: "btn-small" }, "Post reply");
+    var cancel = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "Cancel");
+    row.append(send, cancel);
+    form.append(label, area, error, row);
+    topItem.appendChild(form);
+    area.focus();
+    area.setSelectionRange(area.value.length, area.value.length);
+
+    cancel.addEventListener("click", function () { form.remove(); });
+    form.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      var value = area.value.trim();
+      if (!value) { error.textContent = "Write something first."; return; }
+      send.disabled = true;
+      try {
+        var data = await MW.api("/posts/" + post.id + "/comments", {
+          method: "POST",
+          json: { body: value, parentId: target.id }
+        });
+        topItem.querySelector(".replies").appendChild(renderComment(data.comment));
+        commentCount++;
+        updateCount();
+        form.remove();
+        MW.toast("Reply posted.");
+      } catch (err) {
+        error.textContent = err.message;
+        send.disabled = false;
+      }
+    });
   }
 
   function showNoComments() {
@@ -174,13 +424,34 @@
 
   async function loadComments() {
     var panel = document.getElementById("comments-panel");
-    if (!post.published) return; // drafts have no comments
+    if (post.status !== "live") return; // drafts and scheduled works have no comments yet
     panel.hidden = false;
     try {
       var data = await MW.api("/posts/" + post.id + "/comments");
       list.textContent = "";
+      commentCount = data.comments.length;
+      updateCount();
       if (!data.comments.length) showNoComments();
-      data.comments.forEach(function (comment) { list.appendChild(renderComment(comment)); });
+      var tops = {};
+      data.comments.forEach(function (comment) {
+        if (!comment.parentId) {
+          tops[comment.id] = renderComment(comment);
+          list.appendChild(tops[comment.id]);
+        }
+      });
+      data.comments.forEach(function (comment) {
+        if (comment.parentId && tops[comment.parentId]) {
+          tops[comment.parentId].querySelector(".replies").appendChild(renderComment(comment));
+        }
+      });
+      // Coming from a link like /work/x#comment-12: scroll to that comment.
+      if (/^#comment-\d+$/.test(window.location.hash)) {
+        var target = document.querySelector(window.location.hash);
+        if (target) {
+          target.classList.add("is-target");
+          target.scrollIntoView({ block: "center" });
+        }
+      }
     } catch (error) {
       list.textContent = "";
       list.appendChild(el("li", { class: "muted" }, error.message));
@@ -205,6 +476,8 @@
           var empty = list.querySelector("[data-empty]");
           if (empty) empty.remove();
           list.appendChild(renderComment(data.comment));
+          commentCount++;
+          updateCount();
           textarea.value = "";
           MW.toast("Comment posted.");
         } catch (error) {
