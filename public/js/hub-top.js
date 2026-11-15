@@ -33,7 +33,7 @@
     ORDER.forEach(function (scope) {
       var list = d.boards[scope] || [];
       var panel = el("section", { class: "panel" });
-      panel.appendChild(el("h2", {}, (list[0] ? list[0].badge.icon : "🌼") + " Top 5 in " + d.names[scope]));
+      panel.appendChild(el("h2", {}, "🐝 Top 5 in " + d.names[scope]));
       var ol = el("ol", { class: "top-list" });
       if (!list.length) ol.appendChild(el("li", { class: "muted" }, "Nobody yet. This spot is waiting for you!"));
       list.forEach(function (r) { ol.appendChild(row(r)); });

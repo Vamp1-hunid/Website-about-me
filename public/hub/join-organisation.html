@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Organisation account | Chapterhive</title>
+  <meta name="description" content="One shared Chapterhive account for publishers, studios, schools, bands and other groups.">
+  
+  <meta property="og:site_name" content="Chapterhive">
+  <meta property="og:title" content="Organisation account | Chapterhive">
+  <meta property="og:description" content="One shared Chapterhive account for publishers, studios, schools, bands and other groups.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://mulenga-mwamba-website.onrender.com/images/chapterhive-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#0e0b07">
+  <link rel="icon" href="/images/chapterhive-mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css?v=14">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=11">
+  <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
+  <script src="/js/theme-boot.js"></script>
+</head>
+<body data-page="join-organisation" data-brand="chapterhive">
+
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <a class="af-brand" href="/hub" aria-label="Chapterhive, home">
+      <img src="/images/chapterhive-mark.svg" alt="" width="34" height="34">
+      <span>Chapter<b>hive</b></span>
+    </a>
+    <div class="header-actions">
+      <div class="auth-area" id="auth-area"></div>
+      <form class="header-search" action="/hub/search" method="get" role="search">
+        <label class="sr-only" for="header-q">Search Chapterhive</label>
+        <input type="search" id="header-q" name="q" placeholder="Search creators, works&hellip;" maxlength="80" autocomplete="off">
+      </form>
+      <button id="menu-toggle" class="btn btn-ghost btn-small menu-toggle" type="button"
+              aria-expanded="false" aria-controls="site-menu" aria-label="Open menu">
+        <span class="bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
+      <button id="theme-toggle" class="btn btn-ghost btn-small" type="button">Light mode</button>
+    </div>
+  </header>
+
+  <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+    <a href="/hub" data-nav="hub">Home</a>
+    <a href="/hub/creators" data-nav="creators">Creators</a>
+    <a href="/hub/top" data-nav="top">Top creators</a>
+    <a href="/hub/feed" data-nav="feed">Following</a>
+    <a href="/hub/news" data-nav="news">News &amp; updates</a>
+    <a href="/hub/collabs" data-nav="collabs">Collabs</a>
+    <a href="/hub/apply" data-nav="apply">Become a creator</a>
+    <a href="/hub/sponsor" data-nav="sponsor">Sponsor</a>
+  </nav>
+
+  <main id="main">
+    <section class="panel narrow org-signup" aria-labelledby="org-title">
+      <p class="node-label">Organisations // join</p>
+      <h1 id="org-title">Create an organisation account</h1>
+      <p class="lead">For publishers, studios, schools, bands, collectives, churches, NGOs and brands: one shared Chapterhive account for your whole group, with your team listed on your page.</p>
+      <ul class="org-perks">
+        <li>🏛 An organisation badge and your team on your creator page</li>
+        <li>🔑 One login your team can share, run by a named contact person</li>
+        <li>📚 Publish books, music, films and more under your group's name</li>
+      </ul>
+
+      <form id="org-form" novalidate>
+        <h2>1. Your organisation</h2>
+        <div class="form-row">
+          <label for="orgName">Organisation or group name</label>
+          <input type="text" id="orgName" name="orgName" maxlength="100" required autocomplete="organization">
+          <p class="error" id="orgName-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="orgType">What kind of organisation?</label>
+          <select id="orgType" name="orgType" required><option value="">Choose&hellip;</option></select>
+          <p class="error" id="orgType-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="website">Website (optional)</label>
+          <input type="url" id="website" name="website" maxlength="300" placeholder="https://">
+          <p class="error" id="website-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="country">Country</label>
+          <select id="country" name="country" required autocomplete="country"><option value="">Choose&hellip;</option></select>
+          <p class="error" id="country-error"></p>
+        </div>
+
+        <h2>2. The person responsible</h2>
+        <p class="muted">Someone has to be responsible for the account. They must be 18 or older. Their details stay private.</p>
+        <div class="form-row">
+          <label for="contactName">Full name</label>
+          <input type="text" id="contactName" name="contactName" maxlength="80" required autocomplete="name">
+          <p class="error" id="contactName-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="contactRole">Role in the organisation (optional)</label>
+          <input type="text" id="contactRole" name="contactRole" maxlength="80" placeholder="e.g. Editor, Manager, Teacher">
+        </div>
+        <div class="form-row">
+          <label for="birthDate">Their date of birth</label>
+          <input type="date" id="birthDate" name="birthDate" required>
+          <p class="error" id="birthDate-error"></p>
+        </div>
+
+        <h2>3. Your team (optional)</h2>
+        <p class="muted">Shown on your page so readers know who's behind the work. Add a username to link to a member's own account.</p>
+        <div id="team-list" class="team-list"></div>
+        <button type="button" class="btn btn-ghost btn-small" id="add-member">＋ Add a team member</button>
+
+        <h2>4. Account login</h2>
+        <div class="form-row">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" maxlength="30" required autocapitalize="none" spellcheck="false">
+          <p class="muted">3&ndash;30 characters: lowercase letters, numbers or _</p>
+          <p class="error" id="username-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="email">Organisation email</label>
+          <input type="email" id="email" name="email" maxlength="254" required autocomplete="email">
+          <p class="error" id="email-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" minlength="10" maxlength="128" required autocomplete="new-password">
+          <p class="muted">At least 10 characters. Because a team shares this login, use a strong one and change it when someone leaves.</p>
+          <p class="error" id="password-error"></p>
+        </div>
+
+        <h2>5. Creator page</h2>
+        <div class="form-row">
+          <label for="handle">Page address: chapterhive/c/<strong id="handle-preview">your-handle</strong></label>
+          <input type="text" id="handle" name="handle" maxlength="30" required autocapitalize="none" spellcheck="false">
+          <p class="error" id="handle-error"></p>
+        </div>
+        <div class="form-row">
+          <span class="label">What do you make?</span>
+          <div class="genre-picks" id="kinds">
+            <label><input type="checkbox" value="novels"><span>Novels</span></label>
+            <label><input type="checkbox" value="storybooks"><span>Storybooks</span></label>
+            <label><input type="checkbox" value="education"><span>Educational books</span></label>
+            <label><input type="checkbox" value="songwriting"><span>Songwriting &amp; music</span></label>
+            <label><input type="checkbox" value="music"><span>Music</span></label>
+            <label><input type="checkbox" value="poetry"><span>Poetry</span></label>
+            <label><input type="checkbox" value="comics"><span>Comics</span></label>
+            <label><input type="checkbox" value="manga"><span>Manga</span></label>
+            <label><input type="checkbox" value="animation"><span>Animation</span></label>
+            <label><input type="checkbox" value="film"><span>Film</span></label>
+            <label><input type="checkbox" value="series"><span>Series</span></label>
+            <label><input type="checkbox" value="illustration"><span>Art &amp; illustration</span></label>
+            <label><input type="checkbox" value="photography"><span>Photography</span></label>
+            <label><input type="checkbox" value="stories"><span>Stories &amp; writing</span></label>
+            <label><input type="checkbox" value="comedy"><span>Comedy</span></label>
+          </div>
+          <p class="error" id="kinds-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="application">Tell us about your organisation and its work</label>
+          <textarea id="application" name="application" rows="4" maxlength="2000" required></textarea>
+          <p class="error" id="application-error"></p>
+        </div>
+
+        <label class="check-row"><input type="checkbox" id="acceptTerms"> <span>I accept the <a href="/legal/terms" target="_blank">Terms</a>, <a href="/legal/privacy" target="_blank">Privacy Policy</a>, <a href="/legal/creator-agreement" target="_blank">Creator Agreement</a> and <a href="/legal/content-rules" target="_blank">Content Rules</a>.</span></label>
+        <p class="error" id="acceptTerms-error"></p>
+        <label class="check-row"><input type="checkbox" id="confirmAuthority"> <span>I'm allowed to create this account on behalf of the organisation, and I'm responsible for how it's used.</span></label>
+        <p class="error" id="confirmAuthority-error"></p>
+        <label class="check-row"><input type="checkbox" id="marketing"> <span>Email us occasional Chapterhive news (optional).</span></label>
+
+        <div class="hero-actions"><button type="submit">Create organisation account</button></div>
+        <p class="feedback feedback-error" id="form-feedback" aria-live="polite"></p>
+      </form>
+      <p class="form-foot">Joining as yourself? <a href="/hub/register">Create a personal account</a> · Already have an account? <a href="/hub/login">Log in</a></p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p class="footer-brand"><img src="/images/chapterhive-mark.svg" alt="" width="28" height="28"> &copy; 2026 Chapterhive &middot; a <a href="/">God's Banditos</a> production</p>
+    <p><a href="/legal/terms">Terms</a> &middot; <a href="/legal/privacy">Privacy</a> &middot; <a href="/legal/creator-agreement">Creator Agreement</a> &middot; <a href="/legal/content-rules">Content Rules</a> &middot; <a href="/contact">Contact</a></p>
+  </footer>
+
+  <script src="/js/api.js" defer></script>
+  <script src="/js/script.js" defer></script>
+  <script src="/js/markup.js" defer></script>
+  <script src="/js/hub.js" defer></script>
+  <script src="/js/org-signup.js" defer></script>
+</body>
+</html>

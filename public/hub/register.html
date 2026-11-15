@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=14">
-  <link rel="stylesheet" href="/css/chapterhive.css?v=8">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=11">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -109,6 +109,15 @@
             <p class="error" id="birthDate-error"></p>
           </div>
           <div class="form-row">
+            <span class="label" id="gender-label">Gender</span>
+            <div class="gender-picks" role="radiogroup" aria-labelledby="gender-label">
+              <label><input type="radio" name="gender" value="male"> <span>Male</span></label>
+              <label><input type="radio" name="gender" value="female"> <span>Female</span></label>
+              <label><input type="radio" name="gender" value="unspecified" checked> <span>Prefer not to say</span></label>
+            </div>
+            <p class="muted">Private: never shown on your profile.</p>
+          </div>
+          <div class="form-row">
             <label for="country">Country or region</label>
             <select id="country" name="country" required autocomplete="country" aria-describedby="country-error">
               <option value="">Choose&hellip;</option>
@@ -150,6 +159,7 @@
         </form>
       </div>
       <p class="form-foot">Already a member? <a id="switch-link" href="/hub/login">Log in</a>.</p>
+      <p class="form-foot org-cta">Signing up for a publisher, studio, school, band or other group? <a href="/hub/join-organisation">Create an organisation account</a>.</p>
     </section>
   </main>
 

@@ -78,6 +78,31 @@
       c.kinds.forEach(function (k) { chips.appendChild(el("span", { class: "kind-chip" }, MW.kindName(k))); });
       body.appendChild(chips);
     }
+    if (c.organisation) {
+      var TYPES = { publisher: "Publisher", studio: "Studio", school: "School or university", band: "Band or music group",
+        collective: "Creative collective", ngo: "Non-profit / NGO", company: "Company or brand", church: "Church or faith group", other: "Group" };
+      var orgLine = el("p", { class: "org-line" });
+      orgLine.appendChild(el("span", { class: "org-badge" }, "🏛 " + (TYPES[c.organisation.type] || "Organisation")));
+      if (c.organisation.website) {
+        orgLine.appendChild(document.createTextNode(" "));
+        orgLine.appendChild(el("a", { href: c.organisation.website, target: "_blank", rel: "noopener nofollow ugc" }, c.organisation.website.replace(/^https?:\/\//, "")));
+      }
+      body.appendChild(orgLine);
+      if (c.organisation.team.length) {
+        var team = el("div", { class: "org-team" });
+        team.appendChild(el("h3", {}, "The team"));
+        var ul = el("ul");
+        c.organisation.team.forEach(function (m) {
+          var li = el("li");
+          if (m.username) li.appendChild(el("a", { href: "/u/" + encodeURIComponent(m.username) }, m.name));
+          else li.appendChild(el("strong", {}, m.name));
+          if (m.role) li.appendChild(el("span", { class: "muted" }, " · " + m.role));
+          ul.appendChild(li);
+        });
+        team.appendChild(ul);
+        body.appendChild(team);
+      }
+    }
     if (c.bio) {
       var prose = el("div", { class: "prose work-body" });
       MW.renderMarkup(prose, c.bio);

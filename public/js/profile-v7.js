@@ -48,6 +48,14 @@
     cRow.appendChild(el("p", { class: "error", id: "country-error" }));
     form.appendChild(cRow);
 
+    var gRow = el("div", { class: "form-row" });
+    gRow.appendChild(el("label", { for: "d-gender" }, "Gender (private)"));
+    var gender = el("select", { id: "d-gender" });
+    [["unspecified", "Prefer not to say"], ["male", "Male"], ["female", "Female"]].forEach(function (o) { gender.appendChild(el("option", { value: o[0] }, o[1])); });
+    gender.value = d.gender || "unspecified";
+    gRow.appendChild(gender);
+    if (d.accountType !== "organisation") form.appendChild(gRow);
+
     var chatRow = el("div", { class: "form-row" });
     chatRow.appendChild(el("label", { for: "d-chat" }, "Who can start a chat with you"));
     var chat = el("select", { id: "d-chat", name: "chatPrivacy" });
@@ -70,6 +78,7 @@
     form.addEventListener("submit", function (event) {
       event.preventDefault();
       var json = { country: country.value || undefined, chatPrivacy: chat.value, marketing: mkBox.checked };
+      if (d.accountType !== "organisation") json.gender = gender.value;
       var birth = document.getElementById("d-birth");
       if (birth && birth.value) json.birthDate = birth.value;
       save.disabled = true;

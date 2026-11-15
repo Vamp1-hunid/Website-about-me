@@ -502,3 +502,24 @@ CREATE TABLE IF NOT EXISTS creator_ranks (
   PRIMARY KEY (user_id, scope)
 );
 CREATE INDEX IF NOT EXISTS creator_ranks_scope_idx ON creator_ranks (scope, rank);
+
+-- v10: gender (private, optional "prefer not to say") and organisation accounts.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS gender VARCHAR(12);
+DO $$ BEGIN
+  ALTER TABLE users ADD CONSTRAINT users_gender_check CHECK (gender IS NULL OR gender IN ('male', 'female', 'unspecified'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS account_type VARCHAR(12) NOT NULL DEFAULT 'person';
+DO $$ BEGIN
+  ALTER TABLE users ADD CONSTRAINT users_account_type_check CHECK (account_type IN ('person', 'organisation'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- Organisation / group accounts: one shared account run by a named contact person, with a public team list.
+CREATE TABLE IF NOT EXISTS organisations (
+  user_id      INTEGER PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+  org_name     VARCHAR(100) NOT NULL,
+  org_type     VARCHAR(20)  NOT NULL,
+  website      VARCHAR(300) NOT NULL DEFAULT '',
+  contact_name VARCHAR(80)  NOT NULL,
+  contact_role VARCHAR(80)  NOT NULL DEFAULT '',
+  team         JSONB        NOT NULL DEFAULT '[]',
+  created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);

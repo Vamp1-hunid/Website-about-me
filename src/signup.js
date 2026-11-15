@@ -56,10 +56,15 @@ function passwordProblem(password, username) {
   return null;
 }
 
+// Gender is optional and private: male, female, or "prefer not to say".
+function checkGender(value) {
+  return ["male", "female", "unspecified"].includes(value) ? value : null;
+}
+
 function isMinor(birthDate) {
   if (!birthDate) return null; // unknown
   const d = birthDate instanceof Date ? birthDate : new Date(birthDate);
   return ageOn(d) < ADULT_AGE;
 }
 
-module.exports = { MIN_AGE, ADULT_AGE, TERMS_VERSION, checkBirthDate, checkCountry, passwordProblem, isMinor, ageOn };
+module.exports = { checkGender, MIN_AGE, ADULT_AGE, TERMS_VERSION, checkBirthDate, checkCountry, passwordProblem, isMinor, ageOn };

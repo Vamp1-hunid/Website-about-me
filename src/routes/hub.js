@@ -166,10 +166,13 @@ router.get("/creators/:handle", async function (req, res) {
   );
   const card = toCreatorCard(row);
   const premiumOn = await isFlagOn("premium", req);
+  // Organisation / group accounts show what kind of group they are and who's in the team.
+  const orgRow = (await db.query("SELECT org_type, website, team FROM organisations WHERE user_id = $1", [row.user_id])).rows[0];
   res.json({
     creator: Object.assign(card, {
       userId: row.user_id,
       username: row.account_username,
+      organisation: orgRow ? { type: orgRow.org_type, website: orgRow.website, team: orgRow.team || [] } : null,
       // Premium creators' page style (only shown while the Premium feature is on for this visitor).
       premium: premiumOn && planOf(row).customPage,
       pageStyle: premiumOn && (planOf(row).customPage || row.role === "admin") && (row.page_theme || row.page_accent || row.page_wallpaper_url) ? {
