@@ -142,7 +142,7 @@
     var box = el("div", { class: "tribute", "aria-label": "A tribute to our creators" });
     box.appendChild(el("p", { class: "tribute-title" }, "Made possible by our creators"));
     box.appendChild(el("p", { class: "muted tribute-lead" },
-      "Every novel, storybook, song, lesson, comic, film and drawing here exists because someone was brave enough to share it. Thank you to every creator in the hive."));
+      "Every novel, storybook, song, lesson, comic, film and drawing here was shared by a creator from our community, people just like you. Thank you to every one of them."));
     var track = el("div", { class: "tribute-track" });
     var reel = el("div", { class: "tribute-reel" });
     track.appendChild(reel);

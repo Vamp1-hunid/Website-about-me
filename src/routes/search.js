@@ -177,7 +177,7 @@ const SUPPORT_TYPES = ["card", "mobile-money", "paypal", "bank", "link"];
 const DEFAULT_SUPPORT = {
   enabled: false,
   title: "Fund the heist",
-  message: "Every story here is made by one person. If you enjoy the work, you can chip in to keep the presses running.",
+  message: "Chapterhive is free for creators and readers. If you enjoy it, you can chip in to keep the hive running.",
   methods: []
 };
 
@@ -193,7 +193,12 @@ async function readSupport() {
 // GET /api/support -> what the button shows (nothing at all while it's switched off)
 router.get("/support", async function (req, res) {
   const support = await readSupport();
-  if (!support.enabled || !support.methods.length || !(await flagsLib.isOn("donations", req))) return res.json({ enabled: false });
+  if (!(await flagsLib.isOn("donations", req))) return res.json({ enabled: false });
+  // Switched on but no payment methods yet: the button still shows, with a "coming soon" note.
+  if (!support.enabled || !support.methods.length) {
+    return res.json({ enabled: true, comingSoon: true, title: support.title || "Fund the heist",
+      message: "Ways to support Chapterhive are being set up. Check back soon!", methods: [] });
+  }
   res.json(support);
 });
 

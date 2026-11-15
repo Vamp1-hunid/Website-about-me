@@ -127,7 +127,7 @@
     async function tribute() {
       var box = el("div", { class: "onboard-tribute" });
       box.appendChild(line("Made possible by our creators", "big"));
-      box.appendChild(line("Every novel, storybook, song, lesson, comic, film and drawing here exists because someone was brave enough to share it.", "sub"));
+      box.appendChild(line("Every novel, storybook, song, lesson, comic, film and drawing here was shared by a creator from our community, people just like you.", "sub"));
       var reel = el("div", { class: "onboard-reel" });
       box.appendChild(reel);
       try {
