@@ -36,7 +36,7 @@
       event.preventDefault();
       var boxes = termsStep.querySelectorAll("input[type='checkbox']");
       var missing = Array.prototype.filter.call(boxes, function (b) { return !b.checked; });
-      document.getElementById("terms-error").textContent = missing.length ? "Please tick all four boxes to continue." : "";
+      document.getElementById("terms-error").textContent = missing.length ? "Please tick all three boxes to continue." : "";
       if (missing.length) { missing[0].focus(); return; }
       showDetails();
     });
@@ -126,18 +126,79 @@
     if (!/^[a-z0-9_]{3,30}$/.test(username)) {
       problems.push({ field: "username", message: "Use 3 to 30 characters: lowercase letters, numbers or _." });
     }
+    var birth = value("birthDate");
+    if (!birth) problems.push({ field: "birthDate", message: "Enter your date of birth." });
+    else if (ageOf(birth) < 13) problems.push({ field: "birthDate", message: "You need to be at least 13 to create an account." });
+    if (!value("country")) problems.push({ field: "country", message: "Choose the country you live in." });
     if (googlePending) return problems;
-    if (value("password").length < 8) {
-      problems.push({ field: "password", message: "Password must be at least 8 characters." });
+    if (value("password").length < 10) {
+      problems.push({ field: "password", message: "Use at least 10 characters." });
     }
     var email = value("email").trim();
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
-      problems.push({ field: "email", message: "That email address doesn't look right (or leave it empty)." });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      problems.push({ field: "email", message: "Enter a working email address." });
     }
     if (value("password2") !== value("password")) {
       problems.push({ field: "password2", message: "The two passwords don't match." });
     }
     return problems;
+  }
+
+  function ageOf(isoDate) {
+    var p = isoDate.split("-").map(Number);
+    var now = new Date();
+    var age = now.getFullYear() - p[0];
+    if (now.getMonth() + 1 < p[1] || (now.getMonth() + 1 === p[1] && now.getDate() < p[2])) age -= 1;
+    return age;
+  }
+
+  /* ---------- Join: country list, password strength, show password ---------- */
+  var countrySelect = document.getElementById("country");
+  if (countrySelect) {
+    var codes = ("AF AL DZ AD AO AG AR AM AU AT AZ BS BH BD BB BY BE BZ BJ BT BO BA BW BR BN BG BF BI CV KH CM CA CF TD CL CN CO KM CG CD CR CI HR CU CY CZ " +
+      "DK DJ DM DO EC EG SV GQ ER EE SZ ET FJ FI FR GA GM GE DE GH GR GD GT GN GW GY HT HN HK HU IS IN ID IR IQ IE IL IT JM JP JO KZ KE KI KW KG " +
+      "LA LV LB LS LR LY LI LT LU MO MG MW MY MV ML MT MH MR MU MX FM MD MC MN ME MA MZ MM NA NR NP NL NZ NI NE NG KP MK NO OM PK PW PS PA PG PY " +
+      "PE PH PL PT PR QA RO RU RW KN LC VC WS SM ST SA SN RS SC SL SG SK SI SB SO ZA KR SS ES LK SD SR SE CH SY TW TJ TZ TH TL TG TO TT TN TR TM TV " +
+      "UG UA AE GB US UY UZ VU VA VE VN YE ZM ZW").split(" ");
+    var names;
+    try { names = new Intl.DisplayNames([navigator.language || "en"], { type: "region" }); } catch (e) { names = null; }
+    codes.map(function (c) { return [c, names ? names.of(c) : c]; })
+      .sort(function (a, b) { return a[1].localeCompare(b[1]); })
+      .forEach(function (c) { countrySelect.appendChild(MW.el("option", { value: c[0] }, c[1])); });
+    // Pre-select the visitor's likely country from their browser language (e.g. en-ZM -> ZM).
+    var guess = (navigator.language || "").split("-")[1];
+    if (guess && codes.indexOf(guess.toUpperCase()) >= 0) countrySelect.value = guess.toUpperCase();
+    var bd = document.getElementById("birthDate");
+    if (bd) bd.max = new Date().toISOString().slice(0, 10);
+  }
+
+  var pw = registerForm && document.getElementById("password");
+  if (pw) {
+    var bar = document.getElementById("strength-bar");
+    var label = document.getElementById("password-strength");
+    pw.addEventListener("input", function () {
+      var v = pw.value;
+      var score = 0;
+      if (v.length >= 10) score++;
+      if (v.length >= 14) score++;
+      if (/[a-z]/.test(v) && /[A-Z]/.test(v)) score++;
+      if (/\d/.test(v)) score++;
+      if (/[^A-Za-z0-9]/.test(v) || /\s/.test(v)) score++;
+      if (v.length < 10) score = Math.min(score, 1);
+      var levels = ["", "Too short", "Weak", "Okay", "Strong", "Very strong"];
+      bar.style.width = (score * 20) + "%";
+      bar.setAttribute("data-score", String(score));
+      label.textContent = v ? levels[Math.max(1, score)] : "";
+    });
+    var toggle = document.getElementById("toggle-password");
+    toggle.addEventListener("click", function () {
+      var showing = pw.type === "text";
+      pw.type = showing ? "password" : "text";
+      var pw2 = document.getElementById("password2");
+      if (pw2) pw2.type = pw.type;
+      toggle.textContent = showing ? "Show" : "Hide";
+      toggle.setAttribute("aria-pressed", String(!showing));
+    });
   }
 
   function checkLogin() {
@@ -168,18 +229,27 @@
           json: { username: value("username"), password: value("password"), adminOnly: !MW.isHub }
         });
       } else if (googlePending) {
-        var done = await MW.api("/account/google-complete", { method: "POST", json: { username: value("username"), acceptTerms: !termsStep || termsStep.hidden } });
+        var done = await MW.api("/account/google-complete", { method: "POST", json: { username: value("username"), acceptTerms: !termsStep || termsStep.hidden,
+          birthDate: value("birthDate"), country: value("country"), marketing: document.getElementById("marketing").checked } });
         window.location.href = MW.safeNext(done.next, next);
         return;
       } else {
         await MW.api("/account/register", {
           method: "POST",
           json: { username: value("username"), displayName: value("displayName"), email: value("email"), password: value("password"),
-            acceptTerms: !termsStep || termsStep.hidden }
+            acceptTerms: !termsStep || termsStep.hidden, birthDate: value("birthDate"), country: value("country"),
+            marketing: document.getElementById("marketing").checked }
         });
       }
       window.location.href = next;
     } catch (error) {
+      if (error.data && error.data.tooYoung) {
+        // Under 13: no account, nothing stored. Explain kindly and close the form.
+        form.textContent = "";
+        form.appendChild(MW.el("p", { class: "lead" }, "Sorry, you need to be at least 13 to join Chapterhive."));
+        form.appendChild(MW.el("p", { class: "muted" }, "You can still read the news, look at new releases and browse creators without an account. Come back when you're 13!"));
+        return;
+      }
       MW.showProblems(form, (error.data && error.data.problems) || []);
       feedback.textContent = error.message;
       button.disabled = false;

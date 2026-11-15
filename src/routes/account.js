@@ -12,6 +12,7 @@ const { thumbnailUrl, upload, saveImage, deleteImage, avatarUrl } = require("../
 const { mailEnabled, sendMail } = require("../mail");
 const users = require("../users");
 const flags = require("../flags");
+const signup = require("../signup");
 
 const router = express.Router();
 
@@ -26,7 +27,8 @@ const loginLimiter = rateLimit({
 
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  limit: 5,
+  limit: Number(process.env.SIGNUP_LIMIT_PER_HOUR) || 5,
+  skipFailedRequests: true, // typos in the form don't use up the allowance
   standardHeaders: "draft-8",
   legacyHeaders: false,
   message: { error: "Too many new accounts from this connection. Please try again later." }
@@ -48,10 +50,21 @@ router.post("/register", registerLimiter, async function (req, res) {
   const displayName = cleanText(req.body.displayName) || username;
   const password = typeof req.body.password === "string" ? req.body.password : "";
   const email = cleanText(req.body.email).toLowerCase();
+  const birth = signup.checkBirthDate(req.body.birthDate);
+  const country = signup.checkCountry(req.body.country);
 
   const problems = [];
-  if (email && (email.length > 254 || !EMAIL_PATTERN.test(email))) {
-    problems.push({ field: "email", message: "That email address doesn't look right (or leave it empty)." });
+  // Under-13s are turned away before anything else is checked, and nothing about them is stored.
+  if (birth.tooYoung) {
+    return res.status(403).json({ error: birth.problem, tooYoung: true, problems: [{ field: "birthDate", message: birth.problem }] });
+  }
+  if (birth.problem) problems.push({ field: "birthDate", message: birth.problem });
+  if (!country) problems.push({ field: "country", message: "Choose the country you live in." });
+  if (!email || email.length > 254 || !EMAIL_PATTERN.test(email)) {
+    problems.push({ field: "email", message: "Enter a working email address. It's used to verify your account and reset your password." });
+  } else {
+    const used = await db.query("SELECT 1 FROM users WHERE lower(email) = $1", [email]);
+    if (used.rows.length) problems.push({ field: "email", message: "That email already has an account. Log in or reset your password instead." });
   }
   const usernameIssue = await users.usernameProblem(username);
   if (usernameIssue) {
@@ -60,9 +73,8 @@ router.post("/register", registerLimiter, async function (req, res) {
   if (displayName.length > 60) {
     problems.push({ field: "displayName", message: "Display name must be 60 characters or fewer." });
   }
-  if (password.length < 8 || password.length > 200) {
-    problems.push({ field: "password", message: "Password must be at least 8 characters." });
-  }
+  const passwordIssue = signup.passwordProblem(password, username);
+  if (passwordIssue) problems.push({ field: "password", message: passwordIssue });
   if (req.body.acceptTerms !== true) {
     problems.push({ field: "acceptTerms", message: "Please accept the Terms of Service and Privacy Policy." });
   }
@@ -73,11 +85,13 @@ router.post("/register", registerLimiter, async function (req, res) {
 
   const hash = await bcrypt.hash(password, 12);
   const { rows } = await db.query(
-    "INSERT INTO users (username, display_name, password_hash, role, email, terms_accepted_at) VALUES ($1, $2, $3, 'member', $4, NOW()) RETURNING *",
-    [username, displayName, hash, email || null]
+    `INSERT INTO users (username, display_name, password_hash, role, email, terms_accepted_at, terms_version, birth_date, country, marketing_opt_in)
+     VALUES ($1, $2, $3, 'member', $4, NOW(), $5, $6, $7, $8) RETURNING *`,
+    [username, displayName, hash, email, signup.TERMS_VERSION, birth.date, country, req.body.marketing === true]
   );
 
   await users.welcome(rows[0].id, "member");
+  sendVerification(req, rows[0]).catch(function () { /* email is optional to deliver */ });
   await startSession(req, rows[0]);
   res.status(201).json({ user: req.session.user });
 });
@@ -96,15 +110,26 @@ router.post("/google-complete", registerLimiter, async function (req, res) {
   if (req.body.acceptTerms !== true) {
     return res.status(400).json({ error: "Please accept the terms to create your account.", problems: [{ field: "acceptTerms", message: "Please accept the Terms of Service and Privacy Policy." }] });
   }
+  const birth = signup.checkBirthDate(req.body.birthDate);
+  const country = signup.checkCountry(req.body.country);
+  if (birth.tooYoung) {
+    delete req.session.pendingGoogle;
+    return res.status(403).json({ error: birth.problem, tooYoung: true, problems: [{ field: "birthDate", message: birth.problem }] });
+  }
+  const early = [];
+  if (birth.problem) early.push({ field: "birthDate", message: birth.problem });
+  if (!country) early.push({ field: "country", message: "Choose the country you live in." });
+  if (early.length) return res.status(400).json({ error: "Please fix the highlighted fields.", problems: early });
   const username = cleanText(req.body.username).toLowerCase() || pending.username;
   const issue = await users.usernameProblem(username);
   if (issue) return res.status(400).json({ error: issue, problems: [{ field: "username", message: issue }] });
   const already = await db.query("SELECT 1 FROM users WHERE google_sub = $1", [pending.sub]);
   if (already.rows.length) return res.status(409).json({ error: "This Google account already has an account. Log in instead." });
   const { rows } = await db.query(
-    `INSERT INTO users (username, display_name, password_hash, role, google_sub, email, terms_accepted_at)
-     VALUES ($1, $2, NULL, 'member', $3, $4, NOW()) RETURNING *`,
-    [username, pending.displayName, pending.sub, pending.email]
+    `INSERT INTO users (username, display_name, password_hash, role, google_sub, email, terms_accepted_at, terms_version,
+                        birth_date, country, marketing_opt_in, email_verified_at)
+     VALUES ($1, $2, NULL, 'member', $3, $4, NOW(), $5, $6, $7, $8, NOW()) RETURNING *`,
+    [username, pending.displayName, pending.sub, pending.email, signup.TERMS_VERSION, birth.date, country, req.body.marketing === true]
   );
   const next = pending.next || "/hub";
   delete req.session.pendingGoogle;
@@ -179,11 +204,16 @@ router.get("/me", async function (req, res) {
   let extra = {};
   if (req.session.user) {
     const { rows } = await db.query(
-      "SELECT show_online, streak_count, streak_best, is_beta FROM users WHERE id = $1",
+      "SELECT show_online, streak_count, streak_best, is_beta, birth_date, country, email, email_verified_at, chat_privacy FROM users WHERE id = $1",
       [req.session.user.id]
     );
     if (rows[0]) {
-      extra = { showOnline: rows[0].show_online, streak: rows[0].streak_count, streakBest: rows[0].streak_best, isBeta: rows[0].is_beta };
+      extra = { showOnline: rows[0].show_online, streak: rows[0].streak_count, streakBest: rows[0].streak_best, isBeta: rows[0].is_beta,
+        account: {
+          hasBirthDate: Boolean(rows[0].birth_date), country: rows[0].country || null,
+          teen: rows[0].birth_date ? signup.isMinor(rows[0].birth_date) : null,
+          hasEmail: Boolean(rows[0].email), emailVerified: Boolean(rows[0].email_verified_at), chatPrivacy: rows[0].chat_privacy
+        } };
     }
   }
   const features = await flags.enabledFor(req.session.user ? Object.assign({}, req.session.user, { is_beta: extra.isBeta }) : null);
@@ -191,6 +221,76 @@ router.get("/me", async function (req, res) {
     user: req.session.user || null, creator: creator, googleEnabled: googleEnabled(), mailEnabled: mailEnabled(),
     features: features
   }, extra));
+});
+
+/* ---------- Email verification ---------- */
+
+async function sendVerification(req, user) {
+  if (!user.email || user.email_verified_at || !mailEnabled()) return false;
+  const token = crypto.randomBytes(24).toString("hex");
+  await db.query("UPDATE users SET email_verify_token = $1 WHERE id = $2", [token, user.id]);
+  const base = (process.env.PUBLIC_URL || req.protocol + "://" + req.get("host")).replace(/\/+$/, "");
+  const link = base + "/hub/verify?token=" + token;
+  await sendMail(user.email, "Confirm your Chapterhive email",
+    "Hi " + user.display_name + ",\n\nPlease confirm this is your email address by opening this link:\n" + link +
+    "\n\nIf you didn't create an account, you can ignore this email.",
+    "<p>Hi " + escapeHtml(user.display_name) + ",</p><p>Please confirm this is your email address:</p><p><a href=\"" + link + "\">Confirm my email</a></p><p>If you didn't create an account, you can ignore this email.</p>");
+  return true;
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]; });
+}
+
+const verifyLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: "draft-8", legacyHeaders: false,
+  message: { error: "Too many emails. Please try again later." } });
+
+// POST /api/account/verify/send  -> sends (again) the confirmation link
+router.post("/verify/send", requireLogin, verifyLimiter, async function (req, res) {
+  const { rows } = await db.query("SELECT * FROM users WHERE id = $1", [req.session.user.id]);
+  if (!rows[0].email) return res.status(400).json({ error: "Add an email address first." });
+  if (rows[0].email_verified_at) return res.json({ ok: true, already: true });
+  if (!mailEnabled()) return res.status(503).json({ error: "Email isn't set up on this site yet." });
+  await sendVerification(req, rows[0]);
+  res.json({ ok: true });
+});
+
+// POST /api/account/verify { token }
+router.post("/verify", async function (req, res) {
+  const token = typeof req.body.token === "string" ? req.body.token : "";
+  if (!/^[a-f0-9]{48}$/.test(token)) return res.status(400).json({ error: "That link isn't valid." });
+  const { rows } = await db.query(
+    "UPDATE users SET email_verified_at = NOW(), email_verify_token = NULL WHERE email_verify_token = $1 RETURNING id", [token]);
+  if (!rows.length) return res.status(400).json({ error: "That link has expired or was already used." });
+  res.json({ ok: true });
+});
+
+// PUT /api/account/details { birthDate, country, marketing, chatPrivacy }
+// Accounts made before birth dates were asked for can add theirs once. After that only the admin can change it.
+router.put("/details", requireLogin, async function (req, res) {
+  const { rows } = await db.query("SELECT birth_date FROM users WHERE id = $1", [req.session.user.id]);
+  const problems = [];
+  const sets = [];
+  const values = [];
+  if (req.body.birthDate !== undefined && !rows[0].birth_date) {
+    const birth = signup.checkBirthDate(req.body.birthDate);
+    if (birth.problem) problems.push({ field: "birthDate", message: birth.tooYoung
+      ? "Chapterhive is for people aged " + signup.MIN_AGE + " and over. Please ask a parent or guardian to contact us." : birth.problem });
+    else { values.push(birth.date); sets.push("birth_date = $" + values.length); }
+  }
+  if (req.body.country !== undefined) {
+    const country = signup.checkCountry(req.body.country);
+    if (!country) problems.push({ field: "country", message: "Choose a country." });
+    else { values.push(country); sets.push("country = $" + values.length); }
+  }
+  if (typeof req.body.marketing === "boolean") { values.push(req.body.marketing); sets.push("marketing_opt_in = $" + values.length); }
+  if (["everyone", "nobody"].includes(req.body.chatPrivacy)) { values.push(req.body.chatPrivacy); sets.push("chat_privacy = $" + values.length); }
+  if (problems.length) return res.status(400).json({ error: "Please fix the highlighted fields.", problems: problems });
+  if (sets.length) {
+    values.push(req.session.user.id);
+    await db.query("UPDATE users SET " + sets.join(", ") + " WHERE id = $" + values.length, values);
+  }
+  res.json({ ok: true });
 });
 
 // GET /api/account/favourites  -> the logged-in member's saved works
@@ -261,8 +361,9 @@ router.post("/password", requireLogin, passwordLimiter, async function (req, res
   if (hasPassword && !currentPassword) {
     problems.push({ field: "currentPassword", message: "Enter your current password." });
   }
-  if (newPassword.length < minLength || newPassword.length > 200) {
-    problems.push({ field: "newPassword", message: "The new password must be at least " + minLength + " characters." });
+  const newIssue = signup.passwordProblem(newPassword, req.session.user.username);
+  if (newIssue) {
+    problems.push({ field: "newPassword", message: newIssue });
   } else if (newPassword === currentPassword) {
     problems.push({ field: "newPassword", message: "Choose a password different from your current one." });
   }
@@ -354,7 +455,7 @@ router.put("/email", requireLogin, passwordLimiter, async function (req, res) {
       problems: [{ field: "emailPassword", message: "Enter your current password to change your email." }]
     });
   }
-  await db.query("UPDATE users SET email = $1 WHERE id = $2", [email || null, req.session.user.id]);
+  await db.query("UPDATE users SET email = $1::varchar, email_verified_at = CASE WHEN lower(coalesce(email, '')) = lower(coalesce($1::varchar, '')) THEN email_verified_at ELSE NULL END WHERE id = $2", [email || null, req.session.user.id]);
   res.json({ email: email || null });
 });
 
@@ -490,7 +591,7 @@ async function findValidReset(token) {
 router.get("/reset", forgotLimiter, async function (req, res) {
   const reset = await findValidReset(req.query.token);
   if (!reset) return res.status(400).json({ error: "This reset link has expired or was already used. Ask for a new one." });
-  res.json({ ok: true, username: reset.username, minLength: reset.role === "admin" ? 10 : 8 });
+  res.json({ ok: true, username: reset.username, minLength: 10 });
 });
 
 // POST /api/account/reset  { token, password }
@@ -498,12 +599,9 @@ router.post("/reset", forgotLimiter, async function (req, res) {
   const reset = await findValidReset(req.body.token);
   if (!reset) return res.status(400).json({ error: "This reset link has expired or was already used. Ask for a new one." });
   const password = typeof req.body.password === "string" ? req.body.password : "";
-  const minLength = reset.role === "admin" ? 10 : 8;
-  if (password.length < minLength || password.length > 200) {
-    return res.status(400).json({
-      error: "Please fix the highlighted fields.",
-      problems: [{ field: "password", message: "The new password must be at least " + minLength + " characters." }]
-    });
+  const resetIssue = signup.passwordProblem(password, reset.username);
+  if (resetIssue) {
+    return res.status(400).json({ error: "Please fix the highlighted fields.", problems: [{ field: "password", message: resetIssue }] });
   }
   await db.query("UPDATE users SET password_hash = $1 WHERE id = $2", [await bcrypt.hash(password, 12), reset.user_id]);
   // Every link for this account stops working, and every device is signed out.

@@ -74,7 +74,7 @@ function toCreatorCard(row) {
 }
 
 const CREATOR_SQL = `
-  SELECT cp.*, u.avatar_url, u.role, u.created_at AS joined, u.streak_count,
+  SELECT cp.*, u.username AS account_username, u.avatar_url, u.role, u.created_at AS joined, u.streak_count,
     (u.show_online AND u.last_seen_at > NOW() - INTERVAL '5 minutes') AS online,
     (SELECT COUNT(*) FROM follows f WHERE f.creator_id = cp.user_id)::int AS followers,
     (SELECT COUNT(*) FROM posts p WHERE p.user_id = cp.user_id AND p.category <> 'news' AND ${VISIBLE})::int AS works
@@ -162,6 +162,7 @@ router.get("/creators/:handle", async function (req, res) {
   res.json({
     creator: Object.assign(card, {
       userId: row.user_id,
+      username: row.account_username,
       bio: row.bio,
       links: parseLinks(row.links),
       bannerUrl: storage.displayUrl(row.banner_url, "image") || null,

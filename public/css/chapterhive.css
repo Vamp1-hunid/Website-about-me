@@ -245,6 +245,7 @@ body[data-brand="chapterhive"] .sticker {
 
 body[data-brand="chapterhive"] input[type="text"],
 body[data-brand="chapterhive"] input[type="email"],
+body[data-brand="chapterhive"] input[type="date"],
 body[data-brand="chapterhive"] input[type="password"],
 body[data-brand="chapterhive"] input[type="search"],
 body[data-brand="chapterhive"] input[type="url"],

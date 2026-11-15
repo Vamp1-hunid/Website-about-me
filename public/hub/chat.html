@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat | Chapterhive</title>
+  <meta name="description" content="Chat with other members and share what you are reading and watching.">
+  
+  <meta property="og:site_name" content="Chapterhive">
+  <meta property="og:title" content="Chat | Chapterhive">
+  <meta property="og:description" content="Chat with other members and share what you are reading and watching.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://mulenga-mwamba-website.onrender.com/images/chapterhive-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#0e0b07">
+  <link rel="icon" href="/images/chapterhive-mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css?v=12">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=4">
+  <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
+  <script src="/js/theme-boot.js"></script>
+</head>
+<body data-page="chat" data-brand="chapterhive">
+
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <a class="af-brand" href="/hub" aria-label="Chapterhive, home">
+      <img src="/images/chapterhive-mark.svg" alt="" width="34" height="34">
+      <span>Chapter<b>hive</b></span>
+    </a>
+    <div class="header-actions">
+      <div class="auth-area" id="auth-area"></div>
+      <form class="header-search" action="/hub/search" method="get" role="search">
+        <label class="sr-only" for="header-q">Search Chapterhive</label>
+        <input type="search" id="header-q" name="q" placeholder="Search creators, works&hellip;" maxlength="80" autocomplete="off">
+      </form>
+      <button id="menu-toggle" class="btn btn-ghost btn-small menu-toggle" type="button"
+              aria-expanded="false" aria-controls="site-menu" aria-label="Open menu">
+        <span class="bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
+      <button id="theme-toggle" class="btn btn-ghost btn-small" type="button">Light mode</button>
+    </div>
+  </header>
+
+  <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+    <a href="/hub" data-nav="hub">Home</a>
+    <a href="/hub/creators" data-nav="creators">Creators</a>
+    <a href="/hub/feed" data-nav="feed">Following</a>
+    <a href="/hub/news" data-nav="news">News &amp; updates</a>
+    <a href="/hub/collabs" data-nav="collabs">Collabs</a>
+    <a href="/hub/apply" data-nav="apply">Become a creator</a>
+    <a href="/hub/sponsor" data-nav="sponsor">Sponsor</a>
+    <a href="/">God's Banditos</a>
+  </nav>
+
+  <main id="main">
+    <section class="panel chat-shell" aria-labelledby="chat-title">
+      <p class="node-label">Members // chat</p>
+      <h1 id="chat-title">Chat</h1>
+      <div id="chat-gate"></div>
+      <div class="chat-layout" id="chat-layout" hidden>
+        <aside class="chat-list" aria-label="Conversations">
+          <form id="chat-new" class="chat-new" novalidate>
+            <label for="chat-new-user" class="sr-only">Start a chat with (username)</label>
+            <input type="text" id="chat-new-user" placeholder="Start a chat: @username" autocapitalize="none" spellcheck="false" maxlength="31">
+            <button type="submit" class="btn-small">Start</button>
+          </form>
+          <p class="error" id="chat-new-error" aria-live="polite"></p>
+          <ul id="chat-threads" class="chat-threads"></ul>
+        </aside>
+        <section class="chat-thread" id="chat-thread" aria-live="polite">
+          <p class="muted chat-empty">Pick a conversation, or start a new one. You can share works from any work page with the "Share in chat" button.</p>
+        </section>
+      </div>
+      <p class="muted chat-safety">Be kind. Never share passwords, money or where you live. Teen accounts (13&ndash;17) can only chat with other teen accounts. You can block or report anyone from a conversation.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p class="footer-brand"><img src="/images/chapterhive-mark.svg" alt="" width="28" height="28"> &copy; 2026 Chapterhive &middot; a <a href="/">God's Banditos</a> production</p>
+    <p><a href="/legal/terms">Terms</a> &middot; <a href="/legal/privacy">Privacy</a> &middot; <a href="/legal/creator-agreement">Creator Agreement</a> &middot; <a href="/legal/content-rules">Content Rules</a> &middot; <a href="/contact">Contact</a></p>
+  </footer>
+
+  <script src="/js/api.js" defer></script>
+  <script src="/js/script.js" defer></script>
+  <script src="/js/markup.js" defer></script>
+  <script src="/js/hub.js" defer></script>
+  <script src="/js/chat.js" defer></script>
+</body>
+</html>
