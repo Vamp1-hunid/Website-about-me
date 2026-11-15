@@ -1284,3 +1284,20 @@ body[data-brand="chapterhive"] .aside-hero::after { display: none; }
 .settings-links a { display: block; padding: 0.6rem 0.4rem; border-radius: 10px; text-decoration: none; color: var(--ink); }
 .settings-links a:hover { background: var(--panel-2); }
 .settings-btn { font-size: 1rem; }
+
+/* ===== v13: username reservation campaign ===== */
+.reserve-hero { text-align: center; }
+.reserve-hero h1 { font-size: clamp(2.2rem, 6vw, 3.8rem); }
+.reserve-hero .lead { max-width: 40rem; margin-inline: auto; }
+.reserve-stats { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; }
+.reserve-stats > div { display: grid; padding: 0.9rem 1.4rem; border-radius: 16px; background: var(--panel-2); border: 1px solid var(--line); min-width: 10rem; }
+.reserve-stats strong { font: 800 1.8rem/1.1 var(--font-display); color: var(--pink); }
+.reserve-stats span { font-size: 0.85rem; color: var(--ink-dim); }
+.reserve-at { display: flex; align-items: center; gap: 0.3rem; }
+.reserve-at span { font: 800 1.2rem/1 var(--font-display); color: var(--pink); }
+.reserve-at input { flex: 1; }
+.reserve-success { font: 800 1.8rem/1.2 var(--font-display); margin: 0.4rem 0; }
+.reserve-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 0.6rem; }
+.reserve-table th, .reserve-table td { text-align: left; padding: 0.45rem 0.4rem; border-bottom: 1px solid var(--line); }
+.reserve-btn { box-shadow: 0 0 14px color-mix(in srgb, var(--pink) 45%, transparent); }
+#reserve-list { overflow-x: auto; }

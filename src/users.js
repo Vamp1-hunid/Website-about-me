@@ -26,7 +26,7 @@ function isReserved(name) {
 }
 
 // Returns null if the username can be used, otherwise a friendly reason.
-async function usernameProblem(name, ignoreUserId) {
+async function usernameProblem(name, ignoreUserId, claimToken) {
   const username = String(name || "").trim().toLowerCase();
   if (!USERNAME_PATTERN.test(username)) return "Use 3–30 lowercase letters, numbers or underscores.";
   if (isReserved(username)) return "That username is reserved. Please choose another.";
@@ -35,6 +35,9 @@ async function usernameProblem(name, ignoreUserId) {
     [username, ignoreUserId || null]
   );
   if (rows.length) return "That username is already taken.";
+  // Reserved before launch by someone else (the reserver claims it with their link).
+  const held = await db.query("SELECT claim_token FROM username_reservations WHERE username = $1 AND claimed_at IS NULL", [username]);
+  if (held.rows.length && held.rows[0].claim_token !== claimToken) return "That username has been reserved by someone.";
   return null;
 }
 

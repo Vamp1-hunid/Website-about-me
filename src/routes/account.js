@@ -46,7 +46,17 @@ function cleanText(value) {
 }
 
 // POST /api/account/register  { username, displayName, password }
-router.post("/register", flags.requireFlag("signups"), registerLimiter, async function (req, res) {
+// People claiming a reserved username can join even while new accounts are switched off.
+async function signupsOrClaim(req, res, next) {
+  const token = typeof req.body.claimToken === "string" ? req.body.claimToken : "";
+  if (token) {
+    const r = await db.query("SELECT 1 FROM username_reservations WHERE claim_token = $1 AND claimed_at IS NULL", [token]);
+    if (r.rows.length) return next();
+  }
+  return flags.requireFlag("signups")(req, res, next);
+}
+
+router.post("/register", signupsOrClaim, registerLimiter, async function (req, res) {
   const username = cleanText(req.body.username).toLowerCase();
   const displayName = cleanText(req.body.displayName) || username;
   const password = typeof req.body.password === "string" ? req.body.password : "";
@@ -68,7 +78,8 @@ router.post("/register", flags.requireFlag("signups"), registerLimiter, async fu
     const used = await db.query("SELECT 1 FROM users WHERE lower(email) = $1", [email]);
     if (used.rows.length) problems.push({ field: "email", message: "That email already has an account. Log in or reset your password instead." });
   }
-  const usernameIssue = await users.usernameProblem(username);
+  const claimToken = typeof req.body.claimToken === "string" ? req.body.claimToken : undefined;
+  const usernameIssue = await users.usernameProblem(username, null, claimToken);
   if (usernameIssue) {
     problems.push({ field: "username", message: usernameIssue });
   }
@@ -93,6 +104,14 @@ router.post("/register", flags.requireFlag("signups"), registerLimiter, async fu
   );
 
   await users.welcome(rows[0].id, "member");
+  if (claimToken) {
+    // The reserved name is now a real account. If they claimed with the same email, it's already confirmed.
+    const claimed = await db.query("UPDATE username_reservations SET claimed_at = NOW() WHERE claim_token = $1 AND username = $2 RETURNING email", [claimToken, username]);
+    if (claimed.rows[0] && claimed.rows[0].email === email) {
+      await db.query("UPDATE users SET email_verified_at = NOW() WHERE id = $1", [rows[0].id]);
+      rows[0].email_verified_at = new Date();
+    }
+  }
   sendVerification(req, rows[0]).catch(function () { /* email is optional to deliver */ });
   await startSession(req, rows[0]);
   res.status(201).json({ user: req.session.user });
