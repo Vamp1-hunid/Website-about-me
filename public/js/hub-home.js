@@ -20,7 +20,7 @@
     MW.renderWorks(document.getElementById("home-latest"), data.latest, "No releases yet. Check back soon.");
     var news = document.getElementById("home-news");
     news.textContent = "";
-    if (!data.news.length) news.appendChild(el("p", { class: "empty" }, "No anime updates yet."));
+    if (!data.news.length) news.appendChild(el("p", { class: "empty" }, "No news yet."));
     data.news.forEach(function (n) { news.appendChild(MW.newsItem(n)); });
   }).catch(function (error) {
     document.getElementById("home-creators").textContent = error.message;

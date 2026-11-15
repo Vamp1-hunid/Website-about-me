@@ -38,7 +38,7 @@
   --success: #4dffb0;
   --focus: #ffe23d;
   --field-bg: #0f0d15;
-  --halftone: rgba(255, 46, 151, 0.07);
+  --halftone: rgba(255, 46, 151, 0.09);
   --map-node: 255, 46, 151;  /* r, g, b for the network map canvas */
   --map-line: 25, 227, 255;
   --shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
@@ -70,7 +70,7 @@
   --success: #106b3e;
   --focus: #6b2bd6;
   --field-bg: #ffffff;
-  --halftone: rgba(209, 0, 107, 0.06);
+  --halftone: rgba(209, 0, 107, 0.16);
   --map-node: 209, 0, 107;
   --map-line: 0, 106, 128;
   --shadow: 0 14px 30px rgba(40, 20, 60, 0.12);
@@ -171,7 +171,7 @@ a:hover {
 }
 
 :root[data-theme="light"] #net-map {
-  opacity: 0.5;
+  opacity: 0.75;
 }
 
 /* Very faint scanlines over the whole page (dark theme only). */
@@ -2244,46 +2244,6 @@ button[type="submit"]:hover::after {
   height: 22px;
 }
 
-/* --- Page wipe between pages --- */
-html.is-wiping::after {
-  content: "GOD'S BANDITOS \25B8 ROUTING";
-  position: fixed;
-  inset: 0;
-  z-index: 500;
-  display: grid;
-  place-items: center;
-  font: 700 clamp(1rem, 3vw, 1.4rem) var(--font-mono);
-  letter-spacing: 0.2em;
-  color: #f3eff8;
-  background:
-    repeating-linear-gradient(-45deg, rgba(255, 46, 151, 0.16) 0 14px, transparent 14px 28px),
-    #0b0a10;
-  /* fail-safe: uncover the page after 1.5 s even if the script never runs */
-  animation: wipe-failsafe 0s linear 1.5s forwards;
-}
-
-html.is-wiping.wipe-in::after {
-  animation: wipe-in 0.22s cubic-bezier(0.7, 0, 0.3, 1) both;
-}
-
-html.is-wiping.wipe-out::after {
-  animation: wipe-out 0.4s cubic-bezier(0.7, 0, 0.3, 1) both;
-}
-
-@keyframes wipe-in {
-  from { clip-path: inset(0 100% 0 0); }
-  to   { clip-path: inset(0 0 0 0); }
-}
-
-@keyframes wipe-out {
-  from { clip-path: inset(0 0 0 0); }
-  to   { clip-path: inset(0 0 0 100%); }
-}
-
-@keyframes wipe-failsafe {
-  to { visibility: hidden; }
-}
-
 
 /* =========================================================
    24. God's Banditos branding
@@ -4257,3 +4217,19 @@ a.bell-link:hover { background: var(--panel-2); }
 .username-hint.is-ok { color: var(--success); }
 .username-hint.is-bad { color: var(--error); }
 @media (max-width: 640px) { .help-fab { bottom: 4.6rem; } .user-row { grid-template-columns: 1fr; } }
+
+
+/* ===== v6: daylight polish for God's Banditos ===== */
+:root[data-theme="light"] body {
+  background-image:
+    radial-gradient(var(--halftone) 1.3px, transparent 1.5px),
+    linear-gradient(180deg, rgba(209, 0, 107, 0.05), transparent 40%);
+  background-size: 14px 14px, 100% 100%;
+}
+:root[data-theme="light"] .panel {
+  box-shadow: 0 1px 0 rgba(23, 19, 31, 0.06), 0 14px 30px rgba(40, 20, 60, 0.10);
+}
+@media (max-width: 760px) {
+  :root[data-theme="light"] body { background-size: 12px 12px, 100% 100%; }
+  :root[data-theme="light"] #net-map { opacity: 0.6; }
+}

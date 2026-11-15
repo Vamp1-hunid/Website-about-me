@@ -4,7 +4,7 @@
 // Only lets the request through if someone is logged in.
 function requireLogin(req, res, next) {
   if (!req.session.user) {
-    return res.status(401).json({ error: "Please log in first." });
+    return res.status(401).json({ error: "Create a free account or log in to do that.", signup: true });
   }
   next();
 }

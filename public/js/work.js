@@ -37,7 +37,7 @@
   function wireToggle(button, kind, labelOn, labelOff, showCount) {
     button.addEventListener("click", async function () {
       if (!user) {
-        window.location.href = loginUrl();
+        window.location.href = "/register?next=" + encodeURIComponent(MW.currentPath());
         return;
       }
       var on = button.getAttribute("aria-pressed") === "true";
@@ -141,7 +141,7 @@
     document.title = post.title + (MW.isHub ? " | Chapterhive" : " | God's Banditos");
     if (MW.isHub) {
       var back = document.getElementById("back-link");
-      if (back && post.category === "news") { back.href = "/hub/news"; back.textContent = "← Anime updates"; }
+      if (back && post.category === "news") { back.href = "/hub/news"; back.textContent = "← News & updates"; }
       else if (back && post.creator) { back.href = "/hub/c/" + encodeURIComponent(post.creator.handle); back.textContent = "← " + post.creator.name; }
     }
     var metaDesc = document.querySelector("meta[name='description']");
@@ -191,6 +191,14 @@
       renderBody(article, true);
       renderDocuments(article);
       if (post.form && MW.renderPoll) MW.renderPoll(article, post);
+    }
+
+    // Visitors without an account only get a preview of the work.
+    if (post.preview && post.locked) {
+      var bits = [];
+      if (post.lockedMedia) bits.push(post.lockedMedia + (post.lockedMedia === 1 ? " more file" : " more files") + (post.hasVideo || post.hasAudio ? " (video and audio included)" : ""));
+      article.appendChild(MW.guestGate("You're reading a preview. Create a free account to read the whole thing" +
+        (bits.length ? ", see " + bits.join(", ") : "") + ", and to like, save and comment."));
     }
 
     renderNav();
@@ -447,6 +455,14 @@
     try {
       var data = await MW.api("/posts/" + post.id + "/comments");
       list.textContent = "";
+      if (data.locked) {
+        var gateItem = el("li");
+        gateItem.appendChild(MW.guestGate(post.comments
+          ? "There " + (post.comments === 1 ? "is 1 comment" : "are " + post.comments + " comments") + " on this. Create a free account to read and join the conversation."
+          : "Create a free account to start the conversation."));
+        list.appendChild(gateItem);
+        return;
+      }
       commentCount = data.comments.length;
       updateCount();
       if (!data.comments.length) showNoComments();

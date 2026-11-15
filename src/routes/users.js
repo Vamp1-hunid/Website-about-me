@@ -5,11 +5,13 @@
 const express = require("express");
 const db = require("../db");
 const { avatarUrl } = require("../storage");
+const { requireLogin } = require("../auth");
 
 const router = express.Router();
 
 // GET /api/users/:username
-router.get("/:username", async function (req, res) {
+// Member pages are for people with an account.
+router.get("/:username", requireLogin, async function (req, res) {
   const username = String(req.params.username || "").toLowerCase();
   if (!/^[a-z0-9_]{3,30}$/.test(username)) {
     return res.status(404).json({ error: "That member could not be found." });

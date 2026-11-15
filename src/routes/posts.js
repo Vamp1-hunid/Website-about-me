@@ -205,7 +205,7 @@ router.get("/", async function (req, res) {
     values.push(category);
     where.push("p.category = $" + values.length);
   } else if (!showDrafts) {
-    where.push("p.category <> 'news'"); // anime updates have their own section on Chapterhive
+    where.push("p.category <> 'news'"); // news posts have their own section on Chapterhive
   }
   if (tag) {
     values.push(tag);
@@ -272,7 +272,7 @@ router.get("/meta/filters", async function (req, res) {
 
 // Previous / next published works: by date overall, and by chapter number inside a series.
 async function neighbours(row) {
-  // Older / newer works by the same creator (anime updates only lead to other updates).
+  // Older / newer works by the same creator (news posts only lead to other updates).
   const brief = "SELECT p.slug, p.title, p.series_order FROM posts p WHERE " + VISIBLE +
     " AND p.section = 'main' AND p.id <> $1 AND p.user_id = " + Number(row.user_id) +
     (row.category === "news" ? " AND p.category = 'news'" : " AND p.category <> 'news'");
@@ -330,12 +330,42 @@ router.get("/:slug", async function (req, res) {
   post.isMine = Boolean(userId && row.user_id === userId);
   post.media = await mediaFor(row.id);
   post.nav = await neighbours(row);
+  // Visitors without an account get a preview: the opening of the text and the first few images.
+  // Video, audio, documents and forms stay locked until they sign up.
+  if (!userId) guestPreview(post);
   if (row.form && userId) {
     const mine = await db.query("SELECT answers FROM form_responses WHERE post_id = $1 AND user_id = $2", [row.id, userId]);
     post.myResponse = mine.rows[0] ? mine.rows[0].answers : null;
   }
   res.json({ post: post });
 });
+
+const PREVIEW_CHARS = 700;
+const PREVIEW_IMAGES = 3;
+
+function guestPreview(post) {
+  const body = post.body || "";
+  let locked = false;
+  if (body.length > PREVIEW_CHARS) {
+    let cut = body.lastIndexOf("\n\n", PREVIEW_CHARS);
+    if (cut < PREVIEW_CHARS / 2) cut = body.lastIndexOf(" ", PREVIEW_CHARS);
+    if (cut < 1) cut = PREVIEW_CHARS;
+    post.body = body.slice(0, cut).trim() + " …";
+    locked = true;
+  }
+  const images = [];
+  let hidden = 0;
+  (post.media || []).forEach(function (m) {
+    if (m.kind === "image" && images.length < PREVIEW_IMAGES) images.push(m);
+    else hidden += 1;
+  });
+  post.media = images;
+  if (post.form) { post.form = null; locked = true; }
+  post.preview = true;
+  post.lockedMedia = hidden;
+  post.locked = locked || hidden > 0;
+  return post;
+}
 
 /* ---------- Admin: create, edit, delete ---------- */
 
@@ -398,7 +428,7 @@ async function validatePost(body, req) {
     if (!found.rows.length) problems.push({ field: "seriesId", message: "That story no longer exists (or isn't yours)." });
   }
   if (values.category === "news" && !req.creator.canWriteNews) {
-    problems.push({ field: "category", message: "Anime updates can only be posted by approved writers." });
+    problems.push({ field: "category", message: "News posts can only be posted by approved writers." });
   }
   if (values.category === "updates" && !req.isAdmin) {
     problems.push({ field: "category", message: "Choose another category." });
@@ -640,6 +670,8 @@ router.get("/:id/comments", async function (req, res) {
   if (!post) {
     return res.status(404).json({ error: "That work could not be found." });
   }
+  // Visitors without an account see how many comments there are, not the conversation itself.
+  if (!req.session.user) return res.json({ comments: [], locked: true });
   const { rows } = await db.query(COMMENT_SELECT + " WHERE c.post_id = $1 ORDER BY c.created_at ASC, c.id ASC LIMIT 1000", [id]);
   res.json({ comments: rows.map(function (row) { return toComment(row, req.session.user, post.user_id); }) });
 });

@@ -82,7 +82,7 @@ function postMeta(req, post, brand) {
   const isNews = post.category === "news";
   return {
     title: post.title + " | " + (brand === "chapterhive" ? "Chapterhive" : "God's Banditos"),
-    description: post.logline || post.summary || (isNews ? "Anime update on Chapterhive." : "A work by " + by + "."),
+    description: post.logline || post.summary || (isNews ? "News on Chapterhive." : "A work by " + by + "."),
     image: storage.thumbnailUrl(post.image_url),
     type: "article",
     jsonLd: {
