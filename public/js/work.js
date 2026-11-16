@@ -377,7 +377,7 @@
     });
     var header = el("header");
     header.appendChild(MW.avatar(comment.author));
-    var who = el("a", { class: "who", href: "/u/" + encodeURIComponent(comment.author.username) }, comment.author.displayName);
+    var who = el("a", { class: "who", href: "/hub/u/" + encodeURIComponent(comment.author.username) }, comment.author.displayName);
     who.appendChild(MW.onlineDot(comment.author.online));
     if (user && !comment.canEdit && MW.reportLink) {
       var rep = MW.reportLink("comment", comment.id, "Report");

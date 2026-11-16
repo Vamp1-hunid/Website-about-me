@@ -4550,3 +4550,7 @@ span.skill-chip { cursor: default; }
 .role-tag-icon { width: 1.4rem; height: 1.4rem; font-size: 0.85rem; }
 .dash-quick-links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1rem; }
 .count-badge { display: inline-block; min-width: 1.3em; margin-left: 0.4em; padding: 0 0.4em; border-radius: 999px; background: var(--pink); color: #1a1205; font-size: 0.75rem; font-weight: 800; text-align: center; line-height: 1.4; }
+.username-preview { margin: 0.35rem 0 0; font-size: 0.9rem; }
+.username-preview-tag { font-weight: 800; }
+.username-preview.is-bad .username-preview-note { color: #e5484d; }
+.username-preview.is-good .username-preview-note { color: #30a46c; }

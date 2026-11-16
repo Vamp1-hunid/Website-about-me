@@ -153,7 +153,14 @@ app.get("/characters/:slug", async function (req, res) {
 
 // /u/mwamba shows a member's public page.
 app.get("/u/:username", function (req, res) {
-  pages.sendPage(req, res, "user.html", null);
+  res.redirect(301, "/hub/u/" + encodeURIComponent(req.params.username));
+});
+app.get("/hub/u/:username", function (req, res) {
+  pages.sendPage(req, res, "hub/user.html", null);
+});
+// Profiles live on Chapterhive now (God's Banditos has no member accounts).
+app.get("/profile", function (req, res) {
+  res.redirect(302, "/hub/profile" + (req.url.indexOf("?") >= 0 ? req.url.slice(req.url.indexOf("?")) : ""));
 });
 
 // ----- Chapterhive (/hub): the creator platform -----

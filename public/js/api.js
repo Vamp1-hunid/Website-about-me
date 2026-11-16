@@ -312,7 +312,7 @@
     // Settings live in the ☰ menu (keeps the header roomy on phones).
     if (MW.isHub && MW.account && MW.account.waitingForLaunch) waitingBanner();
 
-    var me = el("a", { class: "auth-name", href: "/profile", title: "Your profile" });
+    var me = el("a", { class: "auth-name", href: "/hub/profile", title: "Your profile" });
     me.appendChild(MW.avatar(user));
     me.appendChild(document.createTextNode(" @" + user.username));
     area.appendChild(me);
@@ -321,7 +321,7 @@
     } else if (MW.isHub && (user.role === "admin" || (MW.creator && MW.creator.status === "approved"))) {
       area.appendChild(el("a", { class: "btn btn-small", href: "/hub/studio" }, "Studio"));
     }
-    area.appendChild(el("a", { class: "btn btn-ghost btn-small hdr-profile", href: "/profile" }, "Profile"));
+    area.appendChild(el("a", { class: "btn btn-ghost btn-small hdr-profile", href: "/hub/profile" }, "Profile"));
     var logout = el("button", { class: "btn btn-ghost btn-small hdr-logout", type: "button" }, "Log out");
     logout.addEventListener("click", async function () {
       logout.disabled = true;
@@ -375,6 +375,38 @@
       box.appendChild(s);
     });
     return box;
+  };
+
+  // Live username preview and rules: lowercase only, no emoji/spaces, and at least one _ or -.
+  MW.usernameRules = function (name) {
+    if (!name) return "3–30 characters: lowercase letters, numbers and at least one _ or -";
+    if (name.length < 3) return "At least 3 characters";
+    if (!/[_-]/.test(name)) return "Add an _ or - (like bee_reader or bee-reader)";
+    if (!/^[a-z0-9]+(?:[_-][a-z0-9]+)+$/.test(name)) return "_ or - can't be at the start or end, or two in a row";
+    return null;
+  };
+  MW.usernamePreview = function (input, legacy) {
+    if (!input || input.getAttribute("data-preview")) return;
+    input.setAttribute("data-preview", "1");
+    var box = el("div", { class: "username-preview", "aria-live": "polite" });
+    var tag = el("span", { class: "username-preview-tag" }, "@");
+    var note = el("span", { class: "username-preview-note" });
+    box.appendChild(el("span", { class: "muted" }, "Preview: "));
+    box.appendChild(tag);
+    box.appendChild(note);
+    var anchor = input.closest(".reserve-at") || input;
+    anchor.parentNode.insertBefore(box, anchor.nextSibling);
+    function update() {
+      var clean = input.value.toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 30);
+      if (clean !== input.value && !input.readOnly) input.value = clean;
+      tag.textContent = "@" + (clean || "your_name");
+      var problem = legacy ? null : MW.usernameRules(clean);
+      note.textContent = problem ? " · " + problem : " · ✓ looks good";
+      box.className = "username-preview " + (problem ? "is-bad" : "is-good");
+    }
+    input.addEventListener("input", update);
+    update();
+    return update;
   };
 
   // Admin: how many applications are waiting, shown as little badges on the menu and dashboard links.
@@ -624,7 +656,7 @@
         }
       }
       var items = user
-        ? [["/u/" + encodeURIComponent(user.username), "👤 My profile"], ["/profile", "✏️ Edit my profile"], ["/hub/settings", "⚙ Settings & privacy"]]
+        ? [["/hub/u/" + encodeURIComponent(user.username), "👤 My profile"], ["/hub/profile", "✏️ Edit my profile"], ["/hub/settings", "⚙ Settings & privacy"]]
         : [["/hub/login?next=" + encodeURIComponent(MW.currentPath()), "Log in"],
            MW.isHub && MW.feature("reservations") && !MW.feature("signups") ? ["/hub/reserve", "🐝 Reserve your username"] : ["/hub/register", "Create a free account"]];
       if (!user && MW.isHub && MW.feature("reservations") && !MW.feature("signups")) items.push(["/hub/beta", "🧪 Become a beta tester"]);

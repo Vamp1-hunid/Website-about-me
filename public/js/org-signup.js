@@ -22,11 +22,12 @@
   if (guess) $("country").value = guess.toUpperCase();
   $("birthDate").max = new Date().toISOString().slice(0, 10);
 
+  var previewOrg = MW.usernamePreview($("username"));
   // Suggest a handle and username from the organisation name.
   $("orgName").addEventListener("input", function () {
     var slug = $("orgName").value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30);
     if (!$("handle").dataset.touched) { $("handle").value = slug; $("handle-preview").textContent = slug || "your-handle"; }
-    if (!$("username").dataset.touched) $("username").value = slug.replace(/-/g, "_");
+    if (!$("username").dataset.touched) { var sug = slug.replace(/-/g, "_"); if (sug && sug.indexOf("_") < 0) sug = (sug + "_org").slice(0, 30); $("username").value = sug; if (previewOrg) previewOrg(); }
   });
   ["handle", "username"].forEach(function (id) {
     $(id).addEventListener("input", function () { $(id).dataset.touched = "1"; if (id === "handle") $("handle-preview").textContent = $("handle").value || "your-handle"; });

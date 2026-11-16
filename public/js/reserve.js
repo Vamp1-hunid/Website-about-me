@@ -6,6 +6,7 @@
   if (!MW || !form) return;
   var el = MW.el;
   var $ = function (id) { return document.getElementById(id); };
+  MW.usernamePreview(document.getElementById("username"));
 
   // Countries
   var names;
@@ -42,10 +43,10 @@
   var timer = null;
   $("username").addEventListener("input", function () {
     var u = $("username");
-    u.value = u.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+    u.value = u.value.toLowerCase().replace(/[^a-z0-9_-]/g, "");
     clearTimeout(timer);
     var hint = $("username-hint");
-    if (u.value.length < 3) { hint.textContent = "3–30 characters: lowercase letters, numbers or _"; hint.className = "muted"; return; }
+    if (MW.usernameRules(u.value)) { hint.textContent = ""; hint.className = "muted"; return; }
     timer = setTimeout(function () {
       MW.api("/reserve/check?u=" + encodeURIComponent(u.value)).then(function (d) {
         hint.textContent = (d.available ? "✓ " : "✗ ") + d.message;
@@ -165,6 +166,7 @@
     MW.api("/reserve/admin/mine").then(function (m) {
       if (!m.isOwner) { document.querySelector(".reserve-mine").hidden = true; return; }
       $("mine-username").value = m.username;
+      MW.usernamePreview($("mine-username"));
     });
     $("mine-form").addEventListener("submit", function (ev) {
       ev.preventDefault();
