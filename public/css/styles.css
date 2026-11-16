@@ -4524,3 +4524,27 @@ span.skill-chip { cursor: default; }
   .panel { padding: 1rem !important; }
   h1 { font-size: clamp(1.7rem, 8vw, 2.4rem); }
 }
+
+/* ===== Official role tags (founder, top creator, beta tester) ===== */
+.role-tags { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 0.5rem 0 0.2rem; }
+.role-tag {
+  position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.35rem 0.85rem 0.35rem 0.4rem; border-radius: 999px;
+  font: 800 0.82rem/1.2 var(--font-ui, sans-serif); letter-spacing: 0.01em; white-space: nowrap;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+.role-tag-icon { display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: rgba(255, 255, 255, 0.55); font-size: 0.95rem; }
+/* a light sweep across the sticker, like a shiny card */
+.role-tag::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  animation: role-shine 3.6s ease-in-out infinite;
+}
+@keyframes role-shine { 0%, 60% { left: -60%; } 100% { left: 130%; } }
+.role-founder { background: linear-gradient(135deg, #fff1a8, #f6b40e 45%, #c98200); color: #2a1a00; border: 1px solid #b07400; }
+.role-top { background: linear-gradient(135deg, #ffe48a, #ffbf3c); color: #2b1d06; border: 1px solid #d99a10; }
+.role-beta { background: linear-gradient(135deg, #e5dcff, #a88bff); color: #24164f; border: 1px solid #8a6cf0; }
+@media (prefers-reduced-motion: reduce) { .role-tag::after { animation: none; display: none; } }
+.role-tags { gap: 0.4rem; }
+.role-tag { font-size: 0.78rem; padding: 0.28rem 0.75rem 0.28rem 0.32rem; }
+.role-tag-icon { width: 1.4rem; height: 1.4rem; font-size: 0.85rem; }
