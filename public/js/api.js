@@ -321,8 +321,8 @@
     } else if (MW.isHub && (user.role === "admin" || (MW.creator && MW.creator.status === "approved"))) {
       area.appendChild(el("a", { class: "btn btn-small", href: "/hub/studio" }, "Studio"));
     }
-    area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/profile" }, "Profile"));
-    var logout = el("button", { class: "btn btn-ghost btn-small", type: "button" }, "Log out");
+    area.appendChild(el("a", { class: "btn btn-ghost btn-small hdr-profile", href: "/profile" }, "Profile"));
+    var logout = el("button", { class: "btn btn-ghost btn-small hdr-logout", type: "button" }, "Log out");
     logout.addEventListener("click", async function () {
       logout.disabled = true;
       try {
@@ -462,7 +462,14 @@
       search.appendChild(go);
     }
     if (input && !search.querySelector(".nav-search-icon")) search.insertBefore(searchIcon("nav-search-icon"), input);
-    nav.appendChild(search);
+    // Phones: the search box gets its own slim bar above the swipeable row of tabs.
+    if (window.matchMedia && window.matchMedia("(max-width: 760px)").matches) {
+      var bar = el("div", { class: "mobile-search-bar" });
+      bar.appendChild(search);
+      nav.parentNode.insertBefore(bar, nav);
+    } else {
+      nav.appendChild(search);
+    }
   }
 
   function buildMenu() {
@@ -595,6 +602,19 @@
         if (typeof item[2] === "string" && MW.featureNotice(item[2])) MW.markNotice(a, MW.featureNotice(item[2]));
         ul.appendChild(li);
       });
+      // Light/dark switch and Log out also live in the menu (on phones the header hides them to save room).
+      var themeLi = el("li", { class: "menu-mobile-only" });
+      var themeBtn = el("button", { type: "button", class: "menu-link-btn" }, "🌓 Switch light / dark mode");
+      themeBtn.addEventListener("click", function () { var t = document.getElementById("theme-toggle"); if (t) t.click(); });
+      themeLi.appendChild(themeBtn);
+      ul.appendChild(themeLi);
+      if (user) {
+        var outLi = el("li", { class: "menu-mobile-only" });
+        var outBtn = el("button", { type: "button", class: "menu-link-btn" }, "↩ Log out");
+        outBtn.addEventListener("click", function () { var b = document.querySelector(".hdr-logout"); if (b) b.click(); });
+        outLi.appendChild(outBtn);
+        ul.appendChild(outLi);
+      }
       if (user && MW.feature("streaks") && MW.account && MW.account.streak) {
         ul.appendChild(el("li", { class: "menu-streak" }, "🔥 " + MW.account.streak + "-day streak"));
       }
