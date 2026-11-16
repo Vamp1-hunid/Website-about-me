@@ -1375,6 +1375,8 @@ body[data-holiday="newyear"] .site-header { border-bottom: 4px solid #ffd23f; }
 .reserve-banner-emoji { font-size: 1.8rem; }
 .reserve-banner-text { flex: 1; display: grid; line-height: 1.3; }
 .reserve-banner-text span { font-size: 0.88rem; color: var(--ink-dim); }
+.beta-banner { background: linear-gradient(90deg, color-mix(in srgb, var(--cyan, #39c0ed) 20%, var(--panel)), var(--panel)); border-color: var(--cyan, #39c0ed); }
+.beta-reason { max-width: 280px; white-space: pre-wrap; font-size: 0.85rem; }
 @media (max-width: 760px) { .reserve-banner { margin: 0 0 0.6rem; padding: 0.6rem 0.8rem; } .reserve-banner-emoji { font-size: 1.4rem; } }
 
 /* ===== Official account: grand golden circle with a verified tick ===== */
@@ -1419,3 +1421,5 @@ body[data-holiday="newyear"] .site-header { border-bottom: 4px solid #ffd23f; }
 .prelaunch-note p { margin: 0.3rem 0; }
 .prelaunch-title { font-weight: 800; }
 .prelaunch-strip { max-width: 40rem; margin: 0.8rem auto 0; padding: 0.6rem 0.9rem; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); font-size: 0.92rem; }
+.beta-table-wrap { overflow-x: auto; }
+.beta-table-wrap .reserve-table { min-width: 640px; }

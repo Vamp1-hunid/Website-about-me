@@ -93,6 +93,7 @@
   MW.me().then(function (user) {
     if (!user || user.role !== "admin") return;
     $("reserve-admin").hidden = false;
+    if (window.location.hash === "#reserve-admin") $("reserve-admin").scrollIntoView();
     function load() {
       MW.api("/reserve/admin").then(function (d) {
         var box = $("reserve-list");

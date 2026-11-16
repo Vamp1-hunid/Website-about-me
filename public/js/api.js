@@ -309,9 +309,7 @@
       }).catch(function () {});
     }
 
-    // Settings: always one tap away for members.
-    var gear = el("a", { class: "btn btn-ghost btn-small settings-btn", href: "/hub/settings", title: "Settings", "aria-label": "Settings" }, "⚙");
-    area.appendChild(gear);
+    // Settings live in the ☰ menu (keeps the header roomy on phones).
 
     var me = el("a", { class: "auth-name", href: "/profile", title: "Your profile" });
     me.appendChild(MW.avatar(user));
@@ -406,6 +404,14 @@
     t.appendChild(el("span", {}, "We're testing the waters before launch. For now you can reserve your username; accounts open at launch."));
     card.appendChild(t);
     card.appendChild(el("span", { class: "btn btn-small" }, "Reserve"));
+    var beta = el("a", { class: "reserve-banner beta-banner", href: "/hub/beta" });
+    beta.appendChild(el("span", { class: "reserve-banner-emoji", "aria-hidden": "true" }, "🧪"));
+    var bt = el("span", { class: "reserve-banner-text" });
+    bt.appendChild(el("strong", {}, "Become a beta tester"));
+    bt.appendChild(el("span", {}, "Get a real account before launch and help us shape Chapterhive."));
+    beta.appendChild(bt);
+    beta.appendChild(el("span", { class: "btn btn-small btn-ghost" }, "Apply"));
+    main.insertBefore(beta, main.firstChild);
     main.insertBefore(card, main.firstChild);
   }
 
@@ -587,9 +593,10 @@
         }
       }
       var items = user
-        ? [["/hub/settings", "⚙ Settings & privacy"], ["/profile", "Account settings"], ["/u/" + encodeURIComponent(user.username), "Your public page"]]
+        ? [["/u/" + encodeURIComponent(user.username), "👤 My profile"], ["/profile", "✏️ Edit my profile"], ["/hub/settings", "⚙ Settings & privacy"]]
         : [["/hub/login?next=" + encodeURIComponent(MW.currentPath()), MW.isHub && MW.feature("reservations") && !MW.feature("signups") ? "Team log in" : "Log in"],
            MW.isHub && MW.feature("reservations") && !MW.feature("signups") ? ["/hub/reserve", "🐝 Reserve your username"] : ["/hub/register", "Create a free account"]];
+      if (!user && MW.isHub && MW.feature("reservations") && !MW.feature("signups")) items.push(["/hub/beta", "🧪 Become a beta tester"]);
       // God's Banditos: no accounts here. Visitors are pointed to Chapterhive instead.
       if (!MW.isHub && (!user || user.role !== "admin")) {
         account.querySelector(".node-label").textContent = "Chapterhive";
@@ -614,6 +621,8 @@
         items.unshift(["/hub/apply", "Creator application (pending)"]);
       }
       if (user && user.role === "admin") {
+        items.unshift(["/hub/beta#beta-admin", "🧪 Beta applications"]);
+        items.unshift(["/hub/reserve#reserve-admin", "🐝 Reserved usernames"]);
         items.unshift(["/admin#settings", "Site settings"]);
         items.unshift(["/admin", "Dashboard"]);
       }

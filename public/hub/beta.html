@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Become a beta tester · Chapterhive</title>
+  <meta name="description" content="Apply to test Chapterhive before launch.">
+  
+  <meta property="og:site_name" content="Chapterhive">
+  <meta property="og:title" content="Become a Chapterhive beta tester">
+  <meta property="og:description" content="Apply to test Chapterhive before launch.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://mulenga-mwamba-website.onrender.com/images/chapterhive-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#0e0b07">
+  <link rel="icon" href="/images/chapterhive-mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css?v=22">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=20">
+  <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
+  <script src="/js/theme-boot.js"></script>
+</head>
+<body data-page="beta" data-brand="chapterhive">
+
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <a class="af-brand" href="/hub" aria-label="Chapterhive, home">
+      <img src="/images/chapterhive-mark.svg" alt="" width="34" height="34">
+      <span>Chapter<b>hive</b></span>
+    </a>
+    <div class="header-actions">
+      <div class="auth-area" id="auth-area"></div>
+      <form class="header-search" action="/hub/search" method="get" role="search">
+        <label class="sr-only" for="header-q">Search Chapterhive</label>
+        <input type="search" id="header-q" name="q" placeholder="Search creators, works&hellip;" maxlength="80" autocomplete="off">
+      </form>
+      <button id="menu-toggle" class="btn btn-ghost btn-small menu-toggle" type="button"
+              aria-expanded="false" aria-controls="site-menu" aria-label="Open menu">
+        <span class="bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
+      <button id="theme-toggle" class="btn btn-ghost btn-small" type="button">Light mode</button>
+    </div>
+  </header>
+
+  <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+    <a href="/hub" data-nav="hub">Home</a>
+    <a href="/hub/creators" data-nav="creators">Creators</a>
+    <a href="/hub/top" data-nav="top">Top creators</a>
+    <a href="/hub/feed" data-nav="feed">Following</a>
+    <a href="/hub/news" data-nav="news">News &amp; updates</a>
+    <a href="/hub/collabs" data-nav="collabs">Collabs</a>
+    <a href="/hub/apply" data-nav="apply">Become a creator</a>
+    <a href="/hub/sponsor" data-nav="sponsor">Sponsor</a>
+  </nav>
+
+  <main id="main">
+    <section class="panel reserve-hero beta-hero" aria-labelledby="beta-title">
+      <p class="node-label">Chapterhive // beta testers</p>
+      <h1 id="beta-title">Help us test Chapterhive before launch.</h1>
+      <p class="lead">Beta testers get a normal account before everyone else: post, follow, chat and explore, and tell us what works and what doesn't.</p>
+      <p class="prelaunch-strip">🧪 Apply below. Once you're approved, we'll send you a link to set up your account. Then you can log in while the site is still closed to the public.</p>
+    </section>
+
+    <section class="panel narrow" aria-labelledby="beta-form-title" id="beta-panel">
+      <h2 id="beta-form-title">Apply to be a beta tester</h2>
+      <p id="beta-closed" class="muted" hidden>Beta applications are closed right now.</p>
+      <form id="beta-form" novalidate>
+        <div class="form-row">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" maxlength="254" required autocomplete="email">
+          <p class="muted">Your invite goes here. Already reserved a username? Use the same email and you'll keep it.</p>
+          <p class="error" id="email-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="username">Username you'd like</label>
+          <div class="reserve-at"><span aria-hidden="true">@</span><input type="text" id="username" name="username" maxlength="30" autocapitalize="none" spellcheck="false" aria-describedby="username-hint username-error"></div>
+          <p class="muted" id="username-hint">Leave blank if you already reserved one with this email.</p>
+          <p class="error" id="username-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="displayName">Your name (optional)</label>
+          <input type="text" id="displayName" name="displayName" maxlength="60" autocomplete="nickname">
+        </div>
+        <div class="form-row">
+          <label for="birthDate">Date of birth</label>
+          <input type="date" id="birthDate" name="birthDate" required>
+          <p class="muted">You need to be 13 or older. Only checked, never shown.</p>
+          <p class="error" id="birthDate-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="country">Country</label>
+          <select id="country" name="country"><option value="">Choose&hellip;</option></select>
+        </div>
+        <div class="form-row">
+          <label for="reason">Why would you like to test? What do you make or enjoy?</label>
+          <textarea id="reason" name="reason" maxlength="1000" rows="4" required></textarea>
+          <p class="error" id="reason-error"></p>
+        </div>
+        <label class="check-row"><input type="checkbox" id="acceptTerms"> <span>I accept the <a href="/legal/terms" target="_blank">Terms</a> and <a href="/legal/privacy" target="_blank">Privacy Policy</a>.</span></label>
+        <p class="error" id="acceptTerms-error"></p>
+        <div class="hero-actions"><button type="submit">Send my application</button></div>
+        <p class="feedback feedback-error" id="form-feedback" aria-live="polite"></p>
+      </form>
+      <div id="beta-done" hidden></div>
+      <p class="form-foot">Just want a username? <a href="/hub/reserve">Reserve one</a></p>
+    </section>
+
+    <section class="panel" id="beta-admin" aria-labelledby="beta-admin-title" hidden>
+      <p class="node-label">Admin // beta testers</p>
+      <h2 id="beta-admin-title">Beta tester applications</h2>
+      <p class="muted">Approving sends the person a link to set up a beta account (or shows the link to send yourself if email isn't set up). Reserved usernames are on <a href="/hub/reserve#reserve-admin">the reservations page</a>.</p>
+      <div id="beta-links"></div>
+      <div id="beta-list"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p class="footer-brand"><img src="/images/chapterhive-mark.svg" alt="" width="28" height="28"> &copy; 2026 Chapterhive &middot; a <a href="/">God's Banditos</a> production</p>
+    <p><a href="/legal/terms">Terms</a> &middot; <a href="/legal/privacy">Privacy</a> &middot; <a href="/legal/creator-agreement">Creator Agreement</a> &middot; <a href="/legal/content-rules">Content Rules</a> &middot; <a href="/contact">Contact</a></p>
+  </footer>
+
+  <script src="/js/api.js" defer></script>
+  <script src="/js/script.js" defer></script>
+  <script src="/js/markup.js" defer></script>
+  <script src="/js/hub.js" defer></script>
+  <script src="/js/beta.js" defer></script>
+</body>
+</html>

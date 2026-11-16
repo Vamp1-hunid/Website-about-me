@@ -106,7 +106,12 @@ router.post("/register", signupsOrClaim, registerLimiter, async function (req, r
   await users.welcome(rows[0].id, "member");
   if (claimToken) {
     // The reserved name is now a real account. If they claimed with the same email, it's already confirmed.
-    const claimed = await db.query("UPDATE username_reservations SET claimed_at = NOW() WHERE claim_token = $1 AND username = $2 RETURNING email", [claimToken, username]);
+    const claimed = await db.query("UPDATE username_reservations SET claimed_at = NOW() WHERE claim_token = $1 AND username = $2 RETURNING email, beta", [claimToken, username]);
+    // Approved beta testers get an ordinary account that can log in before launch.
+    if (claimed.rows[0] && claimed.rows[0].beta) {
+      await db.query("UPDATE users SET is_beta = TRUE WHERE id = $1", [rows[0].id]);
+      rows[0].is_beta = true;
+    }
     if (claimed.rows[0] && claimed.rows[0].email === email) {
       await db.query("UPDATE users SET email_verified_at = NOW() WHERE id = $1", [rows[0].id]);
       rows[0].email_verified_at = new Date();
