@@ -160,8 +160,12 @@
           var chip = el("a", { class: "tribute-chip", href: "/hub/c/" + encodeURIComponent(c.handle), tabindex: round ? "-1" : "0" });
           if (round) chip.setAttribute("aria-hidden", "true");
           var pic = el("span", { class: "tribute-pic" });
-          if (c.avatarUrl) pic.appendChild(el("img", { src: c.avatarUrl, alt: "" }));
-          else pic.textContent = (c.name || "?").charAt(0);
+          var letter = (c.name || "?").charAt(0);
+          if (c.avatarUrl) {
+            var im = el("img", { src: c.avatarUrl, alt: "" });
+            im.addEventListener("error", function () { im.remove(); pic.textContent = letter; });
+            pic.appendChild(im);
+          } else pic.textContent = letter;
           chip.appendChild(pic);
           chip.appendChild(el("span", {}, c.name));
           reel.appendChild(chip);
@@ -184,17 +188,35 @@
       w.body.split(/\n+/).forEach(function (para) { dialog.appendChild(el("p", {}, para)); });
       dialog.appendChild(tribute());
       var actions = el("div", { class: "form-actions" });
-      if (w.link) actions.appendChild(el("a", { class: "btn", href: w.link }, "Let's go"));
+      var go = null;
+      if (w.link) { go = el("a", { class: "btn", href: w.link }, "Let's go"); actions.appendChild(go); }
       var close = el("button", { type: "button", class: "btn btn-ghost" }, "Close");
       actions.appendChild(close);
       dialog.appendChild(actions);
       document.body.appendChild(dialog);
+      // Mark the welcome as seen however the dialog is left (Close, Esc, or "Let's go"), so it never comes back.
+      // keepalive lets the request finish even though "Let's go" moves to another page straight away.
+      var marked = false;
       function done() {
+        if (marked) return;
+        marked = true;
         try { localStorage.setItem(key, "1"); } catch (e) { /* ignore */ }
-        MW.api("/notifications/read", { method: "POST", json: { ids: [w.id] } }).catch(function () {});
+        try {
+          fetch("/api/notifications/read", { method: "POST", credentials: "same-origin", keepalive: true,
+            headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: [w.id] }) }).catch(function () {});
+        } catch (e) { /* ignore */ }
       }
       close.addEventListener("click", function () { dialog.close(); });
+      if (go) {
+        go.addEventListener("click", function (ev) {
+          done();
+          // Already on that page? Just close the welcome instead of reloading it.
+          var target = new URL(go.href, window.location.href);
+          if (target.pathname === window.location.pathname) { ev.preventDefault(); dialog.close(); }
+        });
+      }
       dialog.addEventListener("close", done);
+      dialog.addEventListener("cancel", done);
       if (dialog.showModal) dialog.showModal(); else dialog.setAttribute("open", "");
     }).catch(function () {});
   }
