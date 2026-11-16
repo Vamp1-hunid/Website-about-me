@@ -281,7 +281,7 @@
 
     if (!user && MW.isHub && MW.feature("reservations") && !MW.feature("signups")) {
       // Before launch the header stays small: just Log in. "Reserve your name" lives on the home page and in the menu.
-      area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub/login" }, "Log in"));
+      area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub/login", title: "Logging in is for the Chapterhive team until launch" }, "Team log in"));
       reservationBanner();
       return;
     }
@@ -403,7 +403,7 @@
     card.appendChild(el("span", { class: "reserve-banner-emoji", "aria-hidden": "true" }, "🐝"));
     var t = el("span", { class: "reserve-banner-text" });
     t.appendChild(el("strong", {}, "Chapterhive opens soon"));
-    t.appendChild(el("span", {}, "Reserve your username before someone else does"));
+    t.appendChild(el("span", {}, "We're testing the waters before launch. For now you can reserve your username; accounts open at launch."));
     card.appendChild(t);
     card.appendChild(el("span", { class: "btn btn-small" }, "Reserve"));
     main.insertBefore(card, main.firstChild);
@@ -588,7 +588,7 @@
       }
       var items = user
         ? [["/hub/settings", "⚙ Settings & privacy"], ["/profile", "Account settings"], ["/u/" + encodeURIComponent(user.username), "Your public page"]]
-        : [["/hub/login?next=" + encodeURIComponent(MW.currentPath()), "Log in"],
+        : [["/hub/login?next=" + encodeURIComponent(MW.currentPath()), MW.isHub && MW.feature("reservations") && !MW.feature("signups") ? "Team log in" : "Log in"],
            MW.isHub && MW.feature("reservations") && !MW.feature("signups") ? ["/hub/reserve", "🐝 Reserve your username"] : ["/hub/register", "Create a free account"]];
       // God's Banditos: no accounts here. Visitors are pointed to Chapterhive instead.
       if (!MW.isHub && (!user || user.role !== "admin")) {
