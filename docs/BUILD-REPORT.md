@@ -1751,3 +1751,36 @@ banners, the menu, the admin lists, the public list and the username preview.
   "Share → Add to Home Screen".
 - **Play Store link:** `/.well-known/assetlinks.json` is served from the `ANDROID_ASSETLINKS`
   setting on Render, ready for when PWABuilder makes the Android package.
+
+### Version 23 (16 November 2026): follows before launch, bell for all, announcements pop up
+
+- **Following before launch:**
+  - Everyone with an account can now follow **creators** (and the founder) before launch, so their
+    favourite artists are lined up for day one.
+  - Following other **members** and sending buddy requests open at launch.
+  - **Beta testers** can already follow each other.
+  - Enforced in `src/prelaunch.js` (follow routes allowed) and `routes/users.js` (creators only for
+    waiting members).
+- **Notification bell for everyone:** it was still switched to "admin only". A one-time start-up
+  step (`bell_everyone_v23`) turned it on for everyone, and new sites start with it on.
+- **Announcements:**
+  - Everything you post in Announcements now shows at the top of **News & updates** under
+    "📣 Announcements".
+  - It also **pops up once** for the people it's meant for, if it's less than two weeks old. Older
+    unseen ones count as seen, so it's never a queue of pop-ups.
+  - Visitors see the "Everyone" ones. Beta testers, creators and staff also see theirs.
+  - Endpoint: `GET /api/notifications/announcements`.
+- **Profile picture by the search box:** the round yellow search button is gone on phones (press
+  the keyboard's Search key). In its place, your profile picture sits to the **left** of the search
+  box and opens your profile. Visitors get a 👤 that opens Log in.
+- **Account first in the menu:** the ☰ menu now starts with your account, in this order:
+  - 📲 Install the app (when your phone supports it)
+  - 👤 My profile
+  - ✏️ Edit my profile
+  - ⚙ Settings & privacy
+  - your tools
+- **Get the app bar:** a slim "Get the Chapterhive app" bar under the search box.
+  - It shows a one-tap 📲 **Install** on Android/Chrome, and "How?" with the steps on iPhone.
+  - Hiding it keeps it away for two weeks.
+- **Find members on phones:** names and tags sit on top, with the Follow / Add buddy / 💬 buttons on
+  their own row underneath. The buttons also no longer go missing when the page loads quickly.

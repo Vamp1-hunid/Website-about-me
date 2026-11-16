@@ -58,5 +58,6 @@
     });
   }
   document.getElementById("members-q").addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(load, 250); });
-  load();
+  // Wait for the account (and its switched-on features) before drawing the Follow and Message buttons.
+  MW.me().then(load, load);
 })();

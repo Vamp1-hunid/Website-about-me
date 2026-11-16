@@ -19,7 +19,7 @@ const DEFAULTS = [
   ["comments", "Comments", "Members can write and reply to comments.", "everyone", "Accounts & community"],
   ["likes", "Likes & saves", "Members can like and save works.", "everyone", "Accounts & community"],
   ["follows", "Following creators", "Members can follow creators and get their posts in the Following feed.", "everyone", "Accounts & community"],
-  ["notifications", "Notification bell", "Bell with new posts from people you follow, new followers, milestones, trending and announcements.", "admin", "Accounts & community"],
+  ["notifications", "Notification bell", "Bell with new posts from people you follow, new followers, milestones, trending and announcements.", "everyone", "Accounts & community"],
   ["streaks", "Online streaks", "Counts the days in a row someone visits, shown on their profile and the menu.", "admin", "Accounts & community"],
   ["group_chats", "Group chats", "Members can make group chats (up to 30 people) and share works in them.", "everyone", "Accounts & community"],
   ["daily_verse", "Daily Bible verse", "Members can choose to see a daily Bible verse at the top of their feed (Settings).", "everyone", "Accounts & community"],

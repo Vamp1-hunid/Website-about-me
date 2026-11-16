@@ -39,10 +39,17 @@ router.get("/", requireLogin, async function (req, res) {
 // POST / DELETE /api/users/:username/follow  - members can follow each other (creators too).
 async function followMember(req, res) {
   const username = String(req.params.username || "").toLowerCase();
-  const { rows } = await db.query("SELECT id, username, profile_visible, status FROM users WHERE username = $1", [username]);
+  const { rows } = await db.query(
+    `SELECT u.id, u.username, u.profile_visible, u.status, u.role,
+            EXISTS (SELECT 1 FROM creator_profiles cp WHERE cp.user_id = u.id AND cp.status = 'approved') AS is_creator
+       FROM users u WHERE u.username = $1`, [username]);
   const target = rows[0];
   if (!target || target.status !== "active") return res.status(404).json({ error: "That member could not be found." });
   if (target.id === req.session.user.id) return res.status(400).json({ error: "You can't follow yourself." });
+  // Before launch, members who aren't beta testers can follow creators (and the founder), not other members yet.
+  if (req.method === "POST" && !target.is_creator && target.role !== "admin" && await require("../prelaunch").waitingMember(req)) {
+    return res.status(403).json({ error: "Until launch you can follow creators. Following other members opens at launch (beta testers can already).", prelaunch: true });
+  }
   let added = null;
   if (req.method === "POST") {
     added = await db.query("INSERT INTO follows (follower_id, creator_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", [req.session.user.id, target.id]);

@@ -16,6 +16,7 @@ async function migrate() {
   await require("./flags").ensureDefaults();
   await openCommunityFeatures();
   await openHelpAndTeamWording();
+  await openBellForEveryone();
 }
 
 // One time only: the suggestion box and the Fund the heist button go live for everyone
@@ -25,6 +26,14 @@ async function openCommunityFeatures() {
   if (done.rows.length) return;
   await db.query("UPDATE feature_flags SET audience = 'everyone', updated_at = NOW() WHERE key IN ('suggestion_box', 'hub_support', 'donations')");
   await db.query("INSERT INTO app_settings (key, value) VALUES ('community_features_v1', '1') ON CONFLICT (key) DO NOTHING");
+}
+
+// v23: every account gets the notification bell (it started as admin-only).
+async function openBellForEveryone() {
+  const done = await db.query("SELECT 1 FROM app_settings WHERE key = 'bell_everyone_v23'");
+  if (done.rows.length) return;
+  await db.query("UPDATE feature_flags SET audience = 'everyone', updated_at = NOW() WHERE key = 'notifications'");
+  await db.query("INSERT INTO app_settings (key, value) VALUES ('bell_everyone_v23', '1') ON CONFLICT (key) DO NOTHING");
 }
 
 // v19: the help assistant is for everyone, and the Fund the heist message credits the whole team.

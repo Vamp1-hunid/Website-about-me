@@ -6,7 +6,10 @@
 const db = require("./db");
 const flags = require("./flags");
 
-const ALWAYS_ALLOWED = [/^\/account\//, /^\/notifications/, /^\/reserve/, /^\/beta/, /^\/contact/, /^\/help/];
+const ALWAYS_ALLOWED = [/^\/account\//, /^\/notifications/, /^\/reserve/, /^\/beta/, /^\/contact/, /^\/help/,
+  // Following creators works before launch too, so people can line up their favourite artists for day one.
+  // (Following other members is checked in routes/users.js: creators only until launch, unless you're a beta tester.)
+  /^\/hub\/creators\/[^/]+\/follow$/, /^\/users\/[^/]+\/follow$/];
 
 async function isPrelaunch(req) {
   return (await flags.isOn("reservations", req)) && !(await flags.isOn("signups", req));

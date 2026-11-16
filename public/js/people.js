@@ -87,5 +87,6 @@
     });
   });
   window.addEventListener("hashchange", function () { current = (window.location.hash || "#buddies").slice(1); draw(); });
-  load();
+  // Wait for the account (and its switched-on features) before drawing the Follow and Message buttons.
+  MW.me().then(load, load);
 })();
