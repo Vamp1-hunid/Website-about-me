@@ -655,3 +655,30 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS beta_can_message BOOLEAN NOT NULL DEF
 -- and the owner's reservation, which is always #1.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_owner BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE username_reservations ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT FALSE;
+-- Limited powers the owner can give to helpers (see src/staff.js), e.g. {approve_beta, approve_posts}.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS staff_perms TEXT[] NOT NULL DEFAULT '{}';
+-- Backup copies of uploaded files when Cloudinary isn't set up. Render's free disk is wiped on every deploy,
+-- so /uploads/<name> falls back to this table (and restores the file to disk) when the file is missing.
+CREATE TABLE IF NOT EXISTS stored_files (
+  name       VARCHAR(40) PRIMARY KEY,
+  mime       VARCHAR(100) NOT NULL,
+  data       BYTEA NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+-- Announcements can also go to beta testers only (or to staff only).
+DO $$ BEGIN
+  ALTER TABLE announcements DROP CONSTRAINT IF EXISTS announcements_audience_check;
+  ALTER TABLE announcements ADD CONSTRAINT announcements_audience_check CHECK (audience IN ('all', 'creators', 'beta', 'staff'));
+END $$;
+-- Buddies: two-way friendships. One person sends a request; the other accepts or declines.
+CREATE TABLE IF NOT EXISTS buddies (
+  id           SERIAL PRIMARY KEY,
+  requester_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  addressee_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status       VARCHAR(10) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted')),
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  responded_at TIMESTAMPTZ,
+  CHECK (requester_id <> addressee_id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS buddies_pair_idx ON buddies (LEAST(requester_id, addressee_id), GREATEST(requester_id, addressee_id));
+CREATE INDEX IF NOT EXISTS buddies_addressee_idx ON buddies (addressee_id, status);

@@ -154,7 +154,9 @@ router.get("/callback", async function (req, res) {
       username: username,
       next: next
     };
-    return req.session.save(function () { res.redirect("/hub/register?google=1"); });
+    // From the reservation page (or while new accounts are off before launch): finish on the reservation form.
+    const reserving = /^\/hub\/reserve/.test(next) || !(await require("../flags").isOn("signups", req));
+    return req.session.save(function () { res.redirect(reserving ? "/hub/reserve?google=1" : "/hub/register?google=1"); });
   }
 
   const blocked = require("../users").standingProblem(user);

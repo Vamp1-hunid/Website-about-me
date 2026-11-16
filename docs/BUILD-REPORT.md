@@ -1657,3 +1657,97 @@ banners, the menu, the admin lists, the public list and the username preview.
   - The "You're in early!" home banner has a **🧪 Beta test** button.
 - **Re-applying:** someone who was declined can apply again; their application goes back to
   Waiting with the new reason.
+
+### Version 21 (16 November 2026): staff powers, buddies, installable app and more
+
+**Staff powers** (`src/staff.js`, Admin → 🛡️ Team & powers, owner only)
+
+- The owner's account (`users.is_owner`) can see everyone with power: the owner, any full admin,
+  and staff.
+- **Full admins** get a **Remove full admin rights** button. It signs them out straight away.
+- **Staff** get limited powers (`users.staff_perms`), ticked one by one:
+
+  | Power | What it opens |
+  |---|---|
+  | `approve_posts` | Reviews tab |
+  | `approve_creators` | Creator applications |
+  | `approve_beta` | Beta applications |
+  | `manage_reservations` | Reservation list, downloads, claim links |
+  | `handle_reports` | Reports |
+  | `moderate_members` (`moderate_users`) | Warn, suspend or ban members |
+  | `post_updates` | Announcements |
+
+- **Limits:** only the owner can change powers, and the owner can't be changed. Staff can never act
+  on admins, the owner or other staff, and can't open site settings, Site features or the overview.
+- **Staff dashboard:** staff open **🛡️ Staff tools** (`/admin`) and see only the tabs and links
+  their powers allow.
+- **Notifications:** new applications go to everyone who can act on them (`notifyStaff`).
+- **Server side:** routes are guarded by `requireStaff(...)` / `requireOwner`.
+
+**Announcements for beta testers**
+
+- Announcements can go to Everyone, 🧪 Beta testers only, Creators only or 🛡️ Staff only.
+- **📣 Post an update** in the admin's (and `post_updates` staff's) menu opens the form with Beta
+  testers already chosen.
+
+**Buddies and follower lists** (`/hub/people`, table `buddies`)
+
+- **Buddies** are two-way friends:
+  - Send a request with **＋ Add buddy** on a member page or in Find members.
+  - The other person gets a bell notification and can **Accept** or **Decline**.
+  - Either of you can stop being buddies.
+- **🤝 My buddies & followers** (in the ☰ menu and on your own page) has four tabs:
+  - **Buddies**
+  - **Requests:** received and sent
+  - **Followers:** with Follow back
+  - **Following**
+- Member pages show Followers, Following and Buddies counts.
+- **APIs:** `GET /api/users/me/people`, `POST`/`DELETE /api/users/:username/buddy`,
+  `POST /api/users/:username/buddy/decline`.
+
+**Profile pictures**
+
+- **Tap to view:** tap a profile picture on a creator or member page to see it full size
+  (`MW.viewPicture`).
+- **Pictures surviving deploys:** without Cloudinary, uploaded pictures used to vanish on every
+  Render deploy (the owner's picture showed as a blank circle). Now:
+  - Every upload up to 8 MB also gets a backup copy in the database (table `stored_files`).
+  - `/uploads/<name>` serves that copy (and puts it back on disk) when the file is missing.
+  - Pictures uploaded before this version are already gone and need uploading once more.
+  - Setting `CLOUDINARY_URL` on Render (free) is still the best home for files, especially video.
+
+**Sign-up forms**
+
+- **Reserve with Google:** the reservation form has **Continue with Google**. Google supplies a
+  verified email, so there's no email box or password. The account is made with Google sign-in
+  and the person is signed straight in. While new accounts are off, a first-time Google sign-in
+  finishes on the reservation form.
+- **Typed birthdays:** every date-of-birth box takes numbers, DD/MM/YYYY.
+  - It adds the slashes by itself and shows the date in words ("✓ 16 November 2004").
+  - It says when a date doesn't exist.
+  - It also accepts 2004-11-16 and 16112004.
+- **Signed-in visitors** on the reservation page are told their name is already theirs, instead of
+  accidentally making a second account.
+
+**Help**
+
+- **Help page:** Help & FAQ now opens a Chapterhive page (`/hub/help`), not God's Banditos.
+- **Glitter:** the help button glitters (a soft glow, a shine and twinkling sparkles; it stays still
+  for people who turn off motion).
+- **Small talk:** the help bot answers greetings and small talk ("Hi there! 👋 …", thanks, bye).
+- **Honest answers:** it says plainly when it can't answer something instead of guessing a random
+  FAQ entry. Two causes fixed:
+  - Very short words were being matched, so "hi" matched "his".
+  - The match threshold was too low.
+
+**Installable app (step 1 of the Play Store plan)**
+
+- **The pieces:** `manifest.webmanifest` (name, colours, start page `/hub`, shortcuts), app icons in
+  `public/icons/` (normal and maskable, made from the hive logo), a service worker (`sw.js`) and an
+  offline page (`offline.html`).
+- **What the service worker does:** it keeps styles, scripts and icons so the app opens fast, and
+  shows a friendly "You're offline" page with no signal. Pages and API answers are never cached.
+- **📲 Install the app:** appears in the ☰ menu on phones that support it. iPhones get
+  "Share → Add to Home Screen".
+- **Play Store link:** `/.well-known/assetlinks.json` is served from the `ANDROID_ASSETLINKS`
+  setting on Render, ready for when PWABuilder makes the Android package.

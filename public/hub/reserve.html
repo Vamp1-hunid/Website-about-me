@@ -16,11 +16,16 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="theme-color" content="#0e0b07">
   <link rel="icon" href="/images/chapterhive-mark.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Chapterhive">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=25">
-  <link rel="stylesheet" href="/css/chapterhive.css?v=28">
+  <link rel="stylesheet" href="/css/styles.css?v=26">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=30">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -88,13 +93,19 @@
           <label for="displayName">Your name (optional)</label>
           <input type="text" id="displayName" name="displayName" maxlength="60" autocomplete="nickname">
         </div>
-        <div class="form-row">
+        <div class="oauth" id="reserve-google" hidden>
+          <a class="btn btn-google" id="reserve-google-btn" href="/auth/google?next=%2Fhub%2Freserve"><span class="g-mark" aria-hidden="true">G</span> Continue with Google</a>
+          <p class="muted">Use your Gmail: no password to remember, and you log in with one tap at launch.</p>
+          <p class="or-line"><span>or use your email</span></p>
+        </div>
+        <p class="feedback feedback-success" id="reserve-google-using" hidden></p>
+        <div class="form-row" id="email-row">
           <label for="email">Email</label>
           <input type="email" id="email" name="email" maxlength="254" required autocomplete="email">
           <p class="muted">We'll send your claim link here when we open. One name per email.</p>
           <p class="error" id="email-error"></p>
         </div>
-        <div class="form-row">
+        <div class="form-row" id="password-row">
           <label for="password">Choose a password</label>
           <input type="password" id="password" name="password" maxlength="200" required autocomplete="new-password" aria-describedby="password-hint password-error">
           <p class="muted" id="password-hint">Your account is made now, so at launch you just log in. At least 10 characters; a short phrase works well.</p>

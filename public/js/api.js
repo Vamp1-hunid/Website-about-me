@@ -581,7 +581,7 @@
     var groups = MW.isHub ? [
       ["Chapterhive", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following", true], ["/hub/news", "News & updates", false, "updates"], ["/hub/top", "Top creators", false, "rankings"], ["/hub/calendar", "Calendar", false, "calendar"]]],
       ["Create", [["/hub/collabs", "Collab board", true, "collabs"], ["/hub/collabs#suggest", "Suggestion box", true, "suggestion_box"], ["/hub/apply", "Become a creator", true, "creator_applications"], ["/legal/content-rules", "Content Rules"]]],
-      ["More", [["/help", "Help & FAQ"], ["/hub/premium", "Premium", false, "premium"], ["/hub/sponsor", "Sponsor & business", false, "sponsor_page"], ["/", "God's Banditos"], ["/contact", "Contact"], ["/legal/terms", "Terms"]]]
+      ["More", [["/hub/help", "Help & FAQ"], ["/hub/premium", "Premium", false, "premium"], ["/hub/sponsor", "Sponsor & business", false, "sponsor_page"], ["/", "God's Banditos"], ["/contact", "Contact"], ["/legal/terms", "Terms"]]]
     ] : [
       ["Explore", [["/", "Home"], ["/gallery", "All works"], ["/gallery?category=story-art", "Story art"],
         ["/gallery?category=anime", "Anime works"], ["/gallery?category=writing", "Writing"], ["/gallery?category=updates", "Updates", false, "updates"]]],
@@ -642,7 +642,7 @@
         var foot = document.querySelector(".site-footer p:last-child");
         if (foot && !foot.querySelector(".suggest-link")) {
           foot.appendChild(document.createTextNode(" · "));
-          foot.appendChild(el("a", { class: "suggest-link", href: "/help#suggest" }, "💡 Suggest an idea"));
+          foot.appendChild(el("a", { class: "suggest-link", href: (MW.isHub ? "/hub/help" : "/help") + "#suggest" }, "💡 Suggest an idea"));
         }
       }
       // Visitors without an account: members-only links are hidden and replaced by one join prompt.
@@ -657,7 +657,7 @@
         }
       }
       var items = user
-        ? [["/hub/u/" + encodeURIComponent(user.username), "👤 My profile"], ["/hub/members", "👥 Find members"], ["/hub/profile", "✏️ Edit my profile"], ["/hub/settings", "⚙ Settings & privacy"]]
+        ? [["/hub/u/" + encodeURIComponent(user.username), "👤 My profile"], ["/hub/people", "🤝 My buddies & followers"], ["/hub/members", "👥 Find members"], ["/hub/profile", "✏️ Edit my profile"], ["/hub/settings", "⚙ Settings & privacy"]]
         : [["/hub/login?next=" + encodeURIComponent(MW.currentPath()), "Log in"],
            MW.isHub && MW.feature("reservations") && !MW.feature("signups") ? ["/hub/reserve", "🐝 Reserve your username"] : ["/hub/register", "Create a free account"]];
       if (MW.isHub && MW.feature("beta_applications") && (!user ? (MW.feature("reservations") && !MW.feature("signups")) : !(MW.account && MW.account.isBeta) && user.role !== "admin")) items.push(["/hub/beta", "🧪 Become a beta tester"]);
@@ -684,7 +684,18 @@
       } else if (user && MW.creator && MW.creator.status === "pending") {
         items.unshift(["/hub/apply", "Creator application (pending)"]);
       }
+      var perms = (MW.account && MW.account.staffPerms) || [];
+      if (user && user.role !== "admin" && perms.length) {
+        // Staff: only the tools their powers open.
+        if (perms.indexOf("approve_creators") >= 0) items.unshift(["/admin#chapterhive", "🎨 Creator applications", null, "creators"]);
+        if (perms.indexOf("approve_beta") >= 0) items.unshift(["/hub/beta#beta-admin", "🧪 Beta tester applications", null, "beta"]);
+        if (perms.indexOf("manage_reservations") >= 0) items.unshift(["/hub/reserve#reserve-admin", "🐝 Name reservations", null, "reservations"]);
+        if (perms.indexOf("post_updates") >= 0) items.unshift(["/admin?to=beta#announce", "📣 Post an update"]);
+        items.unshift(["/admin", "🛡️ Staff tools"]);
+      }
       if (user && user.role === "admin") {
+        if (MW.account && MW.account.isOwner) items.unshift(["/admin#team", "🛡️ Team & powers"]);
+        items.unshift(["/admin?to=beta#announce", "📣 Post an update"]);
         items.unshift(["/admin#chapterhive", "🎨 Creator applications", null, "creators"]);
         items.unshift(["/hub/beta#beta-admin", "🧪 Beta tester applications", null, "beta"]);
         items.unshift(["/hub/reserve#reserve-admin", "🐝 Name reservations", null, "reservations"]);
@@ -699,7 +710,8 @@
         if (item[3]) a.setAttribute("data-count", item[3]);
         ul.appendChild(li);
       });
-      if (user && user.role === "admin") MW.adminCounts(ul);
+      if (user && (user.role === "admin" || perms.length)) MW.adminCounts(ul);
+      if (installEvent || (/iphone|ipad|ipod/i.test(navigator.userAgent))) setTimeout(addInstallItem, 0);
       // Light/dark switch and Log out also live in the menu (on phones the header hides them to save room).
       var themeLi = el("li", { class: "menu-mobile-only" });
       var themeBtn = el("button", { type: "button", class: "menu-link-btn" }, "🌓 Switch light / dark mode");
@@ -886,4 +898,148 @@
       if (navLink) navLink.appendChild(el("span", { class: "nav-count" }, " " + data.count));
     }).catch(function () {});
   }
+
+  // Birthdays: type them as numbers (DD/MM/YYYY) instead of scrolling a calendar.
+  // The original date field becomes hidden and keeps the YYYY-MM-DD value the forms already send.
+  var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  MW.parseBirthday = function (text) {
+    var t = String(text || "").trim();
+    var m = t.match(/^(\d{4})[\/\-. ](\d{1,2})[\/\-. ](\d{1,2})$/); // 2000-11-16
+    var y, mo, d;
+    if (m) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+    else {
+      m = t.match(/^(\d{1,2})[\/\-. ]+(\d{1,2})[\/\-. ]+(\d{4})$/) || t.match(/^(\d{2})(\d{2})(\d{4})$/); // 16/11/2000 or 16112000
+      if (!m) return null;
+      d = +m[1]; mo = +m[2]; y = +m[3];
+    }
+    var date = new Date(Date.UTC(y, mo - 1, d));
+    if (date.getUTCFullYear() !== y || date.getUTCMonth() !== mo - 1 || date.getUTCDate() !== d) return null;
+    if (y < 1900 || date > new Date()) return null;
+    return { iso: y + "-" + String(mo).padStart(2, "0") + "-" + String(d).padStart(2, "0"), label: d + " " + MONTHS[mo - 1] + " " + y };
+  };
+  function birthdayFields() {
+    document.querySelectorAll("input[type='date']#birthDate").forEach(function (orig) {
+      var typed = el("input", { type: "text", id: "birthDate-typed", inputmode: "numeric", placeholder: "DD/MM/YYYY", maxlength: "10",
+        autocomplete: "bday", "aria-describedby": "birthDate-said birthDate-error" });
+      var said = el("p", { class: "muted birthday-said", id: "birthDate-said" }, "Day / month / year, for example 16/11/2004");
+      orig.type = "hidden";
+      orig.parentNode.insertBefore(typed, orig);
+      orig.parentNode.insertBefore(said, orig.nextSibling);
+      var label = document.querySelector("label[for='birthDate']");
+      if (label) label.setAttribute("for", "birthDate-typed");
+      if (orig.value) { var p0 = MW.parseBirthday(orig.value); if (p0) typed.value = orig.value.split("-").reverse().join("/"); }
+      typed.addEventListener("input", function (ev) {
+        var digits = typed.value.replace(/[^0-9]/g, "");
+        var deleting = ev.inputType && ev.inputType.indexOf("delete") === 0;
+        if (!deleting && /^\d*$/.test(typed.value.replace(/\//g, ""))) {
+          var out = digits.slice(0, 2);
+          if (digits.length > 2) out += "/" + digits.slice(2, 4);
+          if (digits.length > 4) out += "/" + digits.slice(4, 8);
+          if ((digits.length === 2 || digits.length === 4) && digits.length < 8) out += "/";
+          typed.value = out;
+        }
+        var p = MW.parseBirthday(typed.value);
+        orig.value = p ? p.iso : "";
+        said.textContent = p ? "✓ " + p.label : (digits.length >= 8 ? "That date doesn't look right. Use day/month/year." : "Day / month / year, for example 16/11/2004");
+        said.className = "birthday-said " + (p ? "is-good" : digits.length >= 8 ? "is-bad" : "muted");
+        orig.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    });
+  }
+  birthdayFields();
+
+  // Tap a profile picture to see it full size.
+  MW.viewPicture = function (url, name) {
+    if (!url) return;
+    var shade = el("div", { class: "pic-viewer", role: "dialog", "aria-modal": "true", "aria-label": (name || "Profile") + " picture" });
+    var img = el("img", { src: url, alt: (name || "Profile") + " picture" });
+    var close = el("button", { type: "button", class: "pic-viewer-close", "aria-label": "Close" }, "✕");
+    shade.appendChild(img);
+    shade.appendChild(close);
+    if (name) shade.appendChild(el("p", { class: "pic-viewer-name" }, name));
+    function done() { shade.remove(); document.removeEventListener("keydown", onKey); }
+    function onKey(e) { if (e.key === "Escape") done(); }
+    shade.addEventListener("click", function (e) { if (e.target !== img) done(); });
+    document.addEventListener("keydown", onKey);
+    document.body.appendChild(shade);
+    close.focus();
+  };
+  MW.tappablePicture = function (node, url, name) {
+    if (!url || !node) return node;
+    node.classList.add("pic-tappable");
+    node.setAttribute("role", "button");
+    node.setAttribute("tabindex", "0");
+    node.setAttribute("aria-label", "View " + (name || "profile") + " picture");
+    node.addEventListener("click", function () { MW.viewPicture(url, name); });
+    node.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); MW.viewPicture(url, name); } });
+    return node;
+  };
+
+  // "📲 Install the app": Android/desktop Chrome offer a one-tap install; iPhones get the Share-menu steps.
+  var installEvent = null;
+  window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); installEvent = e; addInstallItem(); });
+  function isStandalone() { return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true; }
+  function addInstallItem() {
+    if (isStandalone()) return;
+    var menu = document.querySelector("#site-menu ul");
+    if (!menu || menu.querySelector(".install-app")) return;
+    var li = el("li");
+    var b = el("button", { type: "button", class: "link-button install-app" }, "📲 Install the app");
+    b.addEventListener("click", function () {
+      if (installEvent) {
+        installEvent.prompt();
+        installEvent.userChoice.then(function () { installEvent = null; li.remove(); });
+      } else {
+        MW.toast("On iPhone: tap the Share button, then \"Add to Home Screen\".");
+      }
+    });
+    li.appendChild(b);
+    menu.insertBefore(li, menu.firstChild);
+  }
+  window.addEventListener("appinstalled", function () { var i = document.querySelector(".install-app"); if (i) i.parentNode.remove(); MW.toast("Chapterhive is installed. 🐝"); });
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalone()) setTimeout(addInstallItem, 1500);
+
+  // Installable app: the service worker keeps the app shell and shows an offline page with no signal.
+  if ("serviceWorker" in navigator && window.location.protocol === "https:") {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("/sw.js").catch(function () { /* the site works without it */ });
+    });
+  }
+
+  // Buddy button (two-way friends). States: none -> sent -> buddies, or received (Accept).
+  MW.buddyButton = function (username, state, onChange) {
+    var wrap = el("span", { class: "buddy-actions" });
+    function draw() {
+      wrap.textContent = "";
+      var main, extra = null;
+      if (state === "buddies") main = el("button", { type: "button", class: "btn btn-small btn-ghost", title: "Tap to stop being buddies" }, "🤝 Buddies");
+      else if (state === "sent") main = el("button", { type: "button", class: "btn btn-small btn-ghost", title: "Tap to cancel the request" }, "Request sent");
+      else if (state === "received") {
+        main = el("button", { type: "button", class: "btn btn-small" }, "Accept buddy");
+        extra = el("button", { type: "button", class: "btn btn-small btn-ghost" }, "Decline");
+      } else main = el("button", { type: "button", class: "btn btn-small btn-ghost" }, "＋ Add buddy");
+      main.addEventListener("click", function () {
+        if (state === "buddies" && !window.confirm("Stop being buddies with @" + username + "?")) return;
+        if (state === "sent" && !window.confirm("Cancel your buddy request to @" + username + "?")) return;
+        var del = state === "buddies" || state === "sent";
+        main.disabled = true;
+        MW.api("/users/" + encodeURIComponent(username) + "/buddy", { method: del ? "DELETE" : "POST" }).then(function (d) {
+          state = d.state; draw(); if (onChange) onChange(state);
+          if (state === "sent") MW.toast("Buddy request sent to @" + username + ".");
+          if (state === "buddies") MW.toast("You and @" + username + " are buddies now. 🤝");
+        }).catch(function (e) { MW.toast(e.message, true); main.disabled = false; });
+      });
+      wrap.appendChild(main);
+      if (extra) {
+        extra.addEventListener("click", function () {
+          MW.api("/users/" + encodeURIComponent(username) + "/buddy/decline", { method: "POST" }).then(function (d) {
+            state = d.state; draw(); if (onChange) onChange(state);
+          }).catch(function (e) { MW.toast(e.message, true); });
+        });
+        wrap.appendChild(extra);
+      }
+    }
+    draw();
+    return wrap;
+  };
 })();

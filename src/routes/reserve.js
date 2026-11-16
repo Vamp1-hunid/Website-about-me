@@ -15,7 +15,9 @@ const db = require("../db");
 const users = require("../users");
 const signup = require("../signup");
 const flags = require("../flags");
-const { requireAdmin } = require("../auth");
+const { requireAdmin: requireFullAdmin } = require("../auth");
+const { requireStaff } = require("../staff");
+const requireAdmin = requireStaff("manage_reservations");
 const { mailEnabled, sendMail } = require("../mail");
 
 const router = express.Router();
@@ -51,8 +53,13 @@ router.get("/check", async function (req, res) {
 router.post("/", flags.requireFlag("reservations"), reserveLimiter, async function (req, res) {
   const clean = function (v) { return typeof v === "string" ? v.trim() : ""; };
   const username = clean(req.body.username).toLowerCase().replace(/^@/, "");
-  const email = clean(req.body.email).toLowerCase();
-  const displayName = clean(req.body.displayName).slice(0, 60);
+  // "Continue with Google": the email (already verified by Google) comes from the Google sign-in, not the form.
+  const google = req.body.useGoogle === true ? req.session.pendingGoogle : null;
+  if (req.body.useGoogle === true && (!google || !google.email)) {
+    return res.status(400).json({ error: "Your Google sign-in expired (or that Google account has no verified email). Press Continue with Google again.", googleExpired: true });
+  }
+  const email = google ? String(google.email).toLowerCase() : clean(req.body.email).toLowerCase();
+  const displayName = (clean(req.body.displayName) || (google ? google.displayName : "")).slice(0, 60);
   const birth = signup.checkBirthDate(req.body.birthDate);
   const country = signup.checkCountry(req.body.country);
   if (birth.tooYoung) return res.status(403).json({ error: birth.problem, tooYoung: true, problems: [{ field: "birthDate", message: birth.problem }] });
@@ -68,7 +75,8 @@ router.post("/", flags.requireFlag("reservations"), reserveLimiter, async functi
   if (birth.problem) problems.push({ field: "birthDate", message: birth.problem });
   if (req.body.acceptTerms !== true) problems.push({ field: "acceptTerms", message: "Please accept the Terms and Privacy Policy." });
   // With a password, the reservation is a real account straight away: it just can't log in until launch.
-  const password = typeof req.body.password === "string" ? req.body.password : "";
+  const password = !google && typeof req.body.password === "string" ? req.body.password : "";
+  if (google && !country) problems.push({ field: "country", message: "Choose the country you live in." });
   if (password) {
     const pw = signup.passwordProblem(password, username);
     if (pw) problems.push({ field: "password", message: pw });
@@ -80,8 +88,18 @@ router.post("/", flags.requireFlag("reservations"), reserveLimiter, async functi
   }
   // The date of birth is only checked (13+), not stored: it's asked again when the account is claimed.
   const token = crypto.randomBytes(24).toString("hex");
+  const makesAccount = Boolean(password || google);
+  let newUser = null;
   try {
-    if (password) {
+    if (google) {
+      const u = await db.query(
+        `INSERT INTO users (username, display_name, password_hash, role, google_sub, email, email_verified_at, terms_accepted_at, terms_version, birth_date, country)
+         VALUES ($1, $2, NULL, 'member', $3, $4, NOW(), NOW(), $5, $6, $7) RETURNING *`,
+        [username, displayName || username, google.sub, email, signup.TERMS_VERSION, birth.date, country]);
+      newUser = u.rows[0];
+      await users.welcome(newUser.id, "member");
+      delete req.session.pendingGoogle;
+    } else if (password) {
       const hash = await bcrypt.hash(password, 12);
       const u = await db.query(
         `INSERT INTO users (username, display_name, password_hash, role, email, terms_accepted_at, terms_version, birth_date, country)
@@ -89,7 +107,7 @@ router.post("/", flags.requireFlag("reservations"), reserveLimiter, async functi
         [username, displayName || username, hash, email, signup.TERMS_VERSION, birth.date, country]);
       await users.welcome(u.rows[0].id, "member");
     }
-    const ins = await db.query("INSERT INTO username_reservations (username, email, display_name, country, claim_token, claimed_at) VALUES ($1, $2, $3, $4, $5, " + (password ? "NOW()" : "NULL") + ") RETURNING id",
+    const ins = await db.query("INSERT INTO username_reservations (username, email, display_name, country, claim_token, claimed_at) VALUES ($1, $2, $3, $4, $5, " + (makesAccount ? "NOW()" : "NULL") + ") RETURNING id",
       [username, email, displayName || username, country, token]);
     req.reservationId = ins.rows[0].id;
     req.position = await positionOf(req.reservationId);
@@ -99,14 +117,16 @@ router.post("/", flags.requireFlag("reservations"), reserveLimiter, async functi
   }
   if (mailEnabled()) {
     sendMail(email, "@" + username + " is reserved for you on Chapterhive",
-      "Hi " + (displayName || username) + ",\n\nYou're #" + "{POS}" + " in line. Your username @" + username + " is reserved" + (password ? " and your account is ready. When Chapterhive opens, just log in with your username and password." : ". When Chapterhive opens, we'll email you a link to claim it and set up your account.") + "\n\nSee you in the hive!",
+      "Hi " + (displayName || username) + ",\n\nYou're #" + req.position + " in line. Your username @" + username + " is reserved" + (google ? " and your account is ready. When Chapterhive opens, just press Continue with Google." : password ? " and your account is ready. When Chapterhive opens, just log in with your username and password." : ". When Chapterhive opens, we'll email you a link to claim it and set up your account.") + "\n\nSee you in the hive!",
       "<p>Hi " + escapeHtml(displayName || username) + ",</p><p>Your username <strong>@" + escapeHtml(username) + "</strong> is reserved. When Chapterhive opens, we'll email you a link to claim it and set up your account.</p><p>See you in the hive! 🐝</p>"
     ).catch(function () {});
   }
   const count = (await db.query("SELECT COUNT(*)::int AS n FROM username_reservations")).rows[0].n;
   const position = req.position;
-  require("../notify").notifyAdmins({ type: "reserve", title: "🐝 #" + position + " @" + username + " was reserved", body: count + " username" + (count === 1 ? "" : "s") + " reserved so far.", link: "/hub/reserve#reserve-admin" }).catch(function () {});
-  res.status(201).json({ username: username, count: count, position: position, account: Boolean(password) });
+  require("../notify").notifyStaff("manage_reservations", { type: "reserve", title: "🐝 #" + position + " @" + username + " was reserved", body: count + " username" + (count === 1 ? "" : "s") + " reserved so far.", link: "/hub/reserve#reserve-admin" }).catch(function () {});
+  // Google reservations are signed straight in (they can follow the list and team updates before launch).
+  if (newUser) await require("../auth").startSession(req, newUser);
+  res.status(201).json({ username: username, count: count, position: position, account: makesAccount, google: Boolean(google) });
 });
 
 // Their place in line (the owner's own name is always #1).
@@ -131,7 +151,7 @@ router.get("/claim", async function (req, res) {
 /* ---------- Admin ---------- */
 
 // Waiting counts for the admin's menu and dashboard.
-router.get("/admin/counts", requireAdmin, async function (req, res) {
+router.get("/admin/counts", requireStaff("manage_reservations", "approve_beta", "approve_creators"), async function (req, res) {
   const q = async function (sql) { try { return (await db.query(sql)).rows[0].n; } catch (e) { return 0; } };
   res.json({
     reservations: await q("SELECT COUNT(*)::int AS n FROM username_reservations"),
@@ -230,11 +250,11 @@ router.post("/admin/invite", requireAdmin, async function (req, res) {
 });
 
 // The owner's own nickname: instant, renames the owner account, and always sits at #1.
-router.get("/admin/mine", requireAdmin, async function (req, res) {
+router.get("/admin/mine", requireFullAdmin, async function (req, res) {
   const u = (await db.query("SELECT username, is_owner FROM users WHERE id = $1", [req.session.user.id])).rows[0];
   res.json({ username: u.username, isOwner: u.is_owner });
 });
-router.post("/admin/mine", requireAdmin, async function (req, res) {
+router.post("/admin/mine", requireFullAdmin, async function (req, res) {
   const me = (await db.query("SELECT id, username, email, display_name, country, is_owner FROM users WHERE id = $1", [req.session.user.id])).rows[0];
   if (!me.is_owner) return res.status(403).json({ error: "Only the site owner's account can do this." });
   const name = (typeof req.body.username === "string" ? req.body.username : "").trim().toLowerCase().replace(/^@/, "");

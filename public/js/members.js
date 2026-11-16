@@ -42,6 +42,7 @@
       card.appendChild(link);
       var acts = el("span", { class: "member-card-actions" });
       if (MW.feature("follows")) acts.appendChild(followButton(m));
+      acts.appendChild(MW.buddyButton(m.username, m.buddyState));
       if (MW.feature("chat")) acts.appendChild(el("a", { class: "btn btn-small btn-ghost", href: "/hub/chat?with=" + encodeURIComponent(m.username) }, "💬"));
       card.appendChild(acts);
       list.appendChild(card);

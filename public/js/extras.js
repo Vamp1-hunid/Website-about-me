@@ -231,7 +231,7 @@
       next.addEventListener("click", function () { i = (i + 1) % tips.length; textNode.textContent = tips[i]; });
       bar.appendChild(next);
     }
-    bar.appendChild(el("a", { href: "/help", class: "tips-help" }, "Help & FAQ"));
+    bar.appendChild(el("a", { href: MW.isHub ? "/hub/help" : "/help", class: "tips-help" }, "Help & FAQ"));
     var hide = el("button", { type: "button", class: "tips-close", "aria-label": "Hide tips for this page" }, "×");
     hide.addEventListener("click", function () {
       bar.remove();
@@ -244,9 +244,10 @@
 
   /* ---------- Help assistant ---------- */
 
+  var HELP_PAGE = MW.isHub ? "/hub/help" : "/help";
   MW.helpChat = function (container) {
     var log = el("div", { class: "help-log", "aria-live": "polite" });
-    log.appendChild(el("p", { class: "help-msg help-bot" }, "Hi! Ask me anything about using the site: posting, reviews, collabs, your account…"));
+    log.appendChild(el("p", { class: "help-msg help-bot" }, "Hi! 👋 Ask me anything about using " + (MW.isHub ? "Chapterhive" : "the site") + ": your account, posting, following, chat, beta testing…"));
     var form = el("form", { class: "help-form" });
     var input = el("input", { type: "text", maxlength: "500", placeholder: "Type your question…", "aria-label": "Your question", required: "" });
     var send = el("button", { type: "submit", class: "btn btn-small" }, "Ask");
@@ -264,7 +265,7 @@
       var thinking = el("p", { class: "help-msg help-bot muted" }, "Thinking…");
       log.appendChild(thinking);
       log.scrollTop = log.scrollHeight;
-      MW.api("/help/ask", { method: "POST", json: { question: q, history: history } }).then(function (d) {
+      MW.api("/help/ask", { method: "POST", json: { question: q, history: history, site: MW.isHub ? "chapterhive" : "banditos" } }).then(function (d) {
         thinking.remove();
         var p = el("div", { class: "help-msg help-bot" });
         p.appendChild(el("p", {}, d.answer));
@@ -272,7 +273,7 @@
           var more = el("p", { class: "help-related" }, "Related: ");
           d.sources.forEach(function (s, i) {
             if (i) more.appendChild(document.createTextNode(" · "));
-            more.appendChild(el("a", { href: "/help#" + s.id }, s.q));
+            more.appendChild(el("a", { href: HELP_PAGE + "#" + s.id }, s.q));
           });
           p.appendChild(more);
         }
@@ -291,8 +292,13 @@
   };
 
   function buildHelpButton() {
-    if (document.getElementById("help-fab") || window.location.pathname === "/help") return;
-    var button = el("button", { type: "button", id: "help-fab", class: "help-fab", "aria-haspopup": "dialog", "aria-label": "Help" }, "?");
+    if (document.getElementById("help-fab") || window.location.pathname === "/help" || window.location.pathname === "/hub/help") return;
+    var button = el("button", { type: "button", id: "help-fab", class: "help-fab help-fab-glitter", "aria-haspopup": "dialog", "aria-label": "Help" }, "?");
+    // A glow and a few sparkles around the button so people notice it. They sit in their own layer
+    // behind the button, because the hexagon shape would clip anything drawn on the button itself.
+    var glitter = el("span", { class: "help-glitter", "aria-hidden": "true" });
+    for (var sp = 0; sp < 4; sp++) glitter.appendChild(el("span", { class: "help-sparkle help-sparkle-" + sp }, "✦"));
+    document.body.appendChild(glitter);
     var dialog = el("dialog", { class: "heist-dialog help-dialog", "aria-labelledby": "help-title" });
     dialog.appendChild(el("p", { class: "node-label" }, "Help desk"));
     dialog.appendChild(el("h2", { id: "help-title" }, "How can we help?"));
@@ -300,7 +306,7 @@
     dialog.appendChild(body);
     var input = MW.helpChat(body);
     var foot = el("div", { class: "form-actions" });
-    foot.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/help" }, "All FAQs"));
+    foot.appendChild(el("a", { class: "btn btn-ghost btn-small", href: HELP_PAGE }, "All FAQs"));
     var close = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "Close");
     close.addEventListener("click", function () { dialog.close(); });
     foot.appendChild(close);

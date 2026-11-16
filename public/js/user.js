@@ -16,7 +16,7 @@
       document.title = u.displayName + " (@" + u.username + ") | God's Banditos";
       box.textContent = "";
       var head = el("div", { class: "member-head" });
-      head.appendChild(MW.avatar(u, "big"));
+      head.appendChild(MW.tappablePicture(MW.avatar(u, "big"), u.avatarUrl, u.displayName || u.username));
       var text = el("div");
       text.appendChild(el("p", { class: "node-label" }, u.role === "admin" ? "Creator // profile" : "Member // profile"));
       var h1 = el("h1", { class: "glitch" }, u.displayName);
@@ -47,6 +47,11 @@
         text.appendChild(sk);
       }
       MW.me().then(function (me) {
+        if (me && me.username === u.username) {
+          var mine = el("p", { class: "member-actions" });
+          mine.appendChild(el("a", { class: "btn btn-small", href: "/hub/people" }, "🤝 My buddies & followers"));
+          text.appendChild(mine);
+        }
         if (me && me.username !== u.username) {
           var mp = el("p", { class: "member-actions" });
           if (MW.feature("follows")) {
@@ -64,6 +69,8 @@
             mp.appendChild(fb);
             mp.appendChild(document.createTextNode(" "));
           }
+          mp.appendChild(MW.buddyButton(u.username, u.buddyState));
+          mp.appendChild(document.createTextNode(" "));
           if (MW.feature("chat")) mp.appendChild(el("a", { class: "btn btn-small btn-ghost", href: "/hub/chat?with=" + encodeURIComponent(u.username) }, "💬 Message"));
           text.appendChild(mp);
         }
@@ -77,7 +84,7 @@
       box.appendChild(head);
 
       var stats = el("dl", { class: "stat-row" });
-      [["Followers", u.followers || 0, "member-followers"], ["Following", u.followingCount || 0], ["Comments", u.comments], ["Likes given", u.likes]].forEach(function (s) {
+      [["Followers", u.followers || 0, "member-followers"], ["Following", u.followingCount || 0], ["Buddies", u.buddies || 0], ["Comments", u.comments], ["Likes given", u.likes]].forEach(function (s) {
         var d = el("div", { class: "stat" });
         d.appendChild(el("dt", {}, s[0]));
         d.appendChild(el("dd", s[2] ? { id: s[2] } : {}, String(s[1])));

@@ -17,11 +17,16 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="theme-color" content="#0b0a10">
   <link rel="icon" href="/images/gods-banditos-icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Chapterhive">
   <link rel="apple-touch-icon" href="/images/gods-banditos-icon-180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Caveat:wght@500;700&family=Chakra+Petch:wght@400;600;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=25">
+  <link rel="stylesheet" href="/css/styles.css?v=26">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -87,6 +92,7 @@
         <button role="tab" type="button" data-tab="settings" aria-selected="false">Settings</button>
         <button role="tab" type="button" data-tab="chapterhive" aria-selected="false" data-admin-only>Chapterhive <span class="tab-badge" id="mod-badge" hidden></span></button>
         <button role="tab" type="button" data-tab="profile" aria-selected="false" data-studio-only hidden>Profile</button>
+        <button role="tab" type="button" data-tab="team" aria-selected="false" data-owner-only hidden>🛡️ Team &amp; powers</button>
       </nav>
       <p class="dash-quick-links" id="dash-quick-links" data-admin-only><strong>Applications:</strong> <a class="btn btn-ghost btn-small" href="/hub/reserve#reserve-admin" data-count="reservations">🐝 Name reservations</a> <a class="btn btn-ghost btn-small" href="/hub/beta#beta-admin" data-count="beta">🧪 Beta testers</a> <a class="btn btn-ghost btn-small" href="#chapterhive" data-count="creators" data-go-tab="chapterhive">🎨 Creators</a></p>
 
@@ -607,6 +613,25 @@
       </section>
 
       <!-- ===== Announcements (news from the admin, shown in everyone's bell) ===== -->
+      <section class="dash-panel" role="tabpanel" data-panel="team" aria-label="Team and powers" hidden>
+        <div class="panel">
+          <p class="node-label">Owner // team &amp; powers</p>
+          <h2>Who has power on Chapterhive</h2>
+          <p class="muted">Only your account (the owner) can change this. Full admins can do everything; staff can only do what you tick for them. Staff can never touch admins, other staff or site settings.</p>
+          <div id="team-list"></div>
+        </div>
+        <div class="panel">
+          <h2>Give someone powers</h2>
+          <p class="muted">Type their username, then tick what they may do.</p>
+          <form id="team-add" novalidate>
+            <div class="form-row reserve-at"><span aria-hidden="true">@</span><input type="text" id="team-username" maxlength="30" autocapitalize="none" spellcheck="false" aria-label="Username"></div>
+            <div id="team-add-powers" class="team-powers"></div>
+            <div class="hero-actions"><button type="submit" class="btn btn-small">Give these powers</button></div>
+            <p class="error" id="team-error"></p>
+          </form>
+        </div>
+      </section>
+
       <section class="dash-panel dash-two" role="tabpanel" data-panel="announce" aria-label="Announcements" hidden>
         <div class="panel">
           <p class="node-label">Broadcast // news</p>
@@ -616,7 +641,7 @@
             <div class="form-row"><label for="an-title">Title</label><input type="text" id="an-title" maxlength="120" required></div>
             <div class="form-row"><label for="an-body">Message</label><textarea id="an-body" rows="4" maxlength="1000"></textarea></div>
             <div class="form-row"><label for="an-link">Link (optional)</label><input type="text" id="an-link" maxlength="300" placeholder="/hub/news or https://…"></div>
-            <div class="form-row"><label for="an-audience">Who</label><select id="an-audience"><option value="all">Everyone</option><option value="creators">Creators only</option></select></div>
+            <div class="form-row"><label for="an-audience">Who</label><select id="an-audience"><option value="all">Everyone</option><option value="beta">🧪 Beta testers only</option><option value="creators">Creators only</option><option value="staff">🛡️ Staff only</option></select></div>
             <button type="submit">Send announcement</button>
             <p class="feedback" id="an-feedback" aria-live="polite"></p>
           </form>
@@ -837,5 +862,6 @@
   <script src="/js/admin-more.js" defer></script>
   <script src="/js/admin-moderation.js" defer></script>
   <script src="/js/admin-v5.js" defer></script>
+  <script src="/js/admin-team.js" defer></script>
 </body>
 </html>

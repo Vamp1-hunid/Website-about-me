@@ -130,11 +130,36 @@ function looksLike(buffer, kind) {
 
 /* ---------- Saving ---------- */
 
+// Files up to this size also get a backup copy in the database, so they survive Render wiping its disk.
+const DB_BACKUP_MAX = 8 * 1024 * 1024;
+const MIME_BY_EXT = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".gif": "image/gif",
+  ".pdf": "application/pdf", ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".wav": "audio/wav", ".ogg": "audio/ogg",
+  ".mp4": "video/mp4", ".webm": "video/webm", ".mov": "video/quicktime", ".txt": "text/plain", ".md": "text/plain" };
+
 function saveLocal(buffer, extension) {
   fs.mkdirSync(localDir, { recursive: true });
   const name = crypto.randomBytes(12).toString("hex") + extension;
   fs.writeFileSync(path.join(localDir, name), buffer);
+  if (buffer.length <= DB_BACKUP_MAX) {
+    require("./db").query("INSERT INTO stored_files (name, mime, data) VALUES ($1, $2, $3) ON CONFLICT (name) DO NOTHING",
+      [name, MIME_BY_EXT[extension] || "application/octet-stream", buffer]).catch(function (e) { console.warn("Could not back up upload:", e.message); });
+  }
   return { url: "/uploads/" + name, publicId: "local:" + name };
+}
+
+// GET /uploads/<name> when the file isn't on disk (Render wiped it): serve the database copy and put it back on disk.
+async function serveBackup(req, res, next) {
+  const name = path.basename(req.params.name || "");
+  if (!/^[a-f0-9]{24}\.[a-z0-9]{2,5}$/.test(name)) return next();
+  try {
+    const { rows } = await require("./db").query("SELECT mime, data FROM stored_files WHERE name = $1", [name]);
+    if (!rows.length) return next();
+    try { fs.mkdirSync(localDir, { recursive: true }); fs.writeFileSync(path.join(localDir, name), rows[0].data); } catch (e) { /* disk is optional */ }
+    res.setHeader("Content-Type", rows[0].mime);
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.send(rows[0].data);
+  } catch (e) { next(e); }
 }
 
 function uploadToCloudinary(buffer, options) {
@@ -250,6 +275,7 @@ async function deleteMedia(publicId, kind) {
     if (publicId.startsWith("local:")) {
       const name = path.basename(publicId.slice(6));
       fs.rmSync(path.join(localDir, name), { force: true });
+      await require("./db").query("DELETE FROM stored_files WHERE name = $1", [name]);
     } else if (useCloudinary) {
       const type = kind === "document" ? "raw" : kind === "video" || kind === "audio" ? "video" : "image";
       await cloudinary.uploader.destroy(publicId, { resource_type: type });
@@ -269,6 +295,16 @@ function localFileExists(publicId, url) {
   const name = publicId.slice(6);
   if (!/^[a-f0-9]{24}\.[a-z0-9]{2,5}$/.test(name) || url !== "/uploads/" + name) return false;
   return fs.existsSync(path.join(localDir, name));
+}
+
+// Same, but also counts the database backup (for files Render's disk lost).
+async function localFileKnown(publicId, url) {
+  if (localFileExists(publicId, url)) return true;
+  if (typeof publicId !== "string" || !publicId.startsWith("local:")) return false;
+  const name = publicId.slice(6);
+  if (!/^[a-f0-9]{24}\.[a-z0-9]{2,5}$/.test(name) || url !== "/uploads/" + name) return false;
+  const { rows } = await require("./db").query("SELECT 1 FROM stored_files WHERE name = $1", [name]);
+  return rows.length > 0;
 }
 
 /* ---------- Resized copies (Cloudinary does this on the fly) ---------- */
@@ -303,6 +339,7 @@ function avatarUrl(url) {
 }
 
 module.exports = {
+  serveBackup, localFileKnown,
   useCloudinary, upload, extensionOf, mediaUpload, documentUpload, LIMITS_MB, FORMATS,
   saveImage, saveMediaFile, signUpload, verifyCloudinaryUpload, localFileExists,
   deleteImage, deleteMedia, thumbnailUrl, displayUrl, posterUrl, avatarUrl, cloudinaryMessage

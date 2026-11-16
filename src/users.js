@@ -73,7 +73,7 @@ const WELCOME = {
     title: "Welcome to Chapterhive 🐝",
     body: "Brought to you by God's Banditos.\nYou can now like, save and comment, follow creators, chat and get new releases in your bell. " +
       "Your feed learns what you enjoy: tap ⋯ on any post to see more or less like it. Want to publish your own work? Apply to become a creator.",
-    link: "/help"
+    link: "/hub/help"
   },
   creator: {
     title: "You're in: welcome to the Chapterhive creators! 🐝",

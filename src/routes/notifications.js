@@ -17,7 +17,10 @@ async function announcementsFor(userId, sinceOnly) {
     `SELECT a.*, (a.created_at > COALESCE(u.announcements_seen_at, '-infinity')) AS unread
        FROM announcements a, users u
       WHERE u.id = $1 AND a.created_at > u.created_at - INTERVAL '30 days'
-        AND (a.audience = 'all' OR EXISTS (SELECT 1 FROM creator_profiles cp WHERE cp.user_id = u.id AND cp.status = 'approved') OR u.role = 'admin')
+        AND (a.audience = 'all' OR u.role = 'admin'
+             OR (a.audience = 'creators' AND EXISTS (SELECT 1 FROM creator_profiles cp WHERE cp.user_id = u.id AND cp.status = 'approved'))
+             OR (a.audience = 'beta' AND u.is_beta)
+             OR (a.audience = 'staff' AND cardinality(u.staff_perms) > 0))
         ${sinceOnly ? "AND a.created_at > COALESCE(u.announcements_seen_at, '-infinity')" : ""}
       ORDER BY a.created_at DESC LIMIT 20`,
     [userId]

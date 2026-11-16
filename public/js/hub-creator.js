@@ -39,7 +39,7 @@
     box.appendChild(banner);
     var body = el("div", { class: "profile-body" });
     var top = el("div", { class: "profile-top" });
-    top.appendChild(MW.avatar({ avatarUrl: c.avatarUrl, displayName: c.name }, "big"));
+    top.appendChild(MW.tappablePicture(MW.avatar({ avatarUrl: c.avatarUrl, displayName: c.name }, "big"), c.avatarUrl, c.name));
     var names = el("div");
     var h1 = el("h1", {}, c.name);
     h1.appendChild(MW.onlineDot(c.online));

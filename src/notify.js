@@ -29,4 +29,9 @@ async function notifyAdmins(n) {
   await notifyMany(rows.map(function (r) { return r.id; }), n);
 }
 
-module.exports = { notify, notifyMany, notifyAdmins };
+// Admins and staff who hold a power (e.g. "approve_beta").
+async function notifyStaff(perm, n) {
+  await notifyMany(await require("./staff").staffIds(perm), n);
+}
+
+module.exports = { notify, notifyMany, notifyAdmins, notifyStaff };

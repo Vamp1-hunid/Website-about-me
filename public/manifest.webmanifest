@@ -1,0 +1,26 @@
+{
+  "id": "/hub",
+  "name": "Chapterhive",
+  "short_name": "Chapterhive",
+  "description": "Stories, manga, songs, art and films by independent creators, and the readers and watchers who love them.",
+  "start_url": "/hub?source=app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e0b07",
+  "theme_color": "#0e0b07",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["books", "entertainment", "social"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Home feed", "url": "/hub", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Chat", "url": "/hub/chat", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Reserve a username", "url": "/hub/reserve", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

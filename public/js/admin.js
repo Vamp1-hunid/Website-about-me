@@ -45,20 +45,46 @@
       }
       return;
     }
-    if (ADMIN.mode === "dashboard" && user.role !== "admin") {
-      gate.textContent = "Access denied. This area is only for the site owner.";
+    var perms = (MW.account && MW.account.staffPerms) || [];
+    var isStaff = user.role !== "admin" && perms.length > 0;
+    if (ADMIN.mode === "dashboard" && user.role !== "admin" && !isStaff) {
+      gate.textContent = "Access denied. This area is only for the site owner and staff.";
       return;
+    }
+    ADMIN.isStaff = isStaff;
+    if (ADMIN.mode === "dashboard") {
+      document.querySelectorAll("[data-owner-only]").forEach(function (n) { n.hidden = !(MW.account && MW.account.isOwner); });
+    }
+    if (isStaff && ADMIN.mode === "dashboard") {
+      // Staff see only the tabs their powers open.
+      var TAB_PERMS = { reviews: ["approve_posts"], chapterhive: ["approve_creators", "handle_reports"], users: ["moderate_users"], announce: ["post_updates"] };
+      document.querySelectorAll(".dash-tabs [role='tab']").forEach(function (tab) {
+        var need = TAB_PERMS[tab.getAttribute("data-tab")];
+        tab.hidden = !need || !need.some(function (p) { return perms.indexOf(p) >= 0; });
+      });
+      var ql = document.getElementById("dash-quick-links");
+      if (ql) {
+        var LINK_PERMS = { reservations: "manage_reservations", beta: "approve_beta", creators: "approve_creators" };
+        ql.querySelectorAll("[data-count]").forEach(function (a) { a.hidden = perms.indexOf(LINK_PERMS[a.getAttribute("data-count")]) < 0; });
+      }
     }
     ADMIN.user = user;
     gate.textContent = ADMIN.mode === "studio"
       ? "Welcome back, " + user.displayName + ". Publish, schedule and manage everything on your Chapterhive page."
       : "Welcome back, " + user.displayName + ".";
     area.hidden = false;
-    readyCallbacks.forEach(function (fn) { fn(user); });
+    // Staff only get their own tabs, so the creator/admin set-up (works, stories, inbox counts…) is skipped.
+    if (!isStaff) readyCallbacks.forEach(function (fn) { fn(user); });
     var params = new URLSearchParams(window.location.search);
     var start = (window.location.hash || "").slice(1);
     if (params.get("edit")) start = "compose";
-    ADMIN.show(document.querySelector("[data-panel='" + start + "']") ? start : "overview");
+    var startTab = document.querySelector(".dash-tabs [data-tab='" + start + "']");
+    if (!startTab || startTab.hidden) {
+      var first = Array.prototype.filter.call(document.querySelectorAll(".dash-tabs [role='tab']"), function (t) { return !t.hidden; })[0];
+      start = first ? first.getAttribute("data-tab") : "overview";
+    }
+    if (isStaff) gate.textContent = "Welcome, " + user.displayName + ". These are the staff tools your powers open.";
+    ADMIN.show(start);
   });
 
   /* ---------- Tabs ---------- */

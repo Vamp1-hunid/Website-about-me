@@ -21,7 +21,9 @@ router.get("/", requireLogin, async function (req, res) {
     `SELECT u.id, u.username, u.display_name, u.avatar_url, u.is_beta, u.role, u.bio,
             (u.show_online AND u.last_seen_at > NOW() - INTERVAL '5 minutes') AS online,
             cp.handle AS creator_handle,
-            EXISTS (SELECT 1 FROM follows f WHERE f.follower_id = $2 AND f.creator_id = u.id) AS following
+            EXISTS (SELECT 1 FROM follows f WHERE f.follower_id = $2 AND f.creator_id = u.id) AS following,
+            (SELECT CASE WHEN b.status = 'accepted' THEN 'buddies' WHEN b.requester_id = $2 THEN 'sent' ELSE 'received' END
+               FROM buddies b WHERE LEAST(b.requester_id, b.addressee_id) = LEAST(u.id, $2) AND GREATEST(b.requester_id, b.addressee_id) = GREATEST(u.id, $2)) AS buddy_state
        FROM users u LEFT JOIN creator_profiles cp ON cp.user_id = u.id AND cp.status = 'approved'
       WHERE u.status = 'active' AND u.profile_visible AND u.id <> $2
         AND ($1 = '%%' OR u.username ILIKE $1 OR u.display_name ILIKE $1)
@@ -29,7 +31,7 @@ router.get("/", requireLogin, async function (req, res) {
       LIMIT 60`, [like, me]);
   res.json({ members: rows.map(function (u) {
     return { username: u.username, displayName: u.display_name, avatarUrl: avatarUrl(u.avatar_url), isBeta: u.is_beta,
-      isAdmin: u.role === "admin", creatorHandle: u.creator_handle || null, online: Boolean(u.online), following: u.following,
+      isAdmin: u.role === "admin", creatorHandle: u.creator_handle || null, online: Boolean(u.online), following: u.following, buddyState: u.buddy_state || "none",
       bio: (u.bio || "").slice(0, 140) };
   }) });
 });
@@ -58,6 +60,100 @@ async function followMember(req, res) {
 router.post("/:username/follow", requireLogin, require("../flags").requireFlag("follows"), followMember);
 router.delete("/:username/follow", requireLogin, require("../flags").requireFlag("follows"), followMember);
 
+/* ---------- Followers, following and buddies ---------- */
+
+const PERSON = "u.username, u.display_name, u.avatar_url, u.is_beta, u.role";
+function person(u) {
+  return { username: u.username, displayName: u.display_name, avatarUrl: avatarUrl(u.avatar_url), isBeta: u.is_beta, isAdmin: u.role === "admin" };
+}
+
+// GET /api/users/me/people -> my followers, who I follow, my buddies and buddy requests
+router.get("/me/people", requireLogin, async function (req, res) {
+  const me = req.session.user.id;
+  const [followers, following, buddies, incoming, outgoing] = await Promise.all([
+    db.query(`SELECT ${PERSON}, f.created_at AS since,
+                     EXISTS (SELECT 1 FROM follows b WHERE b.follower_id = $1 AND b.creator_id = u.id) AS follow_back
+                FROM follows f JOIN users u ON u.id = f.follower_id
+               WHERE f.creator_id = $1 AND u.status = 'active' ORDER BY f.created_at DESC LIMIT 500`, [me]),
+    db.query(`SELECT ${PERSON}, f.created_at AS since FROM follows f JOIN users u ON u.id = f.creator_id
+               WHERE f.follower_id = $1 AND u.status = 'active' ORDER BY f.created_at DESC LIMIT 500`, [me]),
+    db.query(`SELECT ${PERSON}, b.responded_at AS since FROM buddies b
+                JOIN users u ON u.id = CASE WHEN b.requester_id = $1 THEN b.addressee_id ELSE b.requester_id END
+               WHERE (b.requester_id = $1 OR b.addressee_id = $1) AND b.status = 'accepted' AND u.status = 'active'
+               ORDER BY u.username LIMIT 500`, [me]),
+    db.query(`SELECT ${PERSON}, b.created_at AS since FROM buddies b JOIN users u ON u.id = b.requester_id
+               WHERE b.addressee_id = $1 AND b.status = 'pending' AND u.status = 'active' ORDER BY b.created_at DESC`, [me]),
+    db.query(`SELECT ${PERSON}, b.created_at AS since FROM buddies b JOIN users u ON u.id = b.addressee_id
+               WHERE b.requester_id = $1 AND b.status = 'pending' AND u.status = 'active' ORDER BY b.created_at DESC`, [me])
+  ]);
+  const map = function (rows, extra) { return rows.map(function (u) { return Object.assign(person(u), { since: u.since }, extra ? extra(u) : {}); }); };
+  res.json({
+    followers: map(followers.rows, function (u) { return { followBack: u.follow_back }; }),
+    following: map(following.rows),
+    buddies: map(buddies.rows),
+    requests: map(incoming.rows),
+    sent: map(outgoing.rows)
+  });
+});
+
+async function findTarget(req, res) {
+  const username = String(req.params.username || "").toLowerCase();
+  const { rows } = await db.query("SELECT id, username, status FROM users WHERE username = $1", [username]);
+  const target = rows[0];
+  if (!target || target.status !== "active") { res.status(404).json({ error: "That member could not be found." }); return null; }
+  if (target.id === req.session.user.id) { res.status(400).json({ error: "That's you!" }); return null; }
+  return target;
+}
+async function buddyRow(a, b) {
+  const { rows } = await db.query("SELECT * FROM buddies WHERE LEAST(requester_id, addressee_id) = LEAST($1::int, $2::int) AND GREATEST(requester_id, addressee_id) = GREATEST($1::int, $2::int)", [a, b]);
+  return rows[0] || null;
+}
+function buddyState(row, me) {
+  if (!row) return "none";
+  if (row.status === "accepted") return "buddies";
+  return row.requester_id === me ? "sent" : "received";
+}
+
+// POST /api/users/:username/buddy -> send a buddy request (or accept theirs if they already asked you)
+router.post("/:username/buddy", requireLogin, async function (req, res) {
+  const target = await findTarget(req, res);
+  if (!target) return;
+  const me = req.session.user;
+  const row = await buddyRow(me.id, target.id);
+  const notify = require("../notify").notify;
+  if (row && row.status === "accepted") return res.json({ state: "buddies" });
+  if (row && row.requester_id === me.id) return res.json({ state: "sent" });
+  if (row) {
+    await db.query("UPDATE buddies SET status = 'accepted', responded_at = NOW() WHERE id = $1", [row.id]);
+    await notify(target.id, { type: "info", title: "🤝 " + (me.displayName || me.username) + " accepted your buddy request", body: "You're buddies now.", link: "/hub/people#buddies" });
+    return res.json({ state: "buddies" });
+  }
+  try {
+    await db.query("INSERT INTO buddies (requester_id, addressee_id) VALUES ($1, $2)", [me.id, target.id]);
+  } catch (e) {
+    if (e.code !== "23505") throw e;
+  }
+  await notify(target.id, { type: "info", title: "🤝 " + (me.displayName || me.username) + " sent you a buddy request", body: "Accept it to add @" + me.username + " to your buddy list.", link: "/hub/people#requests" });
+  res.status(201).json({ state: "sent" });
+});
+
+// POST /api/users/:username/buddy/decline -> turn down a request sent to me
+router.post("/:username/buddy/decline", requireLogin, async function (req, res) {
+  const target = await findTarget(req, res);
+  if (!target) return;
+  await db.query("DELETE FROM buddies WHERE requester_id = $1 AND addressee_id = $2 AND status = 'pending'", [target.id, req.session.user.id]);
+  res.json({ state: "none" });
+});
+
+// DELETE /api/users/:username/buddy -> cancel my request, or stop being buddies
+router.delete("/:username/buddy", requireLogin, async function (req, res) {
+  const target = await findTarget(req, res);
+  if (!target) return;
+  const row = await buddyRow(req.session.user.id, target.id);
+  if (row && (row.status === "accepted" || row.requester_id === req.session.user.id)) await db.query("DELETE FROM buddies WHERE id = $1", [row.id]);
+  res.json({ state: row && row.status !== "accepted" && row.requester_id !== req.session.user.id ? "received" : "none" });
+});
+
 router.get("/:username", requireLogin, async function (req, res) {
   const username = String(req.params.username || "").toLowerCase();
   if (!/^[a-z0-9_-]{3,30}$/.test(username)) {
@@ -72,7 +168,10 @@ router.get("/:username", requireLogin, async function (req, res) {
        (SELECT COUNT(*) FROM likes l WHERE l.user_id = u.id)::int AS likes,
        (SELECT COUNT(*) FROM follows f WHERE f.creator_id = u.id)::int AS followers,
        (SELECT COUNT(*) FROM follows f WHERE f.follower_id = u.id)::int AS following_count,
-       EXISTS (SELECT 1 FROM follows f WHERE f.follower_id = $2 AND f.creator_id = u.id) AS i_follow
+       EXISTS (SELECT 1 FROM follows f WHERE f.follower_id = $2 AND f.creator_id = u.id) AS i_follow,
+       (SELECT CASE WHEN b.status = 'accepted' THEN 'buddies' WHEN b.requester_id = $2 THEN 'sent' ELSE 'received' END
+          FROM buddies b WHERE LEAST(b.requester_id, b.addressee_id) = LEAST(u.id, $2) AND GREATEST(b.requester_id, b.addressee_id) = GREATEST(u.id, $2)) AS buddy_state,
+       (SELECT COUNT(*) FROM buddies b WHERE (b.requester_id = u.id OR b.addressee_id = u.id) AND b.status = 'accepted')::int AS buddy_count
        FROM users u WHERE u.username = $1`,
     [username, req.session.user.id]
   );
@@ -110,7 +209,9 @@ router.get("/:username", requireLogin, async function (req, res) {
       banned: user.status === "banned",
       followers: user.followers,
       followingCount: user.following_count,
-      iFollow: user.i_follow
+      iFollow: user.i_follow,
+      buddyState: user.buddy_state || "none",
+      buddies: user.buddy_count
     },
     recentComments: recent.rows.map(function (row) {
       return {

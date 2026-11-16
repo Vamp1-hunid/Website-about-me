@@ -249,6 +249,18 @@ app.use(
   })
 );
 
+// Android app (Play Store, Trusted Web Activity): paste the assetlinks.json PWABuilder gives you into the
+// ANDROID_ASSETLINKS setting on Render, so the app opens full-screen without a browser bar.
+app.get("/.well-known/assetlinks.json", function (req, res) {
+  let body = [];
+  try { body = JSON.parse(process.env.ANDROID_ASSETLINKS || "[]"); } catch (e) { body = []; }
+  res.setHeader("Cache-Control", "no-cache");
+  res.json(body);
+});
+
+// Uploaded files Render's disk lost: serve the backup copy kept in the database.
+app.get("/uploads/:name", require("./src/storage").serveBackup);
+
 app.use(function (req, res) {
   res.setHeader("Cache-Control", "no-cache");
   res.status(404).sendFile(path.join(publicDir, "404.html"));

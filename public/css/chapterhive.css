@@ -1457,3 +1457,15 @@ body[data-holiday="newyear"] .site-header { border-bottom: 4px solid #ffd23f; }
 .admin-bulk { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 0.3rem 0; }
 .beta-quick { display: grid; gap: 0.5rem; }
 .beta-quick textarea { width: 100%; }
+.birthday-said { margin: 0.3rem 0 0; font-size: 0.9rem; }
+.birthday-said.is-good { color: #30a46c; }
+.birthday-said.is-bad { color: #e5484d; }
+.pic-viewer { position: fixed; inset: 0; z-index: 9999; background: rgba(0, 0, 0, 0.88); display: grid; place-items: center; align-content: center; gap: 0.8rem; padding: 1rem; }
+.pic-viewer img { max-width: min(92vw, 640px); max-height: 75vh; border-radius: 18px; object-fit: contain; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); }
+.pic-viewer-close { position: absolute; top: 0.8rem; right: 0.8rem; width: 44px; height: 44px; border-radius: 50%; font-size: 1.2rem; }
+.pic-viewer-name { color: #fff; font-weight: 800; margin: 0; }
+.pic-tappable { cursor: zoom-in; }
+.people-tabs { display: flex; gap: 0.4rem; overflow-x: auto; margin: 0.8rem 0 0.4rem; padding-bottom: 0.2rem; scrollbar-width: none; }
+.people-tabs button { flex: 0 0 auto; padding: 0.4rem 0.9rem; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font-weight: 700; }
+.people-tabs button[aria-selected="true"] { background: var(--pink); color: #1a1205; border-color: var(--pink); }
+.buddy-actions { display: inline-flex; gap: 0.35rem; flex-wrap: wrap; }

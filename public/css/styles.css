@@ -4559,3 +4559,36 @@ span.skill-chip { cursor: default; }
   .bell-panel { position: fixed; left: 0.5rem; right: 0.5rem; top: 4.2rem; width: auto; max-height: calc(100vh - 5.5rem); max-height: calc(100dvh - 5.5rem); }
   .bell-text { font-size: 0.95rem; }
 }
+.birthday-said { margin: 0.3rem 0 0; font-size: 0.9rem; }
+.birthday-said.is-good { color: #30a46c; }
+.birthday-said.is-bad { color: #e5484d; }
+.team-card { border: 1px solid var(--line); border-radius: 14px; padding: 0.8rem 1rem; margin: 0.6rem 0; display: grid; gap: 0.5rem; }
+.team-card-head { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.team-powers { display: grid; gap: 0.35rem; }
+.team-power { display: flex; gap: 0.5rem; align-items: flex-start; font-size: 0.92rem; }
+.team-power input { margin-top: 0.25rem; }
+.mini-tag { font-size: 0.72rem; padding: 0.05rem 0.45rem; border-radius: 999px; border: 1px solid var(--line); }
+.pic-viewer { position: fixed; inset: 0; z-index: 9999; background: rgba(0, 0, 0, 0.88); display: grid; place-items: center; align-content: center; gap: 0.8rem; padding: 1rem; }
+.pic-viewer img { max-width: min(92vw, 640px); max-height: 75vh; border-radius: 18px; object-fit: contain; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); }
+.pic-viewer-close { position: absolute; top: 0.8rem; right: 0.8rem; width: 44px; height: 44px; border-radius: 50%; font-size: 1.2rem; }
+.pic-viewer-name { color: #fff; font-weight: 800; margin: 0; }
+.pic-tappable { cursor: zoom-in; }
+/* The help button glitters so people notice it. */
+.help-fab-glitter { overflow: hidden; }
+.help-glitter { position: fixed; right: 1rem; bottom: 4.1rem; z-index: 79; width: 2.6rem; height: 2.6rem; border-radius: 50%; pointer-events: none;
+  animation: help-glow 2.4s ease-in-out infinite; }
+body[data-brand="chapterhive"] .help-glitter { width: 2.9rem; height: 3.2rem; }
+@media (max-width: 640px) { .help-glitter { bottom: 4.6rem; } }
+.help-fab-glitter::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.75) 48%, transparent 66%) no-repeat;
+  background-size: 250% 100%; animation: help-shine 3.2s ease-in-out infinite; }
+.help-sparkle { position: absolute; pointer-events: none; color: #fff6c2; font-size: 0.7rem; line-height: 1; opacity: 0;
+  text-shadow: 0 0 6px #ffd84a; animation: help-twinkle 2.4s ease-in-out infinite; }
+.help-sparkle-0 { top: -0.45rem; left: -0.2rem; animation-delay: 0s; }
+.help-sparkle-1 { top: -0.6rem; right: -0.35rem; font-size: 0.55rem; animation-delay: 0.6s; }
+.help-sparkle-2 { bottom: -0.4rem; right: -0.25rem; animation-delay: 1.2s; }
+.help-sparkle-3 { bottom: -0.2rem; left: -0.5rem; font-size: 0.5rem; animation-delay: 1.8s; }
+@keyframes help-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 216, 74, 0.55), 0 4px 14px rgba(0, 0, 0, 0.3); } 50% { box-shadow: 0 0 18px 6px rgba(255, 216, 74, 0.55), 0 4px 14px rgba(0, 0, 0, 0.3); } }
+@keyframes help-shine { 0%, 55% { background-position: 150% 0; } 100% { background-position: -150% 0; } }
+@keyframes help-twinkle { 0%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); } 40% { opacity: 1; transform: scale(1.15) rotate(25deg); } 60% { opacity: 0.9; transform: scale(1) rotate(40deg); } }
+@media (prefers-reduced-motion: reduce) { .help-glitter, .help-fab-glitter::after, .help-sparkle { animation: none; } .help-sparkle { opacity: 0.8; } }
