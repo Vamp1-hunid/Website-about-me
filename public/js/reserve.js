@@ -170,7 +170,7 @@
       ev.preventDefault();
       $("mine-username-error").textContent = "";
       MW.api("/reserve/admin/mine", { method: "POST", json: { username: $("mine-username").value } }).then(function (d) {
-        MW.toast("@" + d.username + " is yours, at #1. Log in with this name from now on.");
+        MW.toast("@" + d.username + " is yours, at #1. Log in with this name from now on." + (d.note ? " " + d.note : ""));
         load();
       }).catch(function (e) { $("mine-username-error").textContent = e.message; });
     });

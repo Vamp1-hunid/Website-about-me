@@ -242,12 +242,22 @@ router.post("/admin/mine", requireAdmin, async function (req, res) {
     const issue = await users.usernameProblem(name, me.id);
     if (issue) return res.status(400).json({ error: issue, problems: [{ field: "mine-username", message: issue }] });
   }
+  // The creator page shows its own @handle, so it follows the nickname too (if the name fits handle rules and is free).
+  const cp = (await db.query("SELECT handle FROM creator_profiles WHERE user_id = $1", [me.id])).rows[0];
+  let handleNote = null;
+  if (cp && cp.handle !== name) {
+    const fits = /^[a-z0-9](?:[a-z0-9_-]{1,28}[a-z0-9])$/.test(name);
+    const taken = (await db.query("SELECT 1 FROM creator_profiles WHERE handle = $1 AND user_id <> $2", [name, me.id])).rows.length;
+    if (!fits) handleNote = "Your creator page handle can't start or end with _ so it stays @" + cp.handle + ".";
+    else if (taken) return res.status(400).json({ error: "A creator page already uses @" + name + ".", problems: [{ field: "mine-username", message: "A creator page already uses that handle." }] });
+  }
   await db.query("UPDATE users SET username = $1 WHERE id = $2", [name, me.id]);
+  if (cp && cp.handle !== name && !handleNote) await db.query("UPDATE creator_profiles SET handle = $1 WHERE user_id = $2", [name, me.id]);
   await db.query("DELETE FROM username_reservations WHERE pinned OR username = $1 OR email = $2", [name, (me.email || "").toLowerCase()]);
   await db.query("INSERT INTO username_reservations (username, email, display_name, country, claim_token, claimed_at, pinned) VALUES ($1, $2, $3, $4, $5, NOW(), TRUE)",
     [name, (me.email || "owner+" + me.id + "@chapterhive.invalid").toLowerCase(), me.display_name || name, me.country, crypto.randomBytes(24).toString("hex")]);
   req.session.user.username = name;
-  res.json({ ok: true, username: name, position: 1 });
+  res.json({ ok: true, username: name, position: 1, note: handleNote });
 });
 
 router.delete("/admin/:id", requireAdmin, async function (req, res) {
