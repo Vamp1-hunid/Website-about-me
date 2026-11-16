@@ -101,7 +101,7 @@ router.post("/admin/:id/approve", requireAdmin, async function (req, res) {
   } else {
     let r = (await db.query("SELECT * FROM username_reservations WHERE email = $1", [app.email])).rows[0];
     if (!r) {
-      const issue = await users.usernameProblem(app.username);
+      const issue = await users.usernameProblem(app.username, null, undefined, { legacy: true });
       if (issue) return res.status(409).json({ error: "@" + app.username + " isn't available any more (" + issue + "). Decline, or ask them to apply with another name." });
       r = (await db.query("INSERT INTO username_reservations (username, email, display_name, country, claim_token, beta) VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING *",
         [app.username, app.email, app.display_name, app.country, crypto.randomBytes(24).toString("hex")])).rows[0];

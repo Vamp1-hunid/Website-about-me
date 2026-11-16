@@ -188,7 +188,7 @@
     var name = el("p");
     name.appendChild(MW.avatar(u, 28));
     name.appendChild(el("strong", {}, " " + u.displayName + " "));
-    name.appendChild(el("a", { href: "/u/" + encodeURIComponent(u.username), target: "_blank", rel: "noopener" }, "@" + u.username));
+    name.appendChild(el("a", { href: "/hub/u/" + encodeURIComponent(u.username), target: "_blank", rel: "noopener" }, "@" + u.username));
     if (u.role === "admin") name.appendChild(el("span", { class: "sticker" }, "Admin"));
     if (u.creator) name.appendChild(el("span", { class: "sticker" }, "Creator" + (u.creator.status !== "approved" ? " (" + u.creator.status + ")" : "")));
     if (u.isBeta) name.appendChild(el("span", { class: "sticker" }, "Beta tester"));

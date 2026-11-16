@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit my profile | Chapterhive</title>
+  <meta name="description" content="Sponsor creators, advertise with approval, partner or invest in Chapterhive. Business contact details and enquiry form.">
+  
+  <meta property="og:site_name" content="Chapterhive">
+  <meta property="og:title" content="Sponsor &amp; business | Chapterhive">
+  <meta property="og:description" content="Sponsor creators, advertise with approval, partner or invest in Chapterhive. Business contact details and enquiry form.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://mulenga-mwamba-website.onrender.com/images/chapterhive-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#0e0b07">
+  <link rel="icon" href="/images/chapterhive-mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css?v=24">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=25">
+  <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
+  <script src="/js/theme-boot.js"></script>
+</head>
+<body data-page="profile" data-brand="chapterhive">
+
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <a class="af-brand" href="/hub" aria-label="Chapterhive, home">
+      <img src="/images/chapterhive-mark.svg" alt="" width="34" height="34">
+      <span>Chapter<b>hive</b></span>
+    </a>
+    <div class="header-actions">
+      <div class="auth-area" id="auth-area"></div>
+      <form class="header-search" action="/hub/search" method="get" role="search">
+        <label class="sr-only" for="header-q">Search Chapterhive</label>
+        <input type="search" id="header-q" name="q" placeholder="Search creators, works&hellip;" maxlength="80" autocomplete="off">
+      </form>
+      <button id="menu-toggle" class="btn btn-ghost btn-small menu-toggle" type="button"
+              aria-expanded="false" aria-controls="site-menu" aria-label="Open menu">
+        <span class="bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
+      <button id="theme-toggle" class="btn btn-ghost btn-small" type="button">Light mode</button>
+    </div>
+  </header>
+
+  <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+    <a href="/hub" data-nav="hub">Home</a>
+    <a href="/hub/creators" data-nav="creators">Creators</a>
+    <a href="/hub/top" data-nav="top">Top creators</a>
+    <a href="/hub/feed" data-nav="feed">Following</a>
+    <a href="/hub/news" data-nav="news">News &amp; updates</a>
+    <a href="/hub/collabs" data-nav="collabs">Collabs</a>
+    <a href="/hub/apply" data-nav="apply">Become a creator</a>
+    <a href="/hub/sponsor" data-nav="sponsor">Sponsor</a>
+  </nav>
+
+  <main id="main">
+    <section class="panel" aria-labelledby="profile-title">
+      <p class="node-label">Member // profile</p>
+      <h1 id="profile-title" class="glitch">Profile</h1>
+      <div class="member-head" id="profile-head">
+        <span id="profile-avatar"></span>
+        <p id="profile-sub" class="lead loading">Loading&hellip;</p>
+      </div>
+      <div class="hero-actions" id="avatar-actions" hidden>
+        <label class="btn btn-ghost btn-small file-button" for="avatar-file">Change picture</label>
+        <input type="file" id="avatar-file" accept="image/jpeg,image/png,image/webp,image/gif" class="sr-only">
+        <button type="button" class="btn btn-ghost btn-small" id="avatar-remove" hidden>Remove picture</button>
+        <a class="btn btn-ghost btn-small" id="public-link" href="/hub/u/">View your public page</a>
+      </div>
+      <dl id="profile-stats" class="stat-row" hidden>
+        <div class="stat"><dt>Joined</dt><dd id="stat-joined">&ndash;</dd></div>
+        <div class="stat"><dt>Saved</dt><dd id="stat-favourites">0</dd></div>
+        <div class="stat"><dt>Likes</dt><dd id="stat-likes">0</dd></div>
+        <div class="stat"><dt>Comments</dt><dd id="stat-comments">0</dd></div>
+        <div class="stat" id="stat-streak-box" hidden><dt>Streak</dt><dd id="stat-streak">0</dd></div>
+      </dl>
+      <p id="admin-link" hidden><a class="btn" href="/admin">Open the admin area</a></p>
+    </section>
+
+    <section class="panel" aria-labelledby="saved-title" id="saved-panel" hidden>
+      <p class="node-label">Member // saved files</p>
+      <h2 id="saved-title">Your favourites</h2>
+      <div id="favourites" class="works-grid"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="presence-title" id="presence-panel" hidden>
+      <p class="node-label">Privacy // presence</p>
+      <h2 id="presence-title">Online status</h2>
+      <label class="check-row"><input type="checkbox" id="show-online"> <span>Show when I'm online (a green dot on my profile, comments and creator page)</span></label>
+      <p class="feedback" id="presence-feedback" aria-live="polite"></p>
+    </section>
+
+    <section class="panel" aria-labelledby="email-title" id="email-panel" hidden>
+      <p class="node-label">Security // recovery</p>
+      <h2 id="email-title">Email for password resets</h2>
+      <p class="muted" id="email-status">Add an email so you can reset your password if you forget it. It's never shown to anyone.</p>
+      <form id="email-form" class="narrow" novalidate>
+        <div class="form-row">
+          <label for="account-email">Email</label>
+          <input type="email" id="account-email" name="email" autocomplete="email" maxlength="254" aria-describedby="account-email-error">
+          <p class="error" id="account-email-error"></p>
+        </div>
+        <div class="form-row" id="email-password-row">
+          <label for="email-password">Current password</label>
+          <input type="password" id="email-password" name="emailPassword" autocomplete="current-password" aria-describedby="email-password-error">
+          <p class="error" id="email-password-error"></p>
+        </div>
+        <button type="submit">Save email</button>
+        <p class="feedback" id="email-feedback" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="panel" aria-labelledby="google-title" id="google-panel" hidden>
+      <p class="node-label">Security // linked accounts</p>
+      <h2 id="google-title">Google sign-in</h2>
+      <p id="google-status" class="lead"></p>
+      <div class="hero-actions">
+        <a class="btn btn-google" id="google-link" href="/auth/google?link=1&amp;next=%2Fhub%2Fprofile" hidden>
+          <span class="g-mark" aria-hidden="true">G</span> Link my Google account
+        </a>
+        <button class="btn btn-ghost" type="button" id="google-unlink" hidden>Unlink Google</button>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="password-title" id="password-panel" hidden>
+      <p class="node-label">Security // credentials</p>
+      <h2 id="password-title">Change password</h2>
+      <form id="password-form" class="narrow" novalidate>
+        <div class="form-row" id="current-password-row">
+          <label for="current-password">Current password</label>
+          <input type="password" id="current-password" name="currentPassword" autocomplete="current-password" required
+                 aria-describedby="current-password-error">
+          <p class="error" id="current-password-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="new-password">New password</label>
+          <input type="password" id="new-password" name="newPassword" autocomplete="new-password" required
+                 aria-describedby="new-password-hint new-password-error">
+          <p class="muted" id="new-password-hint">At least 8 characters (10 for the site owner).</p>
+          <p class="error" id="new-password-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="new-password2">Repeat new password</label>
+          <input type="password" id="new-password2" name="newPassword2" autocomplete="new-password" required
+                 aria-describedby="new-password2-error">
+          <p class="error" id="new-password2-error"></p>
+        </div>
+        <button type="submit">Change password</button>
+        <p class="feedback" id="password-feedback" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="panel danger-zone" aria-labelledby="delete-title" id="delete-panel" hidden>
+      <p class="node-label">Danger zone</p>
+      <h2 id="delete-title">Delete my account</h2>
+      <p>This removes your account, your comments, likes and favourites for good.</p>
+      <form id="delete-form" novalidate>
+        <div class="form-row">
+          <label for="delete-password" id="delete-label">Type your password to confirm</label>
+          <input type="password" id="delete-password" name="password" autocomplete="current-password" required
+                 aria-describedby="delete-password-error">
+          <p class="error" id="delete-password-error"></p>
+        </div>
+        <button type="submit" class="btn btn-danger">Delete my account</button>
+      </form>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p class="footer-brand"><img src="/images/chapterhive-mark.svg" alt="" width="28" height="28"> &copy; 2026 Chapterhive &middot; a <a href="/">God's Banditos</a> production</p>
+    <p><a href="/legal/terms">Terms</a> &middot; <a href="/legal/privacy">Privacy</a> &middot; <a href="/legal/creator-agreement">Creator Agreement</a> &middot; <a href="/legal/content-rules">Content Rules</a> &middot; <a href="/contact">Contact</a></p>
+  </footer>
+
+  <script src="/js/api.js" defer></script>
+  <script src="/js/script.js" defer></script>
+  <script src="/js/fx.js" defer></script>
+  <script src="/js/flair.js" defer></script>
+  <script src="/js/works-grid.js" defer></script>
+  <script src="/js/profile.js" defer></script>
+  <script src="/js/profile-v5.js" defer></script>
+  <script src="/js/profile-v7.js" defer></script>
+</body>
+</html>

@@ -225,7 +225,7 @@ async function followRoute(req, res) {
   if (req.method === "POST" && added.rowCount) {
     const me = req.session.user;
     const { notify } = require("../notify");
-    await notify(id, { type: "follower", title: (me.displayName || me.username) + " followed you", body: "You now have " + count.rows[0].n + " follower" + (count.rows[0].n === 1 ? "" : "s") + ".", link: "/u/" + me.username });
+    await notify(id, { type: "follower", title: (me.displayName || me.username) + " followed you", body: "You now have " + count.rows[0].n + " follower" + (count.rows[0].n === 1 ? "" : "s") + ".", link: "/hub/u/" + me.username });
     await require("../users").followerMilestone(id, count.rows[0].n);
   }
   res.json({ following: req.method === "POST", followers: count.rows[0].n });

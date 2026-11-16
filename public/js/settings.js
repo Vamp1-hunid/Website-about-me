@@ -154,8 +154,8 @@
 
       var s6 = section("Account", null);
       var links = el("ul", { class: "settings-links" });
-      [["/profile", "👤 Profile picture, bio and details"], ["/profile#email-panel", "✉️ Email address"], ["/profile#password-panel", "🔑 Password"],
-       ["/profile#details-panel", "🚫 Blocked members"], ["/hub/chat", "💬 Chat"], ["/profile#delete-panel", "🗑️ Delete my account"]]
+      [["/hub/profile", "👤 Profile picture, bio and details"], ["/hub/profile#email-panel", "✉️ Email address"], ["/hub/profile#password-panel", "🔑 Password"],
+       ["/hub/profile#details-panel", "🚫 Blocked members"], ["/hub/chat", "💬 Chat"], ["/hub/profile#delete-panel", "🗑️ Delete my account"]]
         .forEach(function (l) {
           var li = el("li");
           li.appendChild(el("a", { href: l[0] }, l[1]));

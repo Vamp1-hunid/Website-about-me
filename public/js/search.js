@@ -88,7 +88,7 @@
         var ac = section("Members", "Results // accounts");
         var acg = el("div", { class: "result-grid" });
         data.accounts.forEach(function (u) {
-          acg.appendChild(simpleCard("/u/" + encodeURIComponent(u.username), u.avatarUrl, "@" + u.username, u.displayName || u.username, "Member"));
+          acg.appendChild(simpleCard("/hub/u/" + encodeURIComponent(u.username), u.avatarUrl, "@" + u.username, u.displayName || u.username, "Member"));
         });
         ac.appendChild(acg);
       }

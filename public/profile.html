@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=23">
+  <link rel="stylesheet" href="/css/styles.css?v=24">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -74,7 +74,7 @@
         <label class="btn btn-ghost btn-small file-button" for="avatar-file">Change picture</label>
         <input type="file" id="avatar-file" accept="image/jpeg,image/png,image/webp,image/gif" class="sr-only">
         <button type="button" class="btn btn-ghost btn-small" id="avatar-remove" hidden>Remove picture</button>
-        <a class="btn btn-ghost btn-small" id="public-link" href="/u/">View your public page</a>
+        <a class="btn btn-ghost btn-small" id="public-link" href="/hub/u/">View your public page</a>
       </div>
       <dl id="profile-stats" class="stat-row" hidden>
         <div class="stat"><dt>Joined</dt><dd id="stat-joined">&ndash;</dd></div>
@@ -124,7 +124,7 @@
       <h2 id="google-title">Google sign-in</h2>
       <p id="google-status" class="lead"></p>
       <div class="hero-actions">
-        <a class="btn btn-google" id="google-link" href="/auth/google?link=1&amp;next=%2Fprofile" hidden>
+        <a class="btn btn-google" id="google-link" href="/auth/google?link=1&amp;next=%2Fhub%2Fprofile" hidden>
           <span class="g-mark" aria-hidden="true">G</span> Link my Google account
         </a>
         <button class="btn btn-ghost" type="button" id="google-unlink" hidden>Unlink Google</button>

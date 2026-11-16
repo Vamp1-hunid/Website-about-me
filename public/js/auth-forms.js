@@ -17,10 +17,12 @@
 
   // Claiming a reserved username: /hub/register?claim=<token> fills in and locks the name.
   var claimToken = params.get("claim") || "";
+  var previewUpdate = registerForm ? MW.usernamePreview(document.getElementById("username"), Boolean(claimToken)) : null;
   if (registerForm && claimToken) {
     MW.api("/reserve/claim?token=" + encodeURIComponent(claimToken)).then(function (d) {
       var u = document.getElementById("username");
       u.value = d.username; u.readOnly = true;
+      if (previewUpdate) previewUpdate();
       var e = document.getElementById("email"); if (e && !e.value) e.value = d.email;
       var dn = document.getElementById("displayName"); if (dn && !dn.value) dn.value = d.displayName || "";
       var c = document.getElementById("country"); if (c && d.country) c.value = d.country;
@@ -165,9 +167,8 @@
   function checkRegister() {
     var problems = [];
     var username = value("username").trim().toLowerCase();
-    if (!/^[a-z0-9_]{3,30}$/.test(username)) {
-      problems.push({ field: "username", message: "Use 3 to 30 characters: lowercase letters, numbers or _." });
-    }
+    var rule = claimToken ? (/^[a-z0-9_-]{3,30}$/.test(username) ? null : "Use 3 to 30 characters: lowercase letters, numbers, _ or -.") : MW.usernameRules(username);
+    if (rule) problems.push({ field: "username", message: rule });
     var birth = value("birthDate");
     if (!birth) problems.push({ field: "birthDate", message: "Enter your date of birth." });
     else if (ageOf(birth) < 13) problems.push({ field: "birthDate", message: "You need to be at least 13 to create an account." });

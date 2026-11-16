@@ -1438,3 +1438,7 @@ body[data-holiday="newyear"] .site-header { border-bottom: 4px solid #ffd23f; }
 .reserve-name.is-mine { border-color: var(--pink); background: color-mix(in srgb, var(--pink) 18%, var(--panel)); font-weight: 800; }
 #reserve-find { width: 100%; max-width: 360px; }
 .waiting-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.username-preview { margin: 0.35rem 0 0; font-size: 0.9rem; }
+.username-preview-tag { font-weight: 800; color: var(--pink); }
+.username-preview.is-bad .username-preview-note { color: #e5484d; }
+.username-preview.is-good .username-preview-note { color: #30a46c; }

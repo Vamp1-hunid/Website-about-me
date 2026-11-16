@@ -6,6 +6,7 @@
   if (!MW || !form) return;
   var el = MW.el;
   var $ = function (id) { return document.getElementById(id); };
+  MW.usernamePreview(document.getElementById("username"));
 
   // Countries
   var names;
@@ -25,7 +26,7 @@
 
   $("username").addEventListener("input", function () {
     var u = $("username");
-    u.value = u.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+    u.value = u.value.toLowerCase().replace(/[^a-z0-9_-]/g, "");
   });
 
   form.addEventListener("submit", function (event) {

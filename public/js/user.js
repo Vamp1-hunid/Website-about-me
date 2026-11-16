@@ -8,7 +8,7 @@
   var box = document.getElementById("member");
   if (!box || !MW) return;
   var el = MW.el;
-  var username = decodeURIComponent(window.location.pathname.replace(/^\/u\//, "").replace(/\/$/, ""));
+  var username = decodeURIComponent(window.location.pathname.replace(/^\/(hub\/)?u\//, "").replace(/\/$/, ""));
 
   MW.api("/users/" + encodeURIComponent(username))
     .then(function (data) {
@@ -72,7 +72,7 @@
 
       MW.me().then(function (me) {
         if (me && me.username === u.username) {
-          box.appendChild(el("p", {}, "")).appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/profile" }, "Edit your profile"));
+          box.appendChild(el("p", {}, "")).appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub/profile" }, "Edit your profile"));
         }
       });
 

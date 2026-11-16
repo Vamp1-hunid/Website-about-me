@@ -35,7 +35,7 @@ const registerLimiter = rateLimit({
   message: { error: "Too many new accounts from this connection. Please try again later." }
 });
 
-const USERNAME_PATTERN = /^[a-z0-9_]{3,30}$/;
+const USERNAME_PATTERN = /^[a-z0-9_-]{3,30}$/;
 const EMAIL_PATTERN = /^[^\s@<>"]{1,64}@[^\s@<>"]+\.[^\s@<>"]{2,}$/;
 
 // A hash of a random password, checked when the username does not exist.
