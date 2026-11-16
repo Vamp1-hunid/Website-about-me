@@ -633,3 +633,25 @@ CREATE TABLE IF NOT EXISTS calendar_events (
 );
 ALTER TABLE reports DROP CONSTRAINT IF EXISTS reports_target_type_check;
 ALTER TABLE reports ADD CONSTRAINT reports_target_type_check CHECK (target_type IN ('post', 'comment', 'creator', 'collab', 'message', 'group_message'));
+
+-- ===== v16 =====
+-- Beta tester applications. Approved testers get a claim link that makes a normal account with is_beta set,
+-- so they can log in and use Chapterhive before launch.
+ALTER TABLE username_reservations ADD COLUMN IF NOT EXISTS beta BOOLEAN NOT NULL DEFAULT FALSE;
+CREATE TABLE IF NOT EXISTS beta_applications (
+  id           SERIAL PRIMARY KEY,
+  username     VARCHAR(30)  NOT NULL,
+  email        VARCHAR(254) NOT NULL UNIQUE,
+  display_name VARCHAR(60)  NOT NULL DEFAULT '',
+  country      CHAR(2),
+  reason       VARCHAR(1000) NOT NULL DEFAULT '',
+  status       VARCHAR(10)  NOT NULL DEFAULT 'pending',
+  created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  decided_at   TIMESTAMPTZ
+);
+-- Let beta testers message this account whatever the "who can message me" choice is.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS beta_can_message BOOLEAN NOT NULL DEFAULT FALSE;
+-- The site owner's account (so renaming it to a nickname doesn't make a second admin on restart),
+-- and the owner's reservation, which is always #1.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_owner BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE username_reservations ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT FALSE;

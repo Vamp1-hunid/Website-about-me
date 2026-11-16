@@ -4548,3 +4548,5 @@ span.skill-chip { cursor: default; }
 .role-tags { gap: 0.4rem; }
 .role-tag { font-size: 0.78rem; padding: 0.28rem 0.75rem 0.28rem 0.32rem; }
 .role-tag-icon { width: 1.4rem; height: 1.4rem; font-size: 0.85rem; }
+.dash-quick-links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1rem; }
+.count-badge { display: inline-block; min-width: 1.3em; margin-left: 0.4em; padding: 0 0.4em; border-radius: 999px; background: var(--pink); color: #1a1205; font-size: 0.75rem; font-weight: 800; text-align: center; line-height: 1.4; }

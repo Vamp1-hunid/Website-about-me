@@ -60,14 +60,17 @@
     var button = form.querySelector("button[type='submit']");
     button.disabled = true;
     MW.api("/reserve", { method: "POST", json: {
-      username: $("username").value, displayName: $("displayName").value, email: $("email").value,
+      username: $("username").value, displayName: $("displayName").value, email: $("email").value, password: $("password").value,
       birthDate: $("birthDate").value, country: $("country").value, acceptTerms: $("acceptTerms").checked
     } }).then(function (d) {
       form.hidden = true;
       var done = $("reserve-done");
       done.hidden = false;
       done.appendChild(el("p", { class: "reserve-success" }, "🐝 @" + d.username + " is yours."));
-      done.appendChild(el("p", { class: "lead" }, "We'll email you a link to claim it the moment Chapterhive opens. " + (d.count === 1 ? "You're the very first person waiting!" : "You're one of " + d.count.toLocaleString() + " people already waiting.")));
+      try { localStorage.setItem("ch-reserved", d.username); } catch (e) { /* private mode */ }
+      loadNames();
+      if (d.position) done.appendChild(el("p", { class: "reserve-position" }, "You're #" + d.position.toLocaleString() + " on the reservation list."));
+      done.appendChild(el("p", { class: "lead" }, (d.account ? "Your account is ready. When Chapterhive opens, just log in with @" + d.username + " and your password. " : "We'll email you a link to claim it the moment Chapterhive opens. ") + (d.count === 1 ? "You're the very first person waiting!" : "You're one of " + d.count.toLocaleString() + " people already waiting.")));
       var share = el("button", { type: "button", class: "btn" }, "Invite friends to reserve theirs");
       share.addEventListener("click", function () {
         var url = window.location.origin + "/hub/reserve";
@@ -89,10 +92,40 @@
     });
   });
 
+  // Public list: number + username only.
+  var allNames = [];
+  var SHOW = 120;
+  function mine() { try { return localStorage.getItem("ch-reserved") || ""; } catch (e) { return ""; } }
+  function drawList() {
+    var q = ($("reserve-find").value || "").toLowerCase().replace(/^@/, "").trim();
+    var list = $("reserve-public-list");
+    list.textContent = "";
+    var hits = allNames.filter(function (n) { return !q || n.username.indexOf(q) >= 0; });
+    hits.slice(0, SHOW).forEach(function (n) {
+      var li = el("li", { class: "reserve-name" + (n.username === mine() ? " is-mine" : "") + (n.position === 1 ? " is-first" : "") });
+      li.appendChild(el("span", { class: "reserve-num" }, "#" + n.position));
+      li.appendChild(el("span", {}, (n.position === 1 ? "👑 " : "") + "@" + n.username));
+      list.appendChild(li);
+    });
+    var more = $("reserve-public-more");
+    more.hidden = hits.length <= SHOW;
+    more.textContent = "…and " + (hits.length - SHOW).toLocaleString() + " more. Search to find a name.";
+    if (q && !hits.length) list.appendChild(el("li", { class: "muted" }, "No reserved username matches that. It might be free!"));
+    var m = allNames.filter(function (n) { return n.username === mine(); })[0];
+    $("reserve-mine-pos").hidden = !m;
+    if (m) $("reserve-mine-pos").textContent = "🐝 You're #" + m.position.toLocaleString() + " (@" + m.username + ")";
+  }
+  function loadNames() {
+    MW.api("/reserve/list").then(function (d) { allNames = d.names; drawList(); }).catch(function () {});
+  }
+  $("reserve-find").addEventListener("input", drawList);
+  loadNames();
+
   // Admin: the list, and sending claim links at launch
   MW.me().then(function (user) {
     if (!user || user.role !== "admin") return;
     $("reserve-admin").hidden = false;
+    if (window.location.hash === "#reserve-admin") $("reserve-admin").scrollIntoView();
     function load() {
       MW.api("/reserve/admin").then(function (d) {
         var box = $("reserve-list");
@@ -101,17 +134,18 @@
         box.appendChild(el("p", { class: "mono muted" }, d.reservations.length + " reserved · " + claimed + " claimed" + (d.mailEnabled ? "" : " · email isn't set up, so claim links are shown here to send yourself")));
         var table = el("table", { class: "reserve-table" });
         var head = el("tr");
-        ["Username", "Name", "Email", "Reserved", "Status", ""].forEach(function (h) { head.appendChild(el("th", {}, h)); });
+        ["#", "Username", "Name", "Email", "Reserved", "Status", ""].forEach(function (h) { head.appendChild(el("th", {}, h)); });
         table.appendChild(head);
         d.reservations.forEach(function (r) {
           var tr = el("tr");
-          tr.appendChild(el("td", {}, "@" + r.username));
+          tr.appendChild(el("td", { class: "mono" }, "#" + r.position));
+          tr.appendChild(el("td", {}, (r.pinned ? "👑 " : "") + "@" + r.username));
           tr.appendChild(el("td", {}, r.display_name));
           tr.appendChild(el("td", {}, r.email));
           tr.appendChild(el("td", {}, MW.formatDate(r.created_at)));
           tr.appendChild(el("td", {}, r.claimed_at ? "✓ Claimed" : r.invited_at ? "Invited" : "Waiting"));
           var td = el("td");
-          if (!r.claimed_at) {
+          if (!r.claimed_at && !r.pinned) {
             var rm = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "Release");
             rm.addEventListener("click", function () {
               if (!window.confirm("Release @" + r.username + "? Anyone could take it after this.")) return;
@@ -122,10 +156,24 @@
           tr.appendChild(td);
           table.appendChild(tr);
         });
-        box.appendChild(table);
+        var wrap = el("div", { class: "beta-table-wrap" });
+        wrap.appendChild(table);
+        box.appendChild(wrap);
       });
     }
     load();
+    MW.api("/reserve/admin/mine").then(function (m) {
+      if (!m.isOwner) { document.querySelector(".reserve-mine").hidden = true; return; }
+      $("mine-username").value = m.username;
+    });
+    $("mine-form").addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      $("mine-username-error").textContent = "";
+      MW.api("/reserve/admin/mine", { method: "POST", json: { username: $("mine-username").value } }).then(function (d) {
+        MW.toast("@" + d.username + " is yours, at #1. Log in with this name from now on.");
+        load();
+      }).catch(function (e) { $("mine-username-error").textContent = e.message; });
+    });
     $("reserve-invite").addEventListener("click", function () {
       if (!window.confirm("Send claim links to everyone who hasn't had one yet?")) return;
       MW.api("/reserve/admin/invite", { method: "POST" }).then(function (d) {

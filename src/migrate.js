@@ -59,6 +59,13 @@ async function ensureAdmin() {
     return;
   }
 
+  // If the owner has renamed their account (a nickname), keep using that account.
+  const owner = (await db.query("SELECT id, username FROM users WHERE is_owner AND role = 'admin' LIMIT 1")).rows[0];
+  if (owner) {
+    await applyAdminPasswordReset(owner.username, password);
+    return;
+  }
+
   const { rows } = await db.query("SELECT id, role FROM users WHERE username = $1", [username]);
 
   if (rows.length === 0) {
@@ -74,6 +81,7 @@ async function ensureAdmin() {
     console.log("Existing account promoted to admin: " + username);
   }
 
+  await db.query("UPDATE users SET is_owner = TRUE WHERE username = $1", [username]);
   await applyAdminPasswordReset(username, password);
 }
 

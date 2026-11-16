@@ -281,7 +281,7 @@
 
     if (!user && MW.isHub && MW.feature("reservations") && !MW.feature("signups")) {
       // Before launch the header stays small: just Log in. "Reserve your name" lives on the home page and in the menu.
-      area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub/login", title: "Logging in is for the Chapterhive team until launch" }, "Team log in"));
+      area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub/login", title: "Reserved a name with a password? Log in to follow the list and team updates" }, "Log in"));
       reservationBanner();
       return;
     }
@@ -309,9 +309,8 @@
       }).catch(function () {});
     }
 
-    // Settings: always one tap away for members.
-    var gear = el("a", { class: "btn btn-ghost btn-small settings-btn", href: "/hub/settings", title: "Settings", "aria-label": "Settings" }, "⚙");
-    area.appendChild(gear);
+    // Settings live in the ☰ menu (keeps the header roomy on phones).
+    if (MW.isHub && MW.account && MW.account.waitingForLaunch) waitingBanner();
 
     var me = el("a", { class: "auth-name", href: "/profile", title: "Your profile" });
     me.appendChild(MW.avatar(user));
@@ -378,6 +377,17 @@
     return box;
   };
 
+  // Admin: how many applications are waiting, shown as little badges on the menu and dashboard links.
+  MW.adminCounts = function (root) {
+    return MW.api("/reserve/admin/counts").then(function (c) {
+      root.querySelectorAll("[data-count]").forEach(function (a) {
+        var n = c[a.getAttribute("data-count")];
+        if (!n || a.querySelector(".count-badge")) return;
+        a.appendChild(el("span", { class: "count-badge", title: a.getAttribute("data-count") === "reservations" ? "reserved so far" : "waiting for you" }, String(n)));
+      });
+    }).catch(function () {});
+  };
+
   // A "create an account" box shown wherever a visitor hits something reserved for members.
   MW.guestGate = function (message) {
     var box = el("div", { class: "guest-gate", role: "note" });
@@ -403,11 +413,38 @@
     card.appendChild(el("span", { class: "reserve-banner-emoji", "aria-hidden": "true" }, "🐝"));
     var t = el("span", { class: "reserve-banner-text" });
     t.appendChild(el("strong", {}, "Chapterhive opens soon"));
-    t.appendChild(el("span", {}, "We're testing the waters before launch. For now you can reserve your username; accounts open at launch."));
+    t.appendChild(el("span", {}, "For readers, watchers and creators alike. Reserve your username now; your free member account opens at launch, and you can become a creator any time."));
     card.appendChild(t);
     card.appendChild(el("span", { class: "btn btn-small" }, "Reserve"));
+    var beta = el("a", { class: "reserve-banner beta-banner", href: "/hub/beta" });
+    beta.appendChild(el("span", { class: "reserve-banner-emoji", "aria-hidden": "true" }, "🧪"));
+    var bt = el("span", { class: "reserve-banner-text" });
+    bt.appendChild(el("strong", {}, "Become a beta tester"));
+    bt.appendChild(el("span", {}, "Get a real account before launch and help us shape Chapterhive."));
+    beta.appendChild(bt);
+    beta.appendChild(el("span", { class: "btn btn-small btn-ghost" }, "Apply"));
+    main.insertBefore(beta, main.firstChild);
     main.insertBefore(card, main.firstChild);
   }
+
+  // Signed in but waiting for launch: point them to their place in line and the team's updates.
+  function waitingBanner() {
+    var path = window.location.pathname.replace(/\/$/, "");
+    var main = document.getElementById("main");
+    if (path !== "/hub" || !main || document.querySelector(".waiting-banner")) return;
+    var card = el("div", { class: "reserve-banner waiting-banner", role: "note" });
+    card.appendChild(el("span", { class: "reserve-banner-emoji", "aria-hidden": "true" }, "🐝"));
+    var t = el("span", { class: "reserve-banner-text" });
+    t.appendChild(el("strong", {}, "You're in early! Chapterhive opens soon"));
+    t.appendChild(el("span", {}, "Check how the list is growing and read the team's updates. Posting, comments and chat open at launch."));
+    card.appendChild(t);
+    var acts = el("span", { class: "waiting-actions" });
+    acts.appendChild(el("a", { class: "btn btn-small", href: "/hub/reserve#reserve-public" }, "My place"));
+    acts.appendChild(el("a", { class: "btn btn-small btn-ghost", href: "/hub/news" }, "Updates"));
+    card.appendChild(acts);
+    main.insertBefore(card, main.firstChild);
+  }
+  MW.waitingBanner = waitingBanner;
 
   // Holidays and events: a small banner on the Chapterhive home page, and a theme hook for the whole site.
   function holidayBanner() {
@@ -587,9 +624,10 @@
         }
       }
       var items = user
-        ? [["/hub/settings", "⚙ Settings & privacy"], ["/profile", "Account settings"], ["/u/" + encodeURIComponent(user.username), "Your public page"]]
-        : [["/hub/login?next=" + encodeURIComponent(MW.currentPath()), MW.isHub && MW.feature("reservations") && !MW.feature("signups") ? "Team log in" : "Log in"],
+        ? [["/u/" + encodeURIComponent(user.username), "👤 My profile"], ["/profile", "✏️ Edit my profile"], ["/hub/settings", "⚙ Settings & privacy"]]
+        : [["/hub/login?next=" + encodeURIComponent(MW.currentPath()), "Log in"],
            MW.isHub && MW.feature("reservations") && !MW.feature("signups") ? ["/hub/reserve", "🐝 Reserve your username"] : ["/hub/register", "Create a free account"]];
+      if (!user && MW.isHub && MW.feature("reservations") && !MW.feature("signups")) items.push(["/hub/beta", "🧪 Become a beta tester"]);
       // God's Banditos: no accounts here. Visitors are pointed to Chapterhive instead.
       if (!MW.isHub && (!user || user.role !== "admin")) {
         account.querySelector(".node-label").textContent = "Chapterhive";
@@ -614,6 +652,9 @@
         items.unshift(["/hub/apply", "Creator application (pending)"]);
       }
       if (user && user.role === "admin") {
+        items.unshift(["/admin#chapterhive", "🎨 Creator applications", null, "creators"]);
+        items.unshift(["/hub/beta#beta-admin", "🧪 Beta tester applications", null, "beta"]);
+        items.unshift(["/hub/reserve#reserve-admin", "🐝 Name reservations", null, "reservations"]);
         items.unshift(["/admin#settings", "Site settings"]);
         items.unshift(["/admin", "Dashboard"]);
       }
@@ -622,8 +663,10 @@
         var a = el("a", { href: item[0] }, item[1]);
         li.appendChild(a);
         if (typeof item[2] === "string" && MW.featureNotice(item[2])) MW.markNotice(a, MW.featureNotice(item[2]));
+        if (item[3]) a.setAttribute("data-count", item[3]);
         ul.appendChild(li);
       });
+      if (user && user.role === "admin") MW.adminCounts(ul);
       // Light/dark switch and Log out also live in the menu (on phones the header hides them to save room).
       var themeLi = el("li", { class: "menu-mobile-only" });
       var themeBtn = el("button", { type: "button", class: "menu-link-btn" }, "🌓 Switch light / dark mode");

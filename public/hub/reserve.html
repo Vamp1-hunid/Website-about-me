@@ -19,8 +19,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=21">
-  <link rel="stylesheet" href="/css/chapterhive.css?v=19">
+  <link rel="stylesheet" href="/css/styles.css?v=23">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=24">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -62,8 +62,12 @@
     <section class="panel reserve-hero" aria-labelledby="reserve-title">
       <p class="node-label">Chapterhive // launching soon</p>
       <h1 id="reserve-title">Claim your name in the hive.</h1>
-      <p class="lead">Chapterhive opens soon: a home for writers, storytellers, songwriters, artists and filmmakers. Reserve your username now, before anyone else gets it.</p>
-      <p class="prelaunch-strip">🧪 We're testing our market before launch, so for now visitors can only <strong>reserve a username</strong>. Accounts, posting and logging in open to everyone at launch, and you'll get a link to claim your name.</p>
+      <p class="lead">Chapterhive opens soon: a home for stories, songs, art and films, and for everyone who loves them. Whether you read, watch, listen or create, reserve your username now, before anyone else gets it.</p>
+      <div class="reserve-paths">
+        <div><strong>📖 Here to read and watch?</strong><span>Everyone starts with a free <b>member</b> account: follow creators, build your feed, like, comment and chat.</span></div>
+        <div><strong>✍️ Want to create too?</strong><span>Upgrade your member account to a creator account any time, for free. No new sign-up needed.</span></div>
+      </div>
+      <p class="prelaunch-strip">🧪 We're testing our market before launch, so for now visitors can only <strong>reserve a username</strong>. Pick a password now and your account is ready and waiting: when we launch, just log in.</p>
       <div class="reserve-stats">
         <div><strong id="reserve-count">&hellip;</strong><span>names reserved</span></div>
         <div id="reserve-countdown-box" hidden><strong id="reserve-countdown">&ndash;</strong><span>until launch</span></div>
@@ -91,6 +95,12 @@
           <p class="error" id="email-error"></p>
         </div>
         <div class="form-row">
+          <label for="password">Choose a password</label>
+          <input type="password" id="password" name="password" maxlength="200" required autocomplete="new-password" aria-describedby="password-hint password-error">
+          <p class="muted" id="password-hint">Your account is made now, so at launch you just log in. At least 10 characters; a short phrase works well.</p>
+          <p class="error" id="password-error"></p>
+        </div>
+        <div class="form-row">
           <label for="birthDate">Date of birth</label>
           <input type="date" id="birthDate" name="birthDate" required>
           <p class="muted">You need to be 13 or older. Only checked, never shown.</p>
@@ -109,11 +119,31 @@
       <p class="form-foot">Already have an account? <a href="/hub/login">Log in</a></p>
     </section>
 
+    <section class="panel" id="reserve-public" aria-labelledby="reserve-public-title">
+      <p class="node-label">Chapterhive // the hive so far</p>
+      <h2 id="reserve-public-title">Reserved usernames</h2>
+      <p class="muted">Find your place in line and see who's joining. Only usernames are shown here: names and emails stay private.</p>
+      <input type="search" id="reserve-find" placeholder="Find a username&hellip;" maxlength="30" autocomplete="off" aria-label="Find a username">
+      <p id="reserve-mine-pos" class="reserve-position" hidden></p>
+      <ol id="reserve-public-list" class="reserve-public-list"></ol>
+      <p class="muted" id="reserve-public-more" hidden></p>
+    </section>
+
     <section class="panel" id="reserve-admin" aria-labelledby="reserve-admin-title" hidden>
       <p class="node-label">Admin // reservations</p>
       <h2 id="reserve-admin-title">Reserved usernames</h2>
       <p class="muted">Turn on <strong>Pre-launch username reservations</strong> and turn off <strong>New accounts</strong> in Admin &rarr; Site features while the campaign runs. At launch, switch New accounts back on and press <strong>Send claim links</strong>.</p>
-      <div class="hero-actions"><button type="button" id="reserve-invite" class="btn btn-small">Send claim links</button></div>
+      <div class="hero-actions"><button type="button" id="reserve-invite" class="btn btn-small">Send claim links</button> <a class="btn btn-ghost btn-small" href="/hub/beta#beta-admin">🧪 Beta applications</a></div>
+      <div class="reserve-mine">
+        <h3>👑 Your own nickname</h3>
+        <p class="muted">Reserved instantly and always #1 on the list. This becomes your username: after changing it, log in with the new name (or your email).</p>
+        <form id="mine-form" class="reserve-mine-form">
+          <div class="reserve-at"><span aria-hidden="true">@</span><input type="text" id="mine-username" maxlength="30" autocapitalize="none" spellcheck="false" aria-label="Your nickname"></div>
+          <button type="submit" class="btn btn-small">Save my nickname</button>
+        </form>
+        <p class="error" id="mine-username-error"></p>
+      </div>
+      <div class="hero-actions"><a class="btn btn-ghost btn-small" href="/api/reserve/admin/export.xlsx" download>⬇ Download Excel (.xlsx)</a> <a class="btn btn-ghost btn-small" href="/api/reserve/admin/export.pdf" download>⬇ Download PDF</a></div>
       <div id="reserve-links"></div>
       <div id="reserve-list"></div>
     </section>

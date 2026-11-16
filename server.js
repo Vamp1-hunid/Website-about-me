@@ -78,6 +78,7 @@ const api = express.Router();
 api.use(sameOriginOnly);
 // Online status, streaks and ban checks for logged-in people.
 api.use(require("./src/auth").trackActivity);
+api.use(require("./src/prelaunch").guardWrites);
 api.use("/account", require("./src/routes/account"));
 api.use("/posts", require("./src/routes/posts"));
 api.use("/comments", require("./src/routes/comments"));
@@ -90,6 +91,7 @@ api.use("/notifications", require("./src/routes/notifications"));
 api.use("/chat", require("./src/routes/chat"));
 api.use("/premium", require("./src/routes/premium"));
 api.use("/reserve", require("./src/routes/reserve"));
+api.use("/beta", require("./src/routes/beta"));
 api.use("/calendar", require("./src/routes/calendar"));
 api.use("/help", require("./src/routes/help"));
 api.use(require("./src/routes/business"));

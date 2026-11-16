@@ -23,4 +23,10 @@ async function notifyMany(userIds, n) {
   );
 }
 
-module.exports = { notify, notifyMany };
+// Tell every admin (new applications and reservations land in their bell).
+async function notifyAdmins(n) {
+  const { rows } = await db.query("SELECT id FROM users WHERE role = 'admin'");
+  await notifyMany(rows.map(function (r) { return r.id; }), n);
+}
+
+module.exports = { notify, notifyMany, notifyAdmins };

@@ -40,7 +40,7 @@ const openLimiter = rateLimit({
 });
 
 async function me(req) {
-  const { rows } = await db.query("SELECT id, birth_date, status FROM users WHERE id = $1", [req.session.user.id]);
+  const { rows } = await db.query("SELECT id, birth_date, status, is_beta FROM users WHERE id = $1", [req.session.user.id]);
   return rows[0];
 }
 
@@ -158,7 +158,7 @@ router.get("/unread", async function (req, res) {
 router.post("/threads", openLimiter, async function (req, res) {
   const self = await me(req);
   const username = typeof req.body.username === "string" ? req.body.username.trim().toLowerCase().replace(/^@/, "") : "";
-  const { rows } = await db.query("SELECT id, username, birth_date, status, chat_privacy FROM users WHERE username = $1", [username]);
+  const { rows } = await db.query("SELECT id, username, birth_date, status, chat_privacy, beta_can_message FROM users WHERE username = $1", [username]);
   const other = rows[0];
   if (!other) return res.status(404).json({ error: "There's no member with that username." });
   if (other.id === self.id) return res.status(400).json({ error: "You can't start a chat with yourself." });
@@ -168,8 +168,9 @@ router.post("/threads", openLimiter, async function (req, res) {
   const [a, b] = pair(self.id, other.id);
   const existing = await db.query("SELECT id FROM chat_threads WHERE user_a = $1 AND user_b = $2", [a, b]);
   if (existing.rows.length) return res.json({ id: existing.rows[0].id });
-  if (other.chat_privacy === "nobody") return res.status(403).json({ error: "This member isn't accepting new chats." });
-  if (other.chat_privacy === "following") {
+  const betaWelcome = self.is_beta && other.beta_can_message; // they chose to always hear from beta testers
+  if (!betaWelcome && other.chat_privacy === "nobody") return res.status(403).json({ error: "This member isn't accepting new chats." });
+  if (!betaWelcome && other.chat_privacy === "following") {
     const f = await db.query("SELECT 1 FROM follows WHERE follower_id = $1 AND creator_id = $2", [other.id, self.id]);
     if (!f.rows.length) return res.status(403).json({ error: "This member only accepts chats from creators they follow." });
   }
@@ -358,7 +359,7 @@ router.post("/groups/:id/members", requireFlag("group_chats"), async function (r
   const count = (await db.query("SELECT COUNT(*)::int AS n FROM chat_group_members WHERE group_id = $1", [g.id])).rows[0].n;
   if (count >= MAX_GROUP) return res.status(400).json({ error: "Groups can have up to " + MAX_GROUP + " people." });
   const username = String(req.body.username || "").trim().toLowerCase().replace(/^@/, "");
-  const u = (await db.query("SELECT id, username, birth_date, status, chat_privacy FROM users WHERE username = $1", [username])).rows[0];
+  const u = (await db.query("SELECT id, username, birth_date, status, chat_privacy, beta_can_message FROM users WHERE username = $1", [username])).rows[0];
   if (!u) return res.status(404).json({ error: "There's no member with that username." });
   const why = await canJoin(self, u);
   if (why) return res.status(403).json({ error: "@" + u.username + " " + why + "." });
