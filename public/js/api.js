@@ -280,8 +280,9 @@
     }
 
     if (!user && MW.isHub && MW.feature("reservations") && !MW.feature("signups")) {
+      // Before launch the header stays small: just Log in. "Reserve your name" lives on the home page and in the menu.
       area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub/login" }, "Log in"));
-      area.appendChild(el("a", { class: "btn btn-small reserve-btn", href: "/hub/reserve" }, "Reserve your name"));
+      reservationBanner();
       return;
     }
     if (!user) {
@@ -382,11 +383,31 @@
     var box = el("div", { class: "guest-gate", role: "note" });
     box.appendChild(el("p", {}, message || "Create a free account to join in."));
     var actions = el("div", { class: "actions" });
-    actions.appendChild(el("a", { class: "btn", href: "/hub/register?next=" + encodeURIComponent(MW.currentPath()) }, "Create a free account"));
+    if (MW.feature && MW.feature("reservations") && !MW.feature("signups")) {
+      // Before launch, the join button reserves a username instead.
+      actions.appendChild(el("a", { class: "btn", href: "/hub/reserve" }, "🐝 Reserve your username"));
+    } else {
+      actions.appendChild(el("a", { class: "btn", href: "/hub/register?next=" + encodeURIComponent(MW.currentPath()) }, "Create a free account"));
+    }
     actions.appendChild(el("a", { class: "btn-ghost", href: "/hub/login?next=" + encodeURIComponent(MW.currentPath()) }, "Log in"));
     box.appendChild(actions);
     return box;
   };
+
+  // Pre-launch: a "reserve your username" card at the top of the Chapterhive home page, and a menu link.
+  function reservationBanner() {
+    var path = window.location.pathname.replace(/\/$/, "");
+    var main = document.getElementById("main");
+    if (path !== "/hub" || !main || document.querySelector(".reserve-banner")) return;
+    var card = el("a", { class: "reserve-banner", href: "/hub/reserve" });
+    card.appendChild(el("span", { class: "reserve-banner-emoji", "aria-hidden": "true" }, "🐝"));
+    var t = el("span", { class: "reserve-banner-text" });
+    t.appendChild(el("strong", {}, "Chapterhive opens soon"));
+    t.appendChild(el("span", {}, "Reserve your username before someone else does"));
+    card.appendChild(t);
+    card.appendChild(el("span", { class: "btn btn-small" }, "Reserve"));
+    main.insertBefore(card, main.firstChild);
+  }
 
   // Holidays and events: a small banner on the Chapterhive home page, and a theme hook for the whole site.
   function holidayBanner() {
@@ -567,7 +588,8 @@
       }
       var items = user
         ? [["/hub/settings", "⚙ Settings & privacy"], ["/profile", "Account settings"], ["/u/" + encodeURIComponent(user.username), "Your public page"]]
-        : [["/hub/login?next=" + encodeURIComponent(MW.currentPath()), "Log in"], ["/hub/register", "Create a free account"]];
+        : [["/hub/login?next=" + encodeURIComponent(MW.currentPath()), "Log in"],
+           MW.isHub && MW.feature("reservations") && !MW.feature("signups") ? ["/hub/reserve", "🐝 Reserve your username"] : ["/hub/register", "Create a free account"]];
       // God's Banditos: no accounts here. Visitors are pointed to Chapterhive instead.
       if (!MW.isHub && (!user || user.role !== "admin")) {
         account.querySelector(".node-label").textContent = "Chapterhive";
