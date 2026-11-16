@@ -20,7 +20,7 @@ router.param("id", function (req, res, next, value) {
   next();
 });
 
-const CATEGORIES = ["story-art", "anime", "writing", "updates", "news", "art", "comedy", "film", "series", "meme", "thoughts", "poll", "novel", "storybook", "educational", "poetry", "song", "trailer"];
+const CATEGORIES = ["story-art", "anime", "writing", "updates", "news", "art", "comedy", "film", "series", "meme", "thoughts", "poll", "novel", "storybook", "educational", "poetry", "song", "trailer", "tutorial"];
 const NEEDS_VISUAL = ["story-art", "anime", "art", "meme"];
 const SECTIONS = ["main", "concept-art"];
 const FONTS = ["theme", "serif", "typewriter", "handwritten", "clean"];
@@ -38,7 +38,8 @@ const SORTS = ["new", "old", "popular", "series"];
 const SHELVES = {
   books: ["novel", "storybook", "educational"],
   comics: ["story-art"],
-  art: ["art", "meme"],
+  art: ["art", "meme", "tutorial"],
+  tutorials: ["tutorial"],
   video: ["anime", "film", "series", "trailer"],
   trailers: ["trailer"],
   series: ["series", "anime"],
@@ -52,7 +53,9 @@ const PAGE_SIZE = 12;
 const MAX_MEDIA = 80;
 const plans = require("../plans");
 const rankings = require("../rankings");
+const { notify } = require("../notify");
 const interests = require("../interests");
+const signupLib = require("../signup");
 const { requireFlag, isOn: flagIsOn } = require("../flags");
 const MAX_TAGS = 12;
 
@@ -123,6 +126,12 @@ function toPost(row, full) {
     imageUrl: full ? storage.displayUrl(row.image_url, "image") : storage.thumbnailUrl(row.image_url),
     tags: row.tags || [],
     genres: row.genres || [],
+    contentRating: row.content_rating || "all",
+    strongLanguage: Boolean(row.strong_language),
+    visibility: row.visibility || "public",
+    collaborators: (row.collaborators || []).filter(function (c) { return c.status === "accepted"; })
+      .map(function (c) { return { handle: c.handle, name: c.name, username: c.username }; }),
+    invitedUsernames: full ? (row.collaborators || []).map(function (c) { return c.username; }) : undefined,
     creator: row.creator_handle ? {
       handle: row.creator_handle,
       name: row.creator_name,
@@ -176,19 +185,69 @@ const SELECT_POST = `
     (SELECT COUNT(*) FROM post_media m WHERE m.post_id = p.id AND m.role = 'page' AND m.kind <> 'document')::int AS media_count,
     EXISTS (SELECT 1 FROM post_media m WHERE m.post_id = p.id AND m.kind = 'video') AS has_video,
     EXISTS (SELECT 1 FROM post_media m WHERE m.post_id = p.id AND m.kind = 'audio') AS has_audio,
+    (SELECT json_agg(json_build_object('handle', ccp.handle, 'name', COALESCE(ccp.name, cu.display_name), 'username', cu.username, 'status', pc.status))
+       FROM post_collaborators pc JOIN users cu ON cu.id = pc.user_id LEFT JOIN creator_profiles ccp ON ccp.user_id = pc.user_id
+      WHERE pc.post_id = p.id AND pc.status <> 'declined') AS collaborators,
     (SELECT json_agg(json_build_object('scope', cr.scope, 'rank', cr.rank)) FROM creator_ranks cr WHERE cr.user_id = p.user_id) AS creator_ranks
   FROM posts p LEFT JOIN series s ON s.id = p.series_id
     LEFT JOIN users ou ON ou.id = p.user_id
     LEFT JOIN creator_profiles cp ON cp.user_id = p.user_id`;
 
+/* ---------- Collab posts ---------- */
+
+// Keeps a post's co-creator list in line with the usernames given. New names get an invitation;
+// names removed are taken off. Returns the user ids that were newly invited.
+async function syncCollaborators(client, postId, ownerId, usernames) {
+  const found = usernames.length
+    ? (await client.query("SELECT id, username FROM users WHERE username = ANY ($1::text[]) AND status = 'active' AND id <> $2", [usernames, ownerId])).rows
+    : [];
+  const ids = found.map(function (u) { return u.id; });
+  await client.query("DELETE FROM post_collaborators WHERE post_id = $1 AND NOT (user_id = ANY ($2::int[]))", [postId, ids]);
+  const invited = [];
+  for (const id of ids) {
+    const r = await client.query("INSERT INTO post_collaborators (post_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING user_id", [postId, id]);
+    if (r.rows.length) invited.push(id);
+  }
+  return invited;
+}
+
+// GET /api/posts/collabs/invites -> collab invitations waiting for me
+router.get("/collabs/invites", requireLogin, async function (req, res) {
+  const { rows } = await db.query(
+    `SELECT p.id, p.title, p.slug, pc.status, ou.display_name AS owner_name, ou.username AS owner_username
+       FROM post_collaborators pc JOIN posts p ON p.id = pc.post_id JOIN users ou ON ou.id = p.user_id
+      WHERE pc.user_id = $1 ORDER BY pc.created_at DESC LIMIT 50`, [req.session.user.id]);
+  res.json({ invites: rows.map(function (r) { return { postId: r.id, title: r.title, slug: r.slug, status: r.status, from: r.owner_name, fromUsername: r.owner_username }; }) });
+});
+
+// POST /api/posts/:id/collab { accept: true|false }
+router.post("/:id/collab", requireLogin, async function (req, res) {
+  const status = req.body.accept === true ? "accepted" : "declined";
+  const { rows } = await db.query("UPDATE post_collaborators SET status = $1 WHERE post_id = $2 AND user_id = $3 RETURNING post_id",
+    [status, Number(req.params.id), req.session.user.id]);
+  if (!rows.length) return res.status(404).json({ error: "That invitation could not be found." });
+  res.json({ ok: true, status: status });
+});
+
 /* ---------- Reading ---------- */
+
+// Content filters. Visitors and teen accounts never see "mature" posts; members can lower the limit
+// further and hide strong language (Settings). $n holds the viewer's id (or NULL).
+function contentFilterSql(n) {
+  return `(p.user_id = $${n}::int OR $${n}::int IN (SELECT id FROM users WHERE role = 'admin') OR (
+    (p.content_rating = 'all'
+      OR (p.content_rating = 'teen' AND COALESCE((SELECT max_rating FROM users WHERE id = $${n}::int), 'teen') IN ('teen', 'mature'))
+      OR (p.content_rating = 'mature' AND $${n}::int IS NOT NULL AND EXISTS (SELECT 1 FROM users vu WHERE vu.id = $${n}::int
+            AND vu.max_rating = 'mature' AND vu.birth_date IS NOT NULL AND vu.birth_date <= CURRENT_DATE - INTERVAL '18 years')))
+    AND NOT (p.strong_language AND COALESCE((SELECT hide_strong_language FROM users WHERE id = $${n}::int), FALSE))))`;
+}
 
 // Creators choose who can see their posts: everyone, members (signed in) or only their followers.
 // SQL for "can the viewer whose id is in $n see this post?" ($n may be NULL for visitors).
 function audienceSql(n) {
-  return `(cp.post_visibility IS NULL OR cp.post_visibility = 'everyone' OR p.user_id = $${n}::int
+  return `(((cp.post_visibility IS NULL OR cp.post_visibility = 'everyone') AND p.visibility = 'public') OR p.user_id = $${n}::int
     OR $${n}::int IN (SELECT id FROM users WHERE role = 'admin')
-    OR ($${n}::int IS NOT NULL AND (cp.post_visibility = 'members'
+    OR ($${n}::int IS NOT NULL AND ((cp.post_visibility = 'members' AND p.visibility = 'public')
         OR EXISTS (SELECT 1 FROM follows fv WHERE fv.follower_id = $${n}::int AND fv.creator_id = p.user_id))))`;
 }
 
@@ -245,9 +304,11 @@ router.get("/", async function (req, res) {
     where.push(VISIBLE);
     values.push(me ? me.id : null);
     where.push(audienceSql(values.length));
+    where.push(contentFilterSql(values.length));
     if (creatorHandle) {
       values.push(creatorHandle);
-      where.push("cp.handle = $" + values.length);
+      // Their own posts, plus collab posts they accepted.
+      where.push("(cp.handle = $" + values.length + " OR p.id IN (SELECT pc.post_id FROM post_collaborators pc JOIN creator_profiles ccp ON ccp.user_id = pc.user_id WHERE pc.status = 'accepted' AND ccp.handle = $" + values.length + "))");
     } else if (site === "banditos") {
       where.push(BANDITOS_ONLY);
     }
@@ -422,8 +483,11 @@ router.get("/:slug", async function (req, res) {
   if (row && ["news", "updates"].includes(row.category) && !isAdmin && row.user_id !== userId && !(await flagIsOn("updates", req))) {
     return res.status(503).json({ error: "News & updates are paused for now. Please check back soon.", feature: "updates" });
   }
-  // Followers-only or members-only posts.
-  if (row && row.user_id !== userId && !isAdmin && row.creator_post_visibility && row.creator_post_visibility !== "everyone") {
+  // Followers-only or members-only posts (set for the whole creator page, or for this one post).
+  // The admin can always open them.
+  const effective = row && row.visibility === "followers" ? "followers" : row && row.creator_post_visibility;
+  if (row && row.user_id !== userId && !isAdmin && effective && effective !== "everyone") {
+    row.creator_post_visibility = effective;
     let allowed = false;
     if (userId && row.creator_post_visibility === "members") allowed = true;
     if (userId && row.creator_post_visibility === "followers") {
@@ -438,11 +502,28 @@ router.get("/:slug", async function (req, res) {
       });
     }
   }
+  // Age ratings: mature posts only for adults who chose to see them; teen-rated posts hidden from those who set "all ages".
+  if (row && row.user_id !== userId && !isAdmin && row.content_rating !== "all") {
+    const viewer = userId ? (await db.query("SELECT max_rating, birth_date FROM users WHERE id = $1", [userId])).rows[0] : null;
+    const adult = viewer && viewer.birth_date && !signupLib.isMinor(viewer.birth_date);
+    const limit = viewer ? viewer.max_rating : "teen";
+    const ok = row.content_rating === "teen" ? limit !== "all" : (adult && limit === "mature");
+    if (!ok) {
+      return res.status(403).json({
+        error: row.content_rating === "mature"
+          ? (viewer ? (adult ? "This post is rated Mature (18+). Turn on Mature content in Settings to see it." : "This post is rated Mature (18+).")
+                    : "This post is rated Mature (18+). Log in with an adult account to see it.")
+          : "This post is rated Teen. Change your content filter in Settings to see it.",
+        rating: row.content_rating, signup: !userId
+      });
+    }
+  }
   // Drafts, scheduled works and works of suspended creators: only their owner (and the admin) can open them.
   if (!row || (!row.visible && !isAdmin && row.user_id !== userId)) {
     return res.status(404).json({ error: "That work could not be found." });
   }
   const post = toPost(row, true);
+  if (row.user_id !== userId && !isAdmin) delete post.invitedUsernames;
   post.isMine = Boolean(userId && row.user_id === userId);
   post.media = await mediaFor(row.id);
   post.nav = await neighbours(row);
@@ -518,6 +599,11 @@ async function validatePost(body, req) {
     publishAt: parsePublishAt(body.publishAt),
     tags: cleanTags(body.tags),
     genres: (Array.isArray(body.genres) ? body.genres : []).filter(function (g, i, all) { return GENRES.includes(g) && all.indexOf(g) === i; }).slice(0, 3),
+    contentRating: ["all", "teen", "mature"].includes(body.contentRating) ? body.contentRating : "all",
+    strongLanguage: body.strongLanguage === true,
+    visibility: body.visibility === "followers" ? "followers" : "public",
+    collaborators: (Array.isArray(body.collaborators) ? body.collaborators : []).map(function (u) { return String(u || "").trim().toLowerCase().replace(/^@/, ""); })
+      .filter(function (u, i, all) { return /^[a-z0-9_]{3,30}$/.test(u) && all.indexOf(u) === i; }).slice(0, 10),
     seriesId: optionalInt(body.seriesId, 1, 999999999),
     seriesOrder: optionalInt(body.seriesOrder, 0, 100000)
   };
@@ -602,6 +688,11 @@ async function savePost(req, res, existingRow) {
     media.items.forEach(function (m) {
       if (m.role === "cover") { if (seenCover) m.role = "page"; seenCover = true; }
     });
+    // No TikTok-style live-action skits: comedy and meme posts can't carry video. Comedy films and series
+    // go in Film or Series, and teasers for a creator's own work go in Trailer.
+    if (["comedy", "meme"].includes(values.category) && media.items.some(function (m) { return m.kind === "video"; })) {
+      problems.push({ field: "media", message: "Comedy and meme posts can't include videos. Post comedy films or series under Film or Series, and teasers for your own work under Trailer." });
+    }
     const visual = media.items.some(function (m) { return m.kind === "image" || m.kind === "video"; });
     if (NEEDS_VISUAL.includes(values.category) && !visual) {
       problems.push({ field: "media", message: "This kind of post needs at least one picture or video." });
@@ -618,6 +709,7 @@ async function savePost(req, res, existingRow) {
 
   const client = await db.pool.connect();
   let postId;
+  let collabInvites = [];
   try {
     await client.query("BEGIN");
     // Review: the admin's own posts go straight out; everyone else's wait for approval.
@@ -649,7 +741,9 @@ async function savePost(req, res, existingRow) {
       );
       postId = inserted.rows[0].id;
     }
-    await client.query("UPDATE posts SET genres = $1 WHERE id = $2", [values.genres, postId]);
+    await client.query("UPDATE posts SET genres = $1, content_rating = $3, strong_language = $4, visibility = $5 WHERE id = $2",
+      [values.genres, postId, values.contentRating, values.strongLanguage, values.visibility]);
+    collabInvites = await syncCollaborators(client, postId, req.session.user.id, values.collaborators);
     for (let i = 0; i < media.items.length; i++) {
       const m = media.items[i];
       if (m.id) {
@@ -677,6 +771,11 @@ async function savePost(req, res, existingRow) {
     await storage.deleteImage(existingRow.image_public_id);
   }
 
+  // Tell newly invited co-creators.
+  for (const invitee of collabInvites) {
+    notify(invitee, { type: "collab", title: "✨ " + req.session.user.displayName + " invited you to a collab post",
+      body: "Accept to be credited on \"" + values.title + "\" and show it on your page.", link: "/hub/studio#collab-invites" }).catch(function () {});
+  }
   const { rows } = await db.query(SELECT_POST + " WHERE p.id = $1", [postId]);
   const saved = rows[0];
   if (saved.review_status === "pending") {
@@ -953,6 +1052,7 @@ router.get("/:id/results", async function (req, res) {
 module.exports = router;
 module.exports.GENRES = GENRES;
 module.exports.audienceSql = audienceSql;
+module.exports.contentFilterSql = contentFilterSql;
 module.exports.SHELVES = SHELVES;
 module.exports.cleanForm = cleanForm;
 module.exports.toComment = toComment;

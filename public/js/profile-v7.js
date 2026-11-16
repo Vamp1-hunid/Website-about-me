@@ -178,6 +178,29 @@
         bioFb.className = "feedback feedback-error"; bioFb.textContent = e.message;
       }).then(function () { bioSave.disabled = false; });
     });
+    // Skills: shown as chips under the bio.
+    var skillsBox = el("div", { class: "skills-edit" });
+    skillsBox.appendChild(el("h3", {}, "Skills"));
+    skillsBox.appendChild(el("p", { class: "muted" }, "Pick up to 8 things you do. They show under your bio, so collaborators can find you."));
+    var chips = el("div", { class: "skill-chips" });
+    skillsBox.appendChild(chips);
+    bioPanel.appendChild(skillsBox);
+    MW.api("/account/skills").then(function (d) {
+      var picked = d.skills.slice();
+      d.options.forEach(function (s) {
+        var b = el("button", { type: "button", class: "skill-chip" + (picked.indexOf(s) >= 0 ? " is-on" : ""), "aria-pressed": String(picked.indexOf(s) >= 0) }, s);
+        b.addEventListener("click", function () {
+          var i = picked.indexOf(s);
+          if (i >= 0) picked.splice(i, 1);
+          else if (picked.length >= 8) { MW.toast("Up to 8 skills.", true); return; }
+          else picked.push(s);
+          b.classList.toggle("is-on", i < 0);
+          b.setAttribute("aria-pressed", String(i < 0));
+          MW.api("/account/skills", { method: "PUT", json: { skills: picked } }).catch(function (e) { MW.toast(e.message, true); });
+        });
+        chips.appendChild(b);
+      });
+    }).catch(function () {});
     panel.parentNode.insertBefore(bioPanel, panel);
   });
 })();

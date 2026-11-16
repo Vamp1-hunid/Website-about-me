@@ -201,6 +201,10 @@
       field("summary").value = post.summary;
       field("tags").value = (post.tags || []).join(", ");
       setGenres(post.genres || []);
+      if (field("contentRating")) field("contentRating").value = post.contentRating || "all";
+      if (field("visibility")) field("visibility").value = post.visibility || "public";
+      if (document.getElementById("strongLanguage")) document.getElementById("strongLanguage").checked = Boolean(post.strongLanguage);
+      if (field("collaborators")) field("collaborators").value = (post.invitedUsernames || []).map(function (u) { return "@" + u; }).join(", ");
       field("font").value = post.font || "theme";
       body.value = post.body;
       media.load(post.media);
@@ -306,6 +310,10 @@
       summary: field("summary").value,
       tags: field("tags").value,
       genres: getGenres(),
+      contentRating: field("contentRating") ? field("contentRating").value : "all",
+      visibility: field("visibility") ? field("visibility").value : "public",
+      strongLanguage: document.getElementById("strongLanguage") ? document.getElementById("strongLanguage").checked : false,
+      collaborators: field("collaborators") ? field("collaborators").value.split(/[\s,]+/).filter(Boolean) : [],
       font: field("font").value,
       body: body.value,
       published: vis.published,

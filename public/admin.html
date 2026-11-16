@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Caveat:wght@500;700&family=Chakra+Petch:wght@400;600;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=18">
+  <link rel="stylesheet" href="/css/styles.css?v=20">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -139,6 +139,7 @@
                     <option value="film">Live action film</option>
                     <option value="series">Series episode</option>
                     <option value="trailer">Trailer or teaser</option>
+                    <option value="tutorial">Tutorial or how-to</option>
                     <option value="meme">Meme</option>
                   </optgroup>
                   <optgroup label="Books">
@@ -224,6 +225,30 @@
                 <label><input type="checkbox" value="music"><span>Music</span></label>
               </div>
               <p class="error" id="genres-error"></p>
+            </div>
+            <div class="form-row compose-safety">
+              <span class="label">Who is it for?</span>
+              <div class="compose-grid">
+                <label>Age rating
+                  <select id="contentRating" name="contentRating">
+                    <option value="all">All ages</option>
+                    <option value="teen">Teen (13+): some violence, scary or mature themes</option>
+                    <option value="mature">Mature (18+): strong violence, adult themes</option>
+                  </select>
+                </label>
+                <label>Who can see this post
+                  <select id="visibility" name="visibility">
+                    <option value="public">Everyone allowed by my page settings</option>
+                    <option value="followers">Followers only (private post)</option>
+                  </select>
+                </label>
+              </div>
+              <label class="check-row"><input type="checkbox" id="strongLanguage"> <span>Contains strong or offensive language</span></label>
+            </div>
+            <div class="form-row">
+              <label for="collaborators">Made together with (optional)</label>
+              <input type="text" id="collaborators" name="collaborators" maxlength="400" placeholder="@username, @username" autocapitalize="none" spellcheck="false">
+              <p class="muted">Collab post: each person gets an invitation, and once they accept they're credited and it shows on their page too.</p>
             </div>
 
             <div class="form-row">

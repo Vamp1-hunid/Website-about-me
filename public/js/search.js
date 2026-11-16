@@ -16,7 +16,7 @@
   var type = new URLSearchParams(window.location.search).get("type") || "all";
   var FILTERS = MW.isHub
     ? [["all", "Everything"], ["accounts", "Accounts"], ["posts", "Posts"], ["episodes", "Episodes & series"], ["films", "Films"],
-       ["art", "Art"], ["writing", "Writing"], ["books", "Books"], ["music", "Music"], ["stories", "Stories"], ["characters", "Characters"], ["news", "News"]]
+       ["art", "Art"], ["writing", "Writing"], ["books", "Books"], ["music", "Music"], ["tutorials", "Tutorials"], ["stories", "Stories"], ["characters", "Characters"], ["news", "News"]]
     : [["all", "Everything"], ["posts", "Works"], ["episodes", "Episodes"], ["art", "Art"], ["writing", "Writing"],
        ["stories", "Stories"], ["characters", "Characters"], ["products", "Products"]];
   if (!FILTERS.some(function (f) { return f[0] === type; })) type = "all";

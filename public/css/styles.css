@@ -4458,3 +4458,69 @@ html.onboarding-open, html.onboarding-open body { overflow: hidden; }
 .site-nav .nav-search-go { display: inline-flex; align-items: center; gap: 0.35rem; height: 2.6rem; padding: 0 1rem; border-radius: 999px; }
 .search-svg { display: block; }
 @media (max-width: 760px) { .site-nav .nav-search-go span { display: none; } }
+
+/* ===== v14: skills and trust badges ===== */
+.skill-chips, .skill-list { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.skill-chip { font: 600 0.8rem/1 var(--font-ui); padding: 0.4rem 0.7rem; border-radius: 99px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); cursor: pointer; }
+.skill-chip.is-on { background: color-mix(in srgb, var(--pink) 18%, var(--panel)); border-color: var(--pink); }
+span.skill-chip { cursor: default; }
+.trust-badges { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.3rem 0; }
+.trust-badge { font: 700 0.78rem/1.3 var(--font-ui); padding: 0.2rem 0.6rem; border-radius: 99px; border: 1px solid var(--line); background: var(--panel-2); }
+.trust-student { border-color: #5aa7ff; }
+.trust-whistleblower { border-color: #3fbf7f; background: color-mix(in srgb, #3fbf7f 15%, var(--panel)); }
+.chat-list-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 0.8rem 0 0.2rem; }
+.chat-new-group { justify-content: center; border-style: dashed !important; border-color: var(--line) !important; }
+.chat-sender { display: block; font: 700 0.75rem/1.3 var(--font-ui); color: var(--pink); margin-bottom: 0.15rem; }
+.chat-group-title { flex: 1; display: grid; min-width: 0; }
+.chat-group-title .muted { font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-group-form { display: grid; gap: 0.6rem; max-width: 480px; }
+.compose-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.6rem; }
+.compose-grid label { display: grid; gap: 0.3rem; text-transform: none; letter-spacing: normal; font-family: var(--font-ui); }
+
+/* ===== v15: compact phone layout =====
+   One slim header row (logo, chat, settings, menu), then a single swipeable row of tabs with the
+   search box beside it, so content starts near the top of small screens. */
+.menu-mobile-only { display: none; }
+.menu-link-btn { background: none; border: 0; padding: 0.35rem 0; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+@media (max-width: 760px) {
+  .menu-mobile-only { display: list-item; }
+  .site-header {
+    position: sticky; top: 0; z-index: 40;
+    flex-wrap: nowrap !important; gap: 0.4rem !important;
+    padding: 0.45rem 0.75rem !important; min-height: 0 !important;
+  }
+  .site-header .brand { font-size: 1rem; flex: 0 1 auto; min-width: 0; }
+  .site-header .brand img { width: 30px; height: 30px; }
+  .header-actions, #auth-area { display: flex; flex-wrap: nowrap !important; gap: 0.35rem !important; align-items: center; margin-left: auto; }
+  .header-actions .btn, #auth-area .btn { padding: 0.4rem 0.6rem; font-size: 0.8rem; min-height: 0; }
+  .site-header #theme-toggle, .site-header .hdr-profile, .site-header .hdr-logout, .site-header .auth-name { display: none !important; }
+  .site-header .menu-toggle { display: inline-flex !important; }
+
+  /* Tabs: one row you swipe sideways, never a tall list. */
+  .site-nav, .site-nav.is-open {
+    display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; align-items: center;
+    gap: 0.35rem !important; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+    padding: 0.4rem 0.75rem !important; margin: 0 !important; min-height: 0 !important;
+    position: sticky; top: 50px; z-index: 39; background: var(--bg);
+  }
+  .site-nav::-webkit-scrollbar { display: none; }
+  .site-nav a {
+    flex: none; white-space: nowrap; padding: 0.4rem 0.8rem !important; font-size: 0.85rem !important;
+    border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); margin: 0 !important; line-height: 1.2;
+  }
+  .site-nav a::after { display: none !important; }
+  .site-nav a .notice-badge { font-size: 0.55rem; margin-left: 0.25rem; }
+  /* Search: a slim bar of its own between the header and the tabs. */
+  .mobile-search-bar { display: block; padding: 0.4rem 0.75rem 0; background: var(--bg); }
+  .mobile-search-bar .nav-search { display: flex !important; position: relative; gap: 0.35rem; align-items: center; margin: 0; }
+  .mobile-search-bar .nav-search input { flex: 1; min-width: 0; height: 2.2rem; font-size: 0.85rem; padding-left: 2rem !important;
+    border-radius: 999px !important; border: 2px solid var(--pink) !important; }
+  .mobile-search-bar .nav-search-go { height: 2.2rem; padding: 0 0.7rem; border-radius: 999px; display: inline-flex; align-items: center; }
+  .mobile-search-bar .nav-search-go span { display: none; }
+  .mobile-search-bar .nav-search-icon { position: absolute; left: 0.7rem; top: 50%; transform: translateY(-50%); color: var(--pink); pointer-events: none; }
+  .site-nav { top: 50px; }
+  main, #main { padding-top: 0.6rem !important; }
+  main > .panel:first-child, #main > section:first-child { margin-top: 0 !important; }
+  .panel { padding: 1rem !important; }
+  h1 { font-size: clamp(1.7rem, 8vw, 2.4rem); }
+}

@@ -48,6 +48,7 @@ router.get("/:username", requireLogin, async function (req, res) {
       username: user.username,
       displayName: user.display_name,
       bio: user.bio || "",
+      ...(await require("../trust").badgesFor(user.id)),
       role: user.role,
       avatarUrl: avatarUrl(user.avatar_url),
       joined: user.created_at,

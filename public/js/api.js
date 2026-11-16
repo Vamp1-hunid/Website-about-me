@@ -152,7 +152,7 @@
   MW.categoryName = function (category) {
     return { "story-art": "Story art", anime: "Anime works", writing: "Writing", updates: "Update", news: "News",
       art: "Art", comedy: "Comedy", film: "Live action film", series: "Series", meme: "Meme", thoughts: "Thoughts", poll: "Poll",
-      novel: "Novel", storybook: "Storybook", educational: "Educational", poetry: "Poetry", song: "Song & music", trailer: "Trailer" }[category] || category;
+      novel: "Novel", storybook: "Storybook", educational: "Educational", poetry: "Poetry", song: "Song & music", trailer: "Trailer", tutorial: "Tutorial" }[category] || category;
   };
 
   // "2026-11-20T15:00:00Z" -> "20 Nov 2026, 17:00" (in the visitor's own time zone)
@@ -321,8 +321,8 @@
     } else if (MW.isHub && (user.role === "admin" || (MW.creator && MW.creator.status === "approved"))) {
       area.appendChild(el("a", { class: "btn btn-small", href: "/hub/studio" }, "Studio"));
     }
-    area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/profile" }, "Profile"));
-    var logout = el("button", { class: "btn btn-ghost btn-small", type: "button" }, "Log out");
+    area.appendChild(el("a", { class: "btn btn-ghost btn-small hdr-profile", href: "/profile" }, "Profile"));
+    var logout = el("button", { class: "btn btn-ghost btn-small hdr-logout", type: "button" }, "Log out");
     logout.addEventListener("click", async function () {
       logout.disabled = true;
       try {
@@ -388,9 +388,27 @@
     return box;
   };
 
+  // Holidays and events: a small banner on the Chapterhive home page, and a theme hook for the whole site.
+  function holidayBanner() {
+    if (!MW.isHub || !MW.feature("calendar")) return;
+    MW.api("/calendar/today").then(function (d) {
+      var items = d.events.concat(d.holidays);
+      if (d.theme) document.body.setAttribute("data-holiday", d.theme);
+      var path = window.location.pathname.replace(/\/$/, "");
+      if (!items.length || (path !== "/hub")) return;
+      var main = document.getElementById("main");
+      if (!main || document.querySelector(".holiday-banner")) return;
+      var top = items[0];
+      var banner = el("a", { class: "holiday-banner", href: top.link || "/hub/calendar" });
+      banner.appendChild(el("span", { class: "holiday-emoji", "aria-hidden": "true" }, top.emoji));
+      banner.appendChild(el("span", {}, (top.kind === "event" ? "" : "Happy ") + top.title + (top.kind === "event" && top.details ? ": " + top.details : "") + (items.length > 1 ? " · and " + (items.length - 1) + " more today" : "")));
+      main.insertBefore(banner, main.firstChild);
+    }).catch(function () {});
+  }
+
   // Pages that belong to a switchable feature. While it's off, the page shows a friendly notice instead.
   var PAGE_FEATURES = { "/hub/chat": "chat", "/hub/collabs": "collabs", "/hub/premium": "premium", "/hub/sponsor": "sponsor_page",
-    "/hub/apply": "creator_applications", "/hub/search": "search", "/search": "search", "/hub/feed": "follows", "/hub/news": "updates", "/hub/top": "rankings" };
+    "/hub/apply": "creator_applications", "/hub/search": "search", "/search": "search", "/hub/feed": "follows", "/hub/news": "updates", "/hub/top": "rankings", "/hub/calendar": "calendar", "/hub/comic-maker": "comic_maker" };
   function gatePage() {
     var path = window.location.pathname.replace(/\/$/, "");
     var key = PAGE_FEATURES[path] || (path.indexOf("/hub/collabs/") === 0 ? "collabs" : null);
@@ -444,7 +462,14 @@
       search.appendChild(go);
     }
     if (input && !search.querySelector(".nav-search-icon")) search.insertBefore(searchIcon("nav-search-icon"), input);
-    nav.appendChild(search);
+    // Phones: the search box gets its own slim bar above the swipeable row of tabs.
+    if (window.matchMedia && window.matchMedia("(max-width: 760px)").matches) {
+      var bar = el("div", { class: "mobile-search-bar" });
+      bar.appendChild(search);
+      nav.parentNode.insertBefore(bar, nav);
+    } else {
+      nav.appendChild(search);
+    }
   }
 
   function buildMenu() {
@@ -463,7 +488,7 @@
     menu.appendChild(search);
 
     var groups = MW.isHub ? [
-      ["Chapterhive", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following", true], ["/hub/news", "News & updates", false, "updates"], ["/hub/top", "Top creators", false, "rankings"]]],
+      ["Chapterhive", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following", true], ["/hub/news", "News & updates", false, "updates"], ["/hub/top", "Top creators", false, "rankings"], ["/hub/calendar", "Calendar", false, "calendar"]]],
       ["Create", [["/hub/collabs", "Collab board", true, "collabs"], ["/hub/collabs#suggest", "Suggestion box", true, "suggestion_box"], ["/hub/apply", "Become a creator", true, "creator_applications"], ["/legal/content-rules", "Content Rules"]]],
       ["More", [["/help", "Help & FAQ"], ["/hub/premium", "Premium", false, "premium"], ["/hub/sponsor", "Sponsor & business", false, "sponsor_page"], ["/", "God's Banditos"], ["/contact", "Contact"], ["/legal/terms", "Terms"]]]
     ] : [
@@ -520,6 +545,7 @@
         document.querySelectorAll(".header-search, .menu-search").forEach(function (f) { f.hidden = true; });
       }
       gatePage();
+      holidayBanner();
       // Suggestion box: a link in every footer (and the help page / collab board keep the full form).
       if (MW.feature("suggestion_box")) {
         var foot = document.querySelector(".site-footer p:last-child");
@@ -576,6 +602,19 @@
         if (typeof item[2] === "string" && MW.featureNotice(item[2])) MW.markNotice(a, MW.featureNotice(item[2]));
         ul.appendChild(li);
       });
+      // Light/dark switch and Log out also live in the menu (on phones the header hides them to save room).
+      var themeLi = el("li", { class: "menu-mobile-only" });
+      var themeBtn = el("button", { type: "button", class: "menu-link-btn" }, "🌓 Switch light / dark mode");
+      themeBtn.addEventListener("click", function () { var t = document.getElementById("theme-toggle"); if (t) t.click(); });
+      themeLi.appendChild(themeBtn);
+      ul.appendChild(themeLi);
+      if (user) {
+        var outLi = el("li", { class: "menu-mobile-only" });
+        var outBtn = el("button", { type: "button", class: "menu-link-btn" }, "↩ Log out");
+        outBtn.addEventListener("click", function () { var b = document.querySelector(".hdr-logout"); if (b) b.click(); });
+        outLi.appendChild(outBtn);
+        ul.appendChild(outLi);
+      }
       if (user && MW.feature("streaks") && MW.account && MW.account.streak) {
         ul.appendChild(el("li", { class: "menu-streak" }, "🔥 " + MW.account.streak + "-day streak"));
       }

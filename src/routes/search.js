@@ -6,7 +6,7 @@ const express = require("express");
 const rateLimit = require("express-rate-limit");
 const db = require("../db");
 const storage = require("../storage");
-const { VISIBLE, SELECT_POST, toPost, BANDITOS_ONLY, audienceSql } = require("./posts");
+const { VISIBLE, SELECT_POST, toPost, BANDITOS_ONLY, audienceSql, contentFilterSql } = require("./posts");
 const { CHAR_VISIBLE } = require("./stories");
 
 const router = express.Router();
@@ -31,6 +31,7 @@ const TYPES = {
   writing: ["writing", "thoughts", "novel", "poetry"],
   books: ["novel", "storybook", "educational"],
   music: ["song"],
+  tutorials: ["tutorial"],
   stories: [],
   characters: [],
   news: [],
@@ -55,7 +56,7 @@ router.get("/search", flagsLib.requireFlag("search", { adminAlways: true }), sea
   const works = !wantWorks ? none : await db.query(
     `${SELECT_POST} WHERE ${VISIBLE}${workScope} AND p.category <> 'news'
         AND ($2::text[] IS NULL OR p.category = ANY($2::text[]) OR ($3 AND p.series_id IS NOT NULL))
-        AND ${audienceSql(4)}
+        AND ${audienceSql(4)} AND ${contentFilterSql(4)}
         AND (p.title ILIKE $1 OR p.summary ILIKE $1 OR p.logline ILIKE $1
         OR array_to_string(p.tags, ' ') ILIKE $1 OR p.body ILIKE $1)
       ORDER BY (p.title ILIKE $1) DESC, p.created_at DESC LIMIT ${type === "all" ? 24 : 48}`,

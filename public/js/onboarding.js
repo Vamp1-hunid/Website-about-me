@@ -14,7 +14,7 @@
     ["novel", "📖", "Novels"], ["storybook", "🧸", "Storybooks"], ["educational", "🎓", "Learning & education"], ["poetry", "🪶", "Poetry"],
     ["song", "🎵", "Songs & music"], ["story-art", "💥", "Comics & manga"], ["art", "🎨", "Art & illustration"], ["anime", "✨", "Animation"],
     ["film", "🎬", "Films"], ["series", "📺", "Series"], ["trailer", "🎞️", "Trailers"], ["writing", "✍️", "Short stories"],
-    ["comedy", "😂", "Comedy"], ["meme", "🤣", "Memes"], ["thoughts", "💭", "Thoughts & feelings"]
+    ["tutorial", "✏️", "Drawing & art tutorials"], ["comedy", "😂", "Comedy"], ["meme", "🤣", "Memes"], ["thoughts", "💭", "Thoughts & feelings"]
   ];
   var GENRES = [
     ["fantasy", "🐉", "Fantasy"], ["scifi", "🚀", "Sci-fi"], ["horror", "👻", "Horror"], ["mystery", "🔎", "Mystery"],

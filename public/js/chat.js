@@ -88,6 +88,7 @@
   function messageItem(m) {
     var li = el("li", { class: "chat-msg" + (m.mine ? " is-mine" : ""), "data-id": String(m.id) });
     var bubble = el("div", { class: "chat-bubble" });
+    if (current && current.group && !m.mine && m.sender) bubble.appendChild(el("span", { class: "chat-sender" }, m.sender.displayName || m.sender.username));
     if (m.deleted) bubble.appendChild(el("em", { class: "muted" }, "Message removed"));
     else {
       if (m.body) bubble.appendChild(el("p", {}, m.body));
@@ -99,7 +100,7 @@
       var action = el("button", { type: "button", class: "chat-link" }, m.mine ? "Delete" : "Report");
       action.addEventListener("click", function () {
         if (m.mine) {
-          MW.api("/chat/messages/" + m.id, { method: "DELETE" }).then(function () {
+          MW.api(msgBase() + m.id, { method: "DELETE" }).then(function () {
             bubble.textContent = "";
             bubble.appendChild(el("em", { class: "muted" }, "Message removed"));
             action.remove();
@@ -128,17 +129,118 @@
     cancel.addEventListener("click", function () { form.remove(); });
     form.addEventListener("submit", function (event) {
       event.preventDefault();
-      MW.api("/chat/messages/" + m.id + "/report", { method: "POST", json: { reason: select.value } }).then(function () {
+      MW.api(msgBase() + m.id + "/report", { method: "POST", json: { reason: select.value } }).then(function () {
         form.remove();
         MW.toast("Thanks. The report went to the moderators.");
       }).catch(function (e) { MW.toast(e.message, true); });
     });
   }
 
+  function convBase() { return current && current.group ? "/chat/groups/" : "/chat/threads/"; }
+  function msgBase() { return current && current.group ? "/chat/groups/messages/" : "/chat/messages/"; }
+
+  /* ---------- Group chats ---------- */
+  function loadGroups() {
+    if (!MW.feature("group_chats")) return Promise.resolve();
+    return MW.api("/chat/groups").then(function (d) {
+      var box = document.getElementById("chat-groups");
+      if (!box) {
+        box = el("ul", { id: "chat-groups", class: "chat-threads" });
+        threadsList.before(el("p", { class: "chat-list-label mono muted" }, "Groups"));
+        threadsList.before(box);
+        threadsList.before(el("p", { class: "chat-list-label mono muted" }, "Direct messages"));
+      }
+      box.textContent = "";
+      var add = el("li");
+      var nb = el("button", { type: "button", class: "chat-thread-btn chat-new-group" }, "＋ New group");
+      nb.addEventListener("click", newGroupForm);
+      add.appendChild(nb);
+      box.appendChild(add);
+      d.groups.forEach(function (g) {
+        var li = el("li");
+        var b = el("button", { type: "button", class: "chat-thread-btn" + (current && current.group && current.id === g.id ? " is-active" : "") });
+        b.appendChild(el("span", { class: "chat-avatar", "aria-hidden": "true" }, "👥"));
+        var text = el("span", { class: "chat-thread-text" });
+        text.appendChild(el("strong", {}, g.name));
+        text.appendChild(el("span", { class: "muted" }, g.preview || g.members + " members"));
+        b.appendChild(text);
+        if (g.unread) b.appendChild(el("span", { class: "chat-unread" }, String(g.unread)));
+        b.addEventListener("click", function () { openGroup(g.id); });
+        li.appendChild(b);
+        box.appendChild(li);
+      });
+    }).catch(function () {});
+  }
+
+  function newGroupForm() {
+    stopPolling();
+    current = null;
+    pane.textContent = "";
+    var f = el("form", { class: "chat-group-form", novalidate: "" });
+    f.appendChild(el("h2", {}, "New group chat"));
+    var name = el("input", { type: "text", placeholder: "Group name, e.g. Book club", maxlength: "60", "aria-label": "Group name" });
+    var people = el("input", { type: "text", placeholder: "@username, @username …", "aria-label": "Members", autocapitalize: "none", spellcheck: "false" });
+    var go = el("button", { type: "submit" }, "Create group");
+    var fb = el("p", { class: "feedback", "aria-live": "polite" });
+    f.append(name, people, el("p", { class: "muted" }, "Up to 30 people. Everyone must be allowed to receive chats from you (and teen accounts only join teen groups)."), go, fb);
+    f.addEventListener("submit", function (e) {
+      e.preventDefault();
+      go.disabled = true;
+      MW.api("/chat/groups", { method: "POST", json: { name: name.value, usernames: people.value.split(/[\s,]+/).filter(Boolean) } }).then(function (d) {
+        if (d.skipped && d.skipped.length) MW.toast("Not added: " + d.skipped.join("; "), true);
+        loadGroups();
+        openGroup(d.id);
+      }).catch(function (err) { fb.className = "feedback feedback-error"; fb.textContent = err.message; go.disabled = false; });
+    });
+    pane.appendChild(f);
+    name.focus();
+  }
+
+  function openGroup(id) {
+    stopPolling();
+    return MW.api("/chat/groups/" + id).then(function (data) {
+      current = { id: data.id, group: true, lastId: 0 };
+      history.replaceState(null, "", "/hub/chat?g=" + data.id);
+      pane.textContent = "";
+      var head = el("div", { class: "chat-head" });
+      head.appendChild(el("span", { class: "chat-avatar", "aria-hidden": "true" }, "👥"));
+      var title = el("div", { class: "chat-group-title" });
+      title.appendChild(el("strong", {}, data.name));
+      title.appendChild(el("span", { class: "muted" }, data.members.map(function (m) { return "@" + m.username; }).join(", ")));
+      head.appendChild(title);
+      if (data.isOwner) {
+        var addBtn = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "＋ Add");
+        addBtn.addEventListener("click", function () {
+          var u = window.prompt("Username to add:");
+          if (!u) return;
+          MW.api("/chat/groups/" + data.id + "/members", { method: "POST", json: { username: u.replace(/^@/, "") } })
+            .then(function () { openGroup(data.id); }).catch(function (e) { MW.toast(e.message, true); });
+        });
+        head.appendChild(addBtn);
+      }
+      var leave = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "Leave");
+      leave.addEventListener("click", function () {
+        if (!window.confirm("Leave " + data.name + "?")) return;
+        MW.me().then(function (u) {
+          MW.api("/chat/groups/" + data.id + "/members/" + encodeURIComponent(u.username), { method: "DELETE" }).then(function () {
+            pane.textContent = ""; current = null; loadGroups();
+          });
+        });
+      });
+      head.appendChild(leave);
+      pane.appendChild(head);
+      pane.appendChild(el("ol", { class: "chat-messages", id: "chat-messages" }));
+      addMessages(data.messages);
+      pane.appendChild(composer());
+      loadGroups();
+      startPolling();
+    }).catch(function (e) { pane.textContent = ""; pane.appendChild(el("p", { class: "error" }, e.message)); });
+  }
+
   function openThread(id) {
     stopPolling();
     return MW.api("/chat/threads/" + id).then(function (data) {
-      current = { id: data.id, with: data.with, lastId: 0 };
+      current = { id: data.id, with: data.with, lastId: 0, group: false };
       history.replaceState(null, "", "/hub/chat?t=" + data.id);
       pane.textContent = "";
 
@@ -202,7 +304,7 @@
       var body = area.value.trim();
       if (!body) return;
       send.disabled = true;
-      MW.api("/chat/threads/" + current.id + "/messages", { method: "POST", json: { body: body } }).then(function (d) {
+      MW.api(convBase() + current.id + "/messages", { method: "POST", json: { body: body } }).then(function (d) {
         area.value = "";
         addMessages([d.message]);
         loadThreads();
@@ -215,7 +317,7 @@
 
   function poll() {
     if (!current || document.hidden) return;
-    MW.api("/chat/threads/" + current.id + "?after=" + current.lastId).then(function (d) {
+    MW.api(convBase() + current.id + "?after=" + current.lastId).then(function (d) {
       if (d.messages.length) { addMessages(d.messages); loadThreads(); }
     }).catch(function () {});
   }
@@ -242,13 +344,16 @@
       return;
     }
     layout.hidden = false;
+    loadGroups();
     loadThreads().then(function () {
       if (params.get("with")) {
         startWith(params.get("with")).catch(function (e) { document.getElementById("chat-new-error").textContent = e.message; });
       } else if (params.get("t")) {
         openThread(Number(params.get("t")));
+      } else if (params.get("g")) {
+        openGroup(Number(params.get("g")));
       }
     });
-    listTimer = setInterval(function () { if (!document.hidden) loadThreads().catch(function () {}); }, 20000);
+    listTimer = setInterval(function () { if (!document.hidden) { loadThreads().catch(function () {}); loadGroups(); } }, 20000);
   });
 })();

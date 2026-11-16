@@ -140,12 +140,12 @@
         }));
       }
     }
-    if (t && r.targetType === "message") {
+    if (t && (r.targetType === "message" || r.targetType === "group_message")) {
       li.appendChild(el("p", {}, t.deleted ? "(message already removed)" : "“" + t.body + "”"));
       li.appendChild(el("p", { class: "muted" }, "Chat message from @" + (t.sender || "deleted account") + ". Check their account under Manage users if needed."));
       if (!t.deleted) {
         actions.appendChild(ADMIN.confirmButton("Remove message", async function () {
-          await MW.api("/admin/chat-messages/" + t.id, { method: "DELETE" });
+          await MW.api("/admin/chat-messages/" + t.id + (t.group ? "?group=1" : ""), { method: "DELETE" });
           await setReport(r, "resolved");
           MW.toast("Message removed.");
         }));

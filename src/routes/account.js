@@ -120,7 +120,7 @@ router.post("/register", signupsOrClaim, registerLimiter, async function (req, r
 /* ---------- Feed personalisation: welcome survey and "see more / less" ---------- */
 
 const SURVEY_CATEGORIES = ["novel", "storybook", "educational", "poetry", "song", "story-art", "art", "anime", "film", "series",
-  "trailer", "writing", "comedy", "meme", "thoughts"];
+  "trailer", "writing", "comedy", "meme", "thoughts", "tutorial"];
 const SURVEY_GENRES = ["fantasy", "scifi", "horror", "mystery", "romance", "comedy", "drama", "action", "adventure", "thriller",
   "slice-of-life", "historical", "children", "young-adult", "education", "science", "self-help", "faith", "poetry", "music"];
 
@@ -372,7 +372,7 @@ router.get("/me", async function (req, res) {
   let extra = {};
   if (req.session.user) {
     const { rows } = await db.query(
-      "SELECT show_online, streak_count, streak_best, is_beta, birth_date, country, email, email_verified_at, chat_privacy, gender, account_type, onboarded_at, created_at FROM users WHERE id = $1",
+      "SELECT show_online, streak_count, streak_best, is_beta, birth_date, country, email, email_verified_at, chat_privacy, gender, account_type, onboarded_at, created_at, daily_verse FROM users WHERE id = $1",
       [req.session.user.id]
     );
     if (rows[0]) {
@@ -381,7 +381,7 @@ router.get("/me", async function (req, res) {
           hasBirthDate: Boolean(rows[0].birth_date), country: rows[0].country || null,
           teen: rows[0].birth_date ? signup.isMinor(rows[0].birth_date) : null,
           hasEmail: Boolean(rows[0].email), emailVerified: Boolean(rows[0].email_verified_at), chatPrivacy: rows[0].chat_privacy,
-          gender: rows[0].gender || null, accountType: rows[0].account_type,
+          gender: rows[0].gender || null, accountType: rows[0].account_type, dailyVerse: rows[0].daily_verse,
           // New accounts (made in the last 7 days) that haven't been through the welcome yet.
           needsWelcome: !rows[0].onboarded_at && (Date.now() - new Date(rows[0].created_at)) < 7 * 86400000
         } };
@@ -443,19 +443,81 @@ router.post("/verify", async function (req, res) {
 // GET /api/account/privacy
 router.get("/privacy", requireLogin, async function (req, res) {
   const { rows } = await db.query(
-    `SELECT u.show_online, u.chat_privacy, u.profile_visible, cp.post_visibility, cp.status AS creator_status
+    `SELECT u.show_online, u.chat_privacy, u.profile_visible, u.max_rating, u.hide_strong_language, u.daily_verse, u.birth_date,
+            u.school_email, u.school_verified_at, cp.post_visibility, cp.status AS creator_status
        FROM users u LEFT JOIN creator_profiles cp ON cp.user_id = u.id WHERE u.id = $1`, [req.session.user.id]);
   const r = rows[0];
   res.json({ showOnline: r.show_online, chatPrivacy: r.chat_privacy, profileVisible: r.profile_visible,
-    postVisibility: r.post_visibility || null, isCreator: Boolean(r.creator_status) });
+    postVisibility: r.post_visibility || null, isCreator: Boolean(r.creator_status),
+    maxRating: r.max_rating, hideStrongLanguage: r.hide_strong_language, dailyVerse: r.daily_verse,
+    adult: Boolean(r.birth_date) && !signup.isMinor(r.birth_date),
+    school: { email: r.school_email || null, verified: Boolean(r.school_verified_at) } });
 });
 
-// PUT /api/account/privacy { showOnline, chatPrivacy, profileVisible, postVisibility }
+/* ---------- Skills (shown under the bio) ---------- */
+const SKILLS = ["Writer", "Novelist", "Poet", "Screenwriter", "Voice actor", "Narrator", "Singer", "Songwriter", "Musician", "Producer",
+  "Rapper", "Illustrator", "Comic artist", "Manga artist", "Animator", "Painter", "Photographer", "Filmmaker", "Actor", "Editor",
+  "Translator", "Teacher", "Graphic designer", "Game designer", "Storyboard artist", "Colourist", "Letterer", "Sound designer"];
+router.get("/skills", requireLogin, async function (req, res) {
+  const { rows } = await db.query("SELECT skills FROM users WHERE id = $1", [req.session.user.id]);
+  res.json({ skills: rows[0].skills || [], options: SKILLS });
+});
+router.put("/skills", requireLogin, async function (req, res) {
+  const picked = (Array.isArray(req.body.skills) ? req.body.skills : []).filter(function (s, i, all) { return SKILLS.includes(s) && all.indexOf(s) === i; }).slice(0, 8);
+  await db.query("UPDATE users SET skills = $1 WHERE id = $2", [picked, req.session.user.id]);
+  res.json({ skills: picked });
+});
+
+/* ---------- Student verification ---------- */
+// A school email looks like name@something.edu, .edu.xx, .ac.xx, .sch.xx or .school.
+function looksLikeSchool(email) {
+  const domain = email.split("@")[1] || "";
+  return /(^|\.)(edu|ac|sch|school|college|university|uni)(\.[a-z]{2,3})?$/.test(domain) || /\.edu\.[a-z]{2}$/.test(domain) || /\.ac\.[a-z]{2}$/.test(domain);
+}
+const schoolLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 5, standardHeaders: "draft-8", legacyHeaders: false,
+  message: { error: "Too many tries. Please wait a while." } });
+// POST /api/account/school { email } -> sends a confirmation link to the school address
+router.post("/school", requireLogin, schoolLimiter, async function (req, res) {
+  const email = cleanText(req.body.email).toLowerCase();
+  if (!EMAIL_PATTERN.test(email) || !looksLikeSchool(email)) {
+    return res.status(400).json({ error: "Use your school or university email (for example name@unza.zm, name@school.edu or name@mu.ac.zm).", problems: [{ field: "schoolEmail", message: "That doesn't look like a school email." }] });
+  }
+  if (!mailEnabled()) return res.status(503).json({ error: "Email isn't set up on this site yet, so school emails can't be checked right now." });
+  const token = crypto.randomBytes(24).toString("hex");
+  await db.query("UPDATE users SET school_email = $1, school_token = $2, school_verified_at = NULL WHERE id = $3", [email, token, req.session.user.id]);
+  const base = (process.env.PUBLIC_URL || req.protocol + "://" + req.get("host")).replace(/\/+$/, "");
+  const link = base + "/hub/verify?school=" + token;
+  await sendMail(email, "Confirm your student email on Chapterhive",
+    "Open this link to confirm you're a student and get your verified-student badge:\n" + link,
+    "<p>Open this link to confirm you're a student and get your 🎓 verified-student badge:</p><p><a href=\"" + link + "\">Confirm my school email</a></p>");
+  res.json({ ok: true });
+});
+// POST /api/account/school/verify { token }
+router.post("/school/verify", async function (req, res) {
+  const token = typeof req.body.token === "string" ? req.body.token : "";
+  if (!/^[a-f0-9]{48}$/.test(token)) return res.status(400).json({ error: "That link isn't valid." });
+  const { rows } = await db.query("UPDATE users SET school_verified_at = NOW(), school_token = NULL WHERE school_token = $1 RETURNING id", [token]);
+  if (!rows.length) return res.status(400).json({ error: "That link has expired or was already used." });
+  res.json({ ok: true });
+});
+
+// Content filter and daily verse live with the privacy settings.
+// PUT /api/account/privacy { showOnline, chatPrivacy, profileVisible, postVisibility, maxRating, hideStrongLanguage, dailyVerse }
 router.put("/privacy", requireLogin, async function (req, res) {
   const id = req.session.user.id;
   if (typeof req.body.showOnline === "boolean") await db.query("UPDATE users SET show_online = $1 WHERE id = $2", [req.body.showOnline, id]);
   if (["everyone", "following", "nobody"].includes(req.body.chatPrivacy)) await db.query("UPDATE users SET chat_privacy = $1 WHERE id = $2", [req.body.chatPrivacy, id]);
   if (typeof req.body.profileVisible === "boolean") await db.query("UPDATE users SET profile_visible = $1 WHERE id = $2", [req.body.profileVisible, id]);
+  if (["all", "teen", "mature"].includes(req.body.maxRating)) {
+    // Mature (18+) can only be chosen by adults.
+    const u = (await db.query("SELECT birth_date FROM users WHERE id = $1", [id])).rows[0];
+    if (req.body.maxRating === "mature" && (!u.birth_date || signup.isMinor(u.birth_date))) {
+      return res.status(403).json({ error: "Mature content is only for adults (18+) with a date of birth on their account." });
+    }
+    await db.query("UPDATE users SET max_rating = $1 WHERE id = $2", [req.body.maxRating, id]);
+  }
+  if (typeof req.body.hideStrongLanguage === "boolean") await db.query("UPDATE users SET hide_strong_language = $1 WHERE id = $2", [req.body.hideStrongLanguage, id]);
+  if (typeof req.body.dailyVerse === "boolean") await db.query("UPDATE users SET daily_verse = $1 WHERE id = $2", [req.body.dailyVerse, id]);
   if (["everyone", "members", "followers"].includes(req.body.postVisibility)) {
     await db.query("UPDATE creator_profiles SET post_visibility = $1 WHERE user_id = $2", [req.body.postVisibility, id]);
   }

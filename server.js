@@ -90,6 +90,7 @@ api.use("/notifications", require("./src/routes/notifications"));
 api.use("/chat", require("./src/routes/chat"));
 api.use("/premium", require("./src/routes/premium"));
 api.use("/reserve", require("./src/routes/reserve"));
+api.use("/calendar", require("./src/routes/calendar"));
 api.use("/help", require("./src/routes/help"));
 api.use(require("./src/routes/business"));
 api.use(require("./src/routes/search"));
