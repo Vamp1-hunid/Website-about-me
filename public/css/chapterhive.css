@@ -1442,3 +1442,16 @@ body[data-holiday="newyear"] .site-header { border-bottom: 4px solid #ffd23f; }
 .username-preview-tag { font-weight: 800; color: var(--pink); }
 .username-preview.is-bad .username-preview-note { color: #e5484d; }
 .username-preview.is-good .username-preview-note { color: #30a46c; }
+.members-list { display: grid; gap: 0.5rem; margin-top: 0.9rem; }
+.member-card { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.8rem; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+.member-card-who { flex: 1; display: flex; align-items: center; gap: 0.6rem; min-width: 0; color: var(--ink); text-decoration: none; }
+.member-card-text { display: grid; min-width: 0; }
+.member-card-text strong, .member-card-text .muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.member-card-tags { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.15rem; }
+.mini-tag { font-size: 0.72rem; padding: 0.05rem 0.45rem; border-radius: 999px; border: 1px solid var(--line); }
+.member-card-actions { display: flex; gap: 0.35rem; flex-shrink: 0; }
+#members-q { width: 100%; max-width: 420px; }
+.admin-filters { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.8rem 0 0.4rem; }
+.admin-filters input[type="search"] { flex: 1 1 220px; }
+.admin-filters select { flex: 0 1 auto; width: auto; }
+.admin-bulk { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 0.3rem 0; }

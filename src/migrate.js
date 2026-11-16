@@ -15,6 +15,7 @@ async function migrate() {
   await assignOwnership();
   await require("./flags").ensureDefaults();
   await openCommunityFeatures();
+  await openHelpAndTeamWording();
 }
 
 // One time only: the suggestion box and the Fund the heist button go live for everyone
@@ -24,6 +25,23 @@ async function openCommunityFeatures() {
   if (done.rows.length) return;
   await db.query("UPDATE feature_flags SET audience = 'everyone', updated_at = NOW() WHERE key IN ('suggestion_box', 'hub_support', 'donations')");
   await db.query("INSERT INTO app_settings (key, value) VALUES ('community_features_v1', '1') ON CONFLICT (key) DO NOTHING");
+}
+
+// v19: the help assistant is for everyone, and the Fund the heist message credits the whole team.
+async function openHelpAndTeamWording() {
+  const done = await db.query("SELECT 1 FROM app_settings WHERE key = 'help_team_v19'");
+  if (done.rows.length) return;
+  await db.query("UPDATE feature_flags SET audience = 'everyone', updated_at = NOW() WHERE key = 'help_assistant'");
+  const s = await db.query("SELECT value FROM app_settings WHERE key = 'support'");
+  if (s.rows.length) {
+    let v = s.rows[0].value;
+    try { v = typeof v === "string" ? JSON.parse(v) : v; } catch (e) { v = null; }
+    if (v && typeof v.message === "string" && /one person/i.test(v.message)) {
+      v.message = "Every story here is made by our crew of writers, artists and helpers. If you enjoy the work, you can chip in to keep the presses running.";
+      await db.query("UPDATE app_settings SET value = $1 WHERE key = 'support'", [typeof s.rows[0].value === "string" ? JSON.stringify(v) : v]);
+    }
+  }
+  await db.query("INSERT INTO app_settings (key, value) VALUES ('help_team_v19', '1') ON CONFLICT (key) DO NOTHING");
 }
 
 // Version 4 (Chapterhive): every work, story and character has an owner. Anything made

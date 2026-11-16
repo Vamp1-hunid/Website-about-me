@@ -11,9 +11,56 @@ const router = express.Router();
 
 // GET /api/users/:username
 // Member pages are for people with an account.
+// GET /api/users?q=  - find members (signed-in people only), so beta testers and members can find each other.
+// Only names, pictures and tags are listed; private pages are left out.
+router.get("/", requireLogin, async function (req, res) {
+  const q = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase().replace(/^@/, "").slice(0, 40) : "";
+  const like = "%" + q.replace(/[%_\\]/g, "\\$&") + "%";
+  const me = req.session.user.id;
+  const { rows } = await db.query(
+    `SELECT u.id, u.username, u.display_name, u.avatar_url, u.is_beta, u.role, u.bio,
+            (u.show_online AND u.last_seen_at > NOW() - INTERVAL '5 minutes') AS online,
+            cp.handle AS creator_handle,
+            EXISTS (SELECT 1 FROM follows f WHERE f.follower_id = $2 AND f.creator_id = u.id) AS following
+       FROM users u LEFT JOIN creator_profiles cp ON cp.user_id = u.id AND cp.status = 'approved'
+      WHERE u.status = 'active' AND u.profile_visible AND u.id <> $2
+        AND ($1 = '%%' OR u.username ILIKE $1 OR u.display_name ILIKE $1)
+      ORDER BY u.is_beta DESC, (u.role = 'admin') DESC, u.last_seen_at DESC NULLS LAST, u.created_at DESC
+      LIMIT 60`, [like, me]);
+  res.json({ members: rows.map(function (u) {
+    return { username: u.username, displayName: u.display_name, avatarUrl: avatarUrl(u.avatar_url), isBeta: u.is_beta,
+      isAdmin: u.role === "admin", creatorHandle: u.creator_handle || null, online: Boolean(u.online), following: u.following,
+      bio: (u.bio || "").slice(0, 140) };
+  }) });
+});
+
+// POST / DELETE /api/users/:username/follow  - members can follow each other (creators too).
+async function followMember(req, res) {
+  const username = String(req.params.username || "").toLowerCase();
+  const { rows } = await db.query("SELECT id, username, profile_visible, status FROM users WHERE username = $1", [username]);
+  const target = rows[0];
+  if (!target || target.status !== "active") return res.status(404).json({ error: "That member could not be found." });
+  if (target.id === req.session.user.id) return res.status(400).json({ error: "You can't follow yourself." });
+  let added = null;
+  if (req.method === "POST") {
+    added = await db.query("INSERT INTO follows (follower_id, creator_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", [req.session.user.id, target.id]);
+  } else {
+    await db.query("DELETE FROM follows WHERE follower_id = $1 AND creator_id = $2", [req.session.user.id, target.id]);
+  }
+  const count = (await db.query("SELECT COUNT(*)::int AS n FROM follows WHERE creator_id = $1", [target.id])).rows[0].n;
+  if (added && added.rowCount) {
+    const me = req.session.user;
+    await require("../notify").notify(target.id, { type: "follower", title: (me.displayName || me.username) + " followed you",
+      body: "You now have " + count + " follower" + (count === 1 ? "" : "s") + ".", link: "/hub/u/" + me.username });
+  }
+  res.json({ following: req.method === "POST", followers: count });
+}
+router.post("/:username/follow", requireLogin, require("../flags").requireFlag("follows"), followMember);
+router.delete("/:username/follow", requireLogin, require("../flags").requireFlag("follows"), followMember);
+
 router.get("/:username", requireLogin, async function (req, res) {
   const username = String(req.params.username || "").toLowerCase();
-  if (!/^[a-z0-9_]{3,30}$/.test(username)) {
+  if (!/^[a-z0-9_-]{3,30}$/.test(username)) {
     return res.status(404).json({ error: "That member could not be found." });
   }
 
@@ -22,9 +69,12 @@ router.get("/:username", requireLogin, async function (req, res) {
        (u.show_online AND u.last_seen_at > NOW() - INTERVAL '5 minutes') AS online,
        (SELECT COUNT(*) FROM comments c JOIN posts p ON p.id = c.post_id
          WHERE c.user_id = u.id AND (p.published AND p.review_status = 'approved' AND (p.publish_at IS NULL OR p.publish_at <= NOW())))::int AS comments,
-       (SELECT COUNT(*) FROM likes l WHERE l.user_id = u.id)::int AS likes
+       (SELECT COUNT(*) FROM likes l WHERE l.user_id = u.id)::int AS likes,
+       (SELECT COUNT(*) FROM follows f WHERE f.creator_id = u.id)::int AS followers,
+       (SELECT COUNT(*) FROM follows f WHERE f.follower_id = u.id)::int AS following_count,
+       EXISTS (SELECT 1 FROM follows f WHERE f.follower_id = $2 AND f.creator_id = u.id) AS i_follow
        FROM users u WHERE u.username = $1`,
-    [username]
+    [username, req.session.user.id]
   );
   const user = rows[0];
   // Members who hid their page: only they (and the admin) can open it.
@@ -57,7 +107,10 @@ router.get("/:username", requireLogin, async function (req, res) {
       online: !!user.online,
       streak: user.streak_count || 0,
       streakBest: user.streak_best || 0,
-      banned: user.status === "banned"
+      banned: user.status === "banned",
+      followers: user.followers,
+      followingCount: user.following_count,
+      iFollow: user.i_follow
     },
     recentComments: recent.rows.map(function (row) {
       return {

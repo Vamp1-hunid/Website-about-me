@@ -603,7 +603,7 @@ async function validatePost(body, req) {
     strongLanguage: body.strongLanguage === true,
     visibility: body.visibility === "followers" ? "followers" : "public",
     collaborators: (Array.isArray(body.collaborators) ? body.collaborators : []).map(function (u) { return String(u || "").trim().toLowerCase().replace(/^@/, ""); })
-      .filter(function (u, i, all) { return /^[a-z0-9_]{3,30}$/.test(u) && all.indexOf(u) === i; }).slice(0, 10),
+      .filter(function (u, i, all) { return /^[a-z0-9_-]{3,30}$/.test(u) && all.indexOf(u) === i; }).slice(0, 10),
     seriesId: optionalInt(body.seriesId, 1, 999999999),
     seriesOrder: optionalInt(body.seriesOrder, 0, 100000)
   };

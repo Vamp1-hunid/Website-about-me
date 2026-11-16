@@ -1610,3 +1610,30 @@ banners, the menu, the admin lists, the public list and the username preview.
 - **Email** isn't configured yet. Until a Brevo or Resend key is added, claim and beta links appear
   on screen for the admin to send.
 - **Legal pages** are still drafts. Have them reviewed by a Zambian lawyer before launch.
+
+### Version 19 (16 November 2026): members, follows, help for all, faster beta approval
+
+- **Find members** (`/hub/members`, `js/members.js`, `GET /api/users?q=`): signed-in people can
+  find each other. It lists readers, beta testers (listed first) and creators, with Follow and
+  💬 Message buttons. Private member pages are left out. It's in every account's ☰ menu as
+  **👥 Find members**.
+- **Members follow each other** (`POST`/`DELETE /api/users/:username/follow`), not just
+  creators. Member pages show Followers / Following and a Follow button. Following someone sends
+  them a bell notification. Before launch, only the team and beta testers can follow (the
+  pre-launch write guard).
+- **Help assistant for everyone:** the ? bot (`help_assistant`) now starts live for everyone. A
+  one-time start-up step (`help_team_v19` in `src/migrate.js`) switched it on for the live site.
+- **Fund the heist wording:** the same start-up step replaced the saved "made by one person"
+  message with team wording. You can still change the message in Admin → Settings → heist fund.
+- **Beta testers get their username right away:** the beta form now asks for a password.
+  - Applying holds the username at once (it appears on the reservation list with its number) and
+    creates the account.
+  - When you approve, they can log in immediately; no link is needed.
+  - Applicants without a password still get a set-up link on approval.
+- **Approving long lists:** the beta list has search (username, name, email, reason), status
+  (Waiting / Approved / Declined / All), country and sort filters, plus tick boxes with
+  **Approve selected** and **Decline selected**. The reservation list has search, status, country
+  and order filters too.
+- **Bell on phones:** the notification panel opens as a full-width sheet under the header, so
+  nothing is cut off.
+- Google sign-up now makes usernames that follow the new rule (adds `_hive` when there's no `_`).

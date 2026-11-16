@@ -47,9 +47,24 @@
         text.appendChild(sk);
       }
       MW.me().then(function (me) {
-        if (me && me.username !== u.username && MW.feature("chat")) {
-          var mp = el("p");
-          mp.appendChild(el("a", { class: "btn btn-small", href: "/hub/chat?with=" + encodeURIComponent(u.username) }, "💬 Message"));
+        if (me && me.username !== u.username) {
+          var mp = el("p", { class: "member-actions" });
+          if (MW.feature("follows")) {
+            var fb = el("button", { type: "button", class: "btn btn-small" + (u.iFollow ? " btn-ghost" : "") }, u.iFollow ? "Following" : "Follow");
+            fb.addEventListener("click", function () {
+              fb.disabled = true;
+              MW.api("/users/" + encodeURIComponent(u.username) + "/follow", { method: u.iFollow ? "DELETE" : "POST" }).then(function (d) {
+                u.iFollow = d.following;
+                fb.textContent = u.iFollow ? "Following" : "Follow";
+                fb.className = "btn btn-small" + (u.iFollow ? " btn-ghost" : "");
+                var fc = document.getElementById("member-followers");
+                if (fc) fc.textContent = String(d.followers);
+              }).catch(function (e) { MW.toast(e.message, true); }).then(function () { fb.disabled = false; });
+            });
+            mp.appendChild(fb);
+            mp.appendChild(document.createTextNode(" "));
+          }
+          if (MW.feature("chat")) mp.appendChild(el("a", { class: "btn btn-small btn-ghost", href: "/hub/chat?with=" + encodeURIComponent(u.username) }, "💬 Message"));
           text.appendChild(mp);
         }
       });
@@ -62,10 +77,10 @@
       box.appendChild(head);
 
       var stats = el("dl", { class: "stat-row" });
-      [["Comments", u.comments], ["Likes given", u.likes]].forEach(function (s) {
+      [["Followers", u.followers || 0, "member-followers"], ["Following", u.followingCount || 0], ["Comments", u.comments], ["Likes given", u.likes]].forEach(function (s) {
         var d = el("div", { class: "stat" });
         d.appendChild(el("dt", {}, s[0]));
-        d.appendChild(el("dd", {}, String(s[1])));
+        d.appendChild(el("dd", s[2] ? { id: s[2] } : {}, String(s[1])));
         stats.appendChild(d);
       });
       box.appendChild(stats);
