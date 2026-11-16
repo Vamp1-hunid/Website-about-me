@@ -2,7 +2,7 @@
    Keeps the app shell (styles, scripts, icons, an offline page) so the installed app opens quickly
    and shows a friendly page with no signal. Pages and API answers always come fresh from the server
    (never cached), so nobody sees someone else's data or an old version of a page. */
-const VERSION = "ch-v1";
+const VERSION = "ch-v2";
 const SHELL = [
   "/offline.html",
   "/css/styles.css",

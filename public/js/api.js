@@ -545,7 +545,7 @@
     if (!nav || !search || nav.querySelector(".header-search")) return;
     search.classList.add("nav-search");
     var input = search.querySelector("input");
-    if (input) input.placeholder = MW.isHub ? "Search books, series, creators…" : "Search works, stories…";
+    if (input) { input.placeholder = MW.isHub ? "Search books, series, creators…" : "Search works, stories…"; input.setAttribute("enterkeyhint", "search"); }
     if (!search.querySelector("button")) {
       var go = el("button", { type: "submit", class: "btn btn-small nav-search-go" });
       go.appendChild(searchIcon());
@@ -554,12 +554,27 @@
     }
     if (input && !search.querySelector(".nav-search-icon")) search.insertBefore(searchIcon("nav-search-icon"), input);
     // Phones: the search box gets its own slim bar above the swipeable row of tabs.
+    var holder;
     if (window.matchMedia && window.matchMedia("(max-width: 760px)").matches) {
       var bar = el("div", { class: "mobile-search-bar" });
       bar.appendChild(search);
       nav.parentNode.insertBefore(bar, nav);
+      holder = bar;
     } else {
       nav.appendChild(search);
+      holder = nav;
+    }
+    // Chapterhive: your profile picture sits to the left of the search box, one tap from your account.
+    if (MW.isHub) {
+      MW.me().then(function (user) {
+        if (holder.querySelector(".search-profile")) return;
+        var link = el("a", { class: "search-profile", href: user ? "/hub/u/" + encodeURIComponent(user.username) : "/hub/login",
+          "aria-label": user ? "My profile (@" + user.username + ")" : "Log in", title: user ? "My profile" : "Log in" });
+        if (user) link.appendChild(MW.avatar(user));
+        else link.appendChild(el("span", { class: "search-profile-guest", "aria-hidden": "true" }, "👤"));
+        holder.insertBefore(link, search);
+        holder.classList.add("has-profile");
+      }).catch(function () {});
     }
   }
 
@@ -606,7 +621,8 @@
     var account = el("div", { class: "menu-col", id: "menu-account" });
     account.appendChild(el("p", { class: "node-label" }, "Account"));
     account.appendChild(el("ul"));
-    grid.appendChild(account);
+    // Your account (profile, settings, tools) comes first in the menu, so it's easy to find.
+    grid.insertBefore(account, grid.firstChild);
     menu.appendChild(grid);
 
     var socials = el("div", { class: "social-row menu-socials", hidden: "" });
@@ -701,6 +717,14 @@
         items.unshift(["/hub/reserve#reserve-admin", "🐝 Name reservations", null, "reservations"]);
         items.unshift(["/admin#settings", "Site settings"]);
         items.unshift(["/admin", "Dashboard"]);
+      }
+      // Your own account links (profile, edit profile, settings) always come first, above the admin and staff tools.
+      if (user) {
+        var ACCOUNT = ["/hub/u/" + encodeURIComponent(user.username), "/hub/profile", "/hub/settings"];
+        items.sort(function (a, b) {
+          var ia = ACCOUNT.indexOf(a[0]), ib = ACCOUNT.indexOf(b[0]);
+          return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+        });
       }
       items.forEach(function (item) {
         var li = el("li");
@@ -977,27 +1001,57 @@
 
   // "📲 Install the app": Android/desktop Chrome offer a one-tap install; iPhones get the Share-menu steps.
   var installEvent = null;
-  window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); installEvent = e; addInstallItem(); });
+  window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); installEvent = e; addInstallItem(); installBanner(); });
+  function installNow(after) {
+    if (installEvent) {
+      installEvent.prompt();
+      installEvent.userChoice.then(function () { installEvent = null; if (after) after(); });
+    } else {
+      MW.toast("On iPhone: tap the Share button at the bottom of Safari, then \"Add to Home Screen\".");
+    }
+  }
+  // A slim, easy-to-spot "Get the app" bar under the header (Chapterhive pages). Hiding it keeps it away for two weeks.
+  function installBanner() {
+    if (!MW.isHub || isStandalone() || document.querySelector(".install-banner")) return;
+    if (/^\/hub\/(login|register|verify)/.test(window.location.pathname)) return;
+    try { if (Number(localStorage.getItem("ch-install-hidden") || 0) > Date.now()) return; } catch (e) { /* ignore */ }
+    var header = document.querySelector(".site-header");
+    if (!header) return;
+    var bar = el("div", { class: "install-banner", role: "region", "aria-label": "Get the Chapterhive app" });
+    bar.appendChild(el("img", { src: "/icons/icon-192.png", alt: "", width: "36", height: "36" }));
+    var t = el("span", { class: "install-banner-text" });
+    t.appendChild(el("strong", {}, "Get the Chapterhive app"));
+    t.appendChild(el("span", {}, installEvent ? "Free, quick to open, works like an app." : "On iPhone: Share → Add to Home Screen."));
+    bar.appendChild(t);
+    var go = el("button", { type: "button", class: "btn btn-small" }, installEvent ? "📲 Install" : "How?");
+    go.addEventListener("click", function () { installNow(function () { bar.remove(); }); });
+    var hide = el("button", { type: "button", class: "install-banner-close", "aria-label": "Hide for now" }, "×");
+    hide.addEventListener("click", function () {
+      bar.remove();
+      try { localStorage.setItem("ch-install-hidden", String(Date.now() + 14 * 24 * 3600 * 1000)); } catch (e) { /* ignore */ }
+    });
+    bar.appendChild(go);
+    bar.appendChild(hide);
+    var after = document.querySelector(".mobile-search-bar") || header;
+    after.parentNode.insertBefore(bar, after.nextSibling);
+  }
   function isStandalone() { return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true; }
   function addInstallItem() {
     if (isStandalone()) return;
-    var menu = document.querySelector("#site-menu ul");
+    var menu = document.querySelector("#menu-account ul") || document.querySelector("#site-menu ul");
     if (!menu || menu.querySelector(".install-app")) return;
     var li = el("li");
     var b = el("button", { type: "button", class: "link-button install-app" }, "📲 Install the app");
-    b.addEventListener("click", function () {
-      if (installEvent) {
-        installEvent.prompt();
-        installEvent.userChoice.then(function () { installEvent = null; li.remove(); });
-      } else {
-        MW.toast("On iPhone: tap the Share button, then \"Add to Home Screen\".");
-      }
-    });
+    b.addEventListener("click", function () { installNow(function () { li.remove(); }); });
     li.appendChild(b);
     menu.insertBefore(li, menu.firstChild);
   }
-  window.addEventListener("appinstalled", function () { var i = document.querySelector(".install-app"); if (i) i.parentNode.remove(); MW.toast("Chapterhive is installed. 🐝"); });
-  if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalone()) setTimeout(addInstallItem, 1500);
+  window.addEventListener("appinstalled", function () {
+    var i = document.querySelector(".install-app"); if (i) i.parentNode.remove();
+    var bnr = document.querySelector(".install-banner"); if (bnr) bnr.remove();
+    MW.toast("Chapterhive is installed. 🐝");
+  });
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalone()) setTimeout(function () { addInstallItem(); installBanner(); }, 1500);
 
   // Installable app: the service worker keeps the app shell and shows an offline page with no signal.
   if ("serviceWorker" in navigator && window.location.protocol === "https:") {
@@ -1042,4 +1096,42 @@
     draw();
     return wrap;
   };
+
+  // Team announcements pop up once (newest first, only ones from the last two weeks), then live on News & updates.
+  function announcementPopup() {
+    if (!MW.isHub || /^\/hub\/(news|login|register|verify)/.test(window.location.pathname)) return;
+    var seen = [];
+    try { seen = JSON.parse(localStorage.getItem("ch-announcements-seen") || "[]"); } catch (e) { seen = []; }
+    MW.api("/notifications/announcements").then(function (d) {
+      var fresh = d.announcements.filter(function (a) {
+        return seen.indexOf(a.id) < 0 && Date.now() - new Date(a.createdAt).getTime() < 14 * 24 * 3600 * 1000;
+      });
+      if (!fresh.length) return;
+      // Wait for the first-visit welcome to go first.
+      if (document.querySelector(".welcome-dialog[open], .onboard")) { setTimeout(announcementPopup, 4000); return; }
+      var a = fresh[0];
+      var dialog = el("dialog", { class: "heist-dialog announce-dialog", "aria-labelledby": "announce-title" });
+      dialog.appendChild(el("p", { class: "node-label" }, "📣 " + ({ beta: "For beta testers", creators: "For creators", staff: "For staff" }[a.audience] || "From the team")));
+      dialog.appendChild(el("h2", { id: "announce-title" }, a.title));
+      if (a.body) a.body.split(/\n+/).forEach(function (para) { dialog.appendChild(el("p", {}, para)); });
+      var actions = el("div", { class: "form-actions" });
+      if (a.link) actions.appendChild(el("a", { class: "btn", href: a.link }, "Read more"));
+      var all = el("a", { class: "btn btn-ghost", href: "/hub/news#announcement-" + a.id }, fresh.length > 1 ? "All updates (" + fresh.length + " new)" : "All updates");
+      var ok = el("button", { type: "button", class: "btn btn-ghost" }, "Got it");
+      actions.appendChild(all);
+      actions.appendChild(ok);
+      dialog.appendChild(actions);
+      function markSeen() {
+        // Seeing the newest counts as seeing the older ones too: one pop-up, not a queue of them.
+        fresh.forEach(function (f) { if (seen.indexOf(f.id) < 0) seen.push(f.id); });
+        try { localStorage.setItem("ch-announcements-seen", JSON.stringify(seen.slice(-200))); } catch (e) { /* ignore */ }
+      }
+      ok.addEventListener("click", function () { dialog.close(); });
+      actions.querySelectorAll("a").forEach(function (link) { link.addEventListener("click", markSeen); });
+      dialog.addEventListener("close", markSeen);
+      document.body.appendChild(dialog);
+      if (dialog.showModal) dialog.showModal(); else dialog.setAttribute("open", "");
+    }).catch(function () {});
+  }
+  setTimeout(announcementPopup, 1500);
 })();

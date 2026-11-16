@@ -28,6 +28,24 @@ async function announcementsFor(userId, sinceOnly) {
   return rows;
 }
 
+// GET /api/notifications/announcements -> team announcements for the News & updates page and the pop-up.
+// Visitors see the ones for everyone; signed-in people also see the ones meant for them (beta testers, creators, staff).
+router.get("/announcements", async function (req, res) {
+  const me = req.session && req.session.user ? req.session.user.id : null;
+  const { rows } = await db.query(
+    `SELECT a.id, a.title, a.body, a.link, a.audience, a.created_at FROM announcements a
+       LEFT JOIN users u ON u.id = $1
+      WHERE a.created_at > NOW() - INTERVAL '90 days'
+        AND (a.audience = 'all' OR u.role = 'admin'
+             OR (a.audience = 'creators' AND EXISTS (SELECT 1 FROM creator_profiles cp WHERE cp.user_id = u.id AND cp.status = 'approved'))
+             OR (a.audience = 'beta' AND u.is_beta)
+             OR (a.audience = 'staff' AND cardinality(u.staff_perms) > 0))
+      ORDER BY a.created_at DESC LIMIT 20`, [me]);
+  res.json({ announcements: rows.map(function (a) {
+    return { id: a.id, title: a.title, body: a.body, link: a.link, audience: a.audience, createdAt: a.created_at };
+  }) });
+});
+
 router.get("/", requireLogin, async function (req, res) {
   const me = req.session.user.id;
   const mine = await db.query(

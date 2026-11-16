@@ -4592,3 +4592,16 @@ body[data-brand="chapterhive"] .help-glitter { width: 2.9rem; height: 3.2rem; }
 @keyframes help-shine { 0%, 55% { background-position: 150% 0; } 100% { background-position: -150% 0; } }
 @keyframes help-twinkle { 0%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); } 40% { opacity: 1; transform: scale(1.15) rotate(25deg); } 60% { opacity: 0.9; transform: scale(1) rotate(40deg); } }
 @media (prefers-reduced-motion: reduce) { .help-glitter, .help-fab-glitter::after, .help-sparkle { animation: none; } .help-sparkle { opacity: 0.8; } }
+/* Chapterhive: profile picture left of the search box; the round search button is gone on phones (press Enter / Go on the keyboard). */
+.search-profile { flex: 0 0 auto; display: inline-grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 50%;
+  border: 2px solid var(--pink); overflow: hidden; background: var(--panel); text-decoration: none; }
+.search-profile .avatar { width: 100%; height: 100%; margin: 0; border-radius: 50%; font-size: 1rem; }
+.search-profile .avatar img { width: 100%; height: 100%; object-fit: cover; }
+.search-profile-guest { font-size: 1.1rem; }
+.site-nav.has-profile .search-profile { margin-left: auto; }
+@media (max-width: 760px) {
+  .mobile-search-bar.has-profile { display: flex !important; align-items: center; gap: 0.5rem; }
+  .mobile-search-bar.has-profile .nav-search { flex: 1; min-width: 0; }
+  .mobile-search-bar .nav-search-go { display: none !important; }
+  .search-profile { width: 2.2rem; height: 2.2rem; }
+}

@@ -24,8 +24,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=26">
-  <link rel="stylesheet" href="/css/chapterhive.css?v=30">
+  <link rel="stylesheet" href="/css/styles.css?v=27">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=32">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -68,6 +68,11 @@
       <p class="node-label">Newsroom</p>
       <h1>News &amp; updates</h1>
       <p class="lead">News, release dates and highlights from the anime world and from Chapterhive creators.</p>
+    </section>
+    <section class="panel" aria-labelledby="team-news-title" id="team-news" hidden>
+      <p class="node-label">From the team</p>
+      <h2 id="team-news-title">📣 Announcements</h2>
+      <div id="team-news-list" class="team-news-list"></div>
     </section>
     <section class="panel" aria-label="Updates">
       <div id="news-list" class="news-list" aria-live="polite"><p class="loading">Loading&hellip;</p></div>
