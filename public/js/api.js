@@ -656,7 +656,7 @@
         }
       }
       var items = user
-        ? [["/hub/u/" + encodeURIComponent(user.username), "👤 My profile"], ["/hub/profile", "✏️ Edit my profile"], ["/hub/settings", "⚙ Settings & privacy"]]
+        ? [["/hub/u/" + encodeURIComponent(user.username), "👤 My profile"], ["/hub/members", "👥 Find members"], ["/hub/profile", "✏️ Edit my profile"], ["/hub/settings", "⚙ Settings & privacy"]]
         : [["/hub/login?next=" + encodeURIComponent(MW.currentPath()), "Log in"],
            MW.isHub && MW.feature("reservations") && !MW.feature("signups") ? ["/hub/reserve", "🐝 Reserve your username"] : ["/hub/register", "Create a free account"]];
       if (!user && MW.isHub && MW.feature("reservations") && !MW.feature("signups")) items.push(["/hub/beta", "🧪 Become a beta tester"]);

@@ -36,14 +36,15 @@
     button.disabled = true;
     MW.api("/beta", { method: "POST", json: {
       username: $("username").value, displayName: $("displayName").value, email: $("email").value,
-      birthDate: $("birthDate").value, country: $("country").value, reason: $("reason").value, acceptTerms: $("acceptTerms").checked
+      birthDate: $("birthDate").value, country: $("country").value, reason: $("reason").value, password: $("password").value, acceptTerms: $("acceptTerms").checked
     } }).then(function (d) {
       form.hidden = true;
       var done = $("beta-done");
       done.hidden = false;
       done.appendChild(el("p", { class: "reserve-success" }, "🧪 Application sent!"));
-      done.appendChild(el("p", { class: "lead" }, (d.keptReservation ? "You'll keep your reserved name @" + d.username + ". " : "We've noted @" + d.username + ". ") +
-        "If you're approved, we'll send a link to set up your account so you can log in before launch."));
+      done.appendChild(el("p", { class: "lead" }, (d.keptReservation ? "You'll keep your name @" + d.username + ". " : "@" + d.username + " is yours" + (d.position ? " (#" + d.position + " on the list)" : "") + ". ") +
+        (d.account || d.keptReservation ? "As soon as you're approved you can log in and start testing." : "If you're approved, we'll send a link to finish setting up your account.")));
+      try { localStorage.setItem("ch-reserved", d.username); } catch (e) { /* private mode */ }
     }).catch(function (e) {
       if (e.data && e.data.tooYoung) {
         form.textContent = "";
@@ -77,47 +78,139 @@
         }
       }
     }
+    // Filters for long lists: search, status, country, sort, and approving several at once.
+    var apps = [];
+    var filters = el("div", { class: "admin-filters" });
+    var fq = el("input", { type: "search", placeholder: "Search username, name, email or reason…", "aria-label": "Search applications" });
+    var fs = el("select", { "aria-label": "Status" });
+    [["pending", "Waiting"], ["approved", "Approved"], ["declined", "Declined"], ["", "All"]].forEach(function (o) { fs.appendChild(el("option", { value: o[0] }, o[1])); });
+    var fc = el("select", { "aria-label": "Country" });
+    var fo = el("select", { "aria-label": "Sort" });
+    [["old", "Oldest first"], ["new", "Newest first"], ["az", "Username A–Z"], ["long", "Longest reason"]].forEach(function (o) { fo.appendChild(el("option", { value: o[0] }, o[1])); });
+    [fq, fs, fc, fo].forEach(function (x) { filters.appendChild(x); x.addEventListener(x === fq ? "input" : "change", render); });
+    var bulk = el("div", { class: "admin-bulk" });
+    var allBox = el("input", { type: "checkbox", "aria-label": "Select all shown" });
+    var bulkOk = el("button", { type: "button", class: "btn btn-small" }, "Approve selected");
+    var bulkNo = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "Decline selected");
+    var label = el("label", { class: "check-row" });
+    label.appendChild(allBox); label.appendChild(el("span", {}, " Select all shown"));
+    bulk.appendChild(label); bulk.appendChild(bulkOk); bulk.appendChild(bulkNo);
+    $("beta-list").parentNode.insertBefore(filters, $("beta-list"));
+    $("beta-list").parentNode.insertBefore(bulk, $("beta-list"));
+    var selected = {};
+
+    function shown() {
+      var q = fq.value.trim().toLowerCase().replace(/^@/, "");
+      var list = apps.filter(function (a) {
+        if (fs.value && a.status !== fs.value) return false;
+        if (fc.value && (a.country || "") !== fc.value) return false;
+        if (q && [a.username, a.display_name, a.email, a.reason].join(" ").toLowerCase().indexOf(q) < 0) return false;
+        return true;
+      });
+      var by = { old: function (a, b) { return new Date(a.created_at) - new Date(b.created_at); },
+        new: function (a, b) { return new Date(b.created_at) - new Date(a.created_at); },
+        az: function (a, b) { return a.username.localeCompare(b.username); },
+        long: function (a, b) { return (b.reason || "").length - (a.reason || "").length; } }[fo.value];
+      return list.sort(by);
+    }
+
+    function decide(ids, action) {
+      var chain = Promise.resolve();
+      var done = 0;
+      ids.forEach(function (id) {
+        chain = chain.then(function () {
+          return MW.api("/beta/admin/" + id + "/" + action, { method: "POST" }).then(function (r) {
+            done += 1;
+            if (action === "approve" && r.link) {
+              var a = apps.filter(function (x) { return x.id === id; })[0];
+              $("beta-links").appendChild(el("p", { class: "mono" }, "@" + a.username + " (" + a.email + "): " + r.link));
+            }
+          }).catch(function (e) { MW.toast(e.message, true); });
+        });
+      });
+      return chain.then(function () { MW.toast((action === "approve" ? "Approved " : "Declined ") + done + "."); selected = {}; load(); });
+    }
+    bulkOk.addEventListener("click", function () {
+      var ids = Object.keys(selected).map(Number);
+      if (!ids.length) return MW.toast("Tick some applications first.", true);
+      $("beta-links").textContent = "";
+      decide(ids, "approve");
+    });
+    bulkNo.addEventListener("click", function () {
+      var ids = Object.keys(selected).map(Number);
+      if (!ids.length) return MW.toast("Tick some applications first.", true);
+      if (!window.confirm("Decline " + ids.length + " application(s)?")) return;
+      decide(ids, "decline");
+    });
+    allBox.addEventListener("change", function () {
+      selected = {};
+      if (allBox.checked) shown().forEach(function (a) { if (a.status === "pending") selected[a.id] = true; });
+      render();
+    });
+
+    function render() {
+      var box = $("beta-list");
+      box.textContent = "";
+      var pending = apps.filter(function (a) { return a.status === "pending"; }).length;
+      var list = shown();
+      box.appendChild(el("p", { class: "mono muted" }, apps.length + " applications · " + pending + " waiting for you · " + list.length + " shown"));
+      if (!list.length) { box.appendChild(el("p", { class: "muted" }, apps.length ? "Nothing matches these filters." : "No applications yet.")); return; }
+      var table = el("table", { class: "reserve-table" });
+      var head = el("tr");
+      ["", "Username", "Name", "Email", "Country", "Why", "Applied", "Status", ""].forEach(function (h) { head.appendChild(el("th", {}, h)); });
+      table.appendChild(head);
+      list.forEach(function (a) {
+        var tr = el("tr");
+        var tdc = el("td");
+        if (a.status === "pending") {
+          var cb = el("input", { type: "checkbox", "aria-label": "Select @" + a.username });
+          cb.checked = Boolean(selected[a.id]);
+          cb.addEventListener("change", function () { if (cb.checked) selected[a.id] = true; else delete selected[a.id]; });
+          tdc.appendChild(cb);
+        }
+        tr.appendChild(tdc);
+        tr.appendChild(el("td", {}, "@" + a.username));
+        tr.appendChild(el("td", {}, a.display_name));
+        tr.appendChild(el("td", {}, a.email));
+        tr.appendChild(el("td", {}, a.country || ""));
+        tr.appendChild(el("td", { class: "beta-reason" }, a.reason));
+        tr.appendChild(el("td", {}, MW.formatDate(a.created_at)));
+        tr.appendChild(el("td", {}, a.status === "approved" ? "✓ Approved" : a.status === "declined" ? "Declined" : "Waiting"));
+        var td = el("td");
+        if (a.status === "pending") {
+          var ok = el("button", { type: "button", class: "btn btn-small" }, "Approve");
+          ok.addEventListener("click", function () {
+            ok.disabled = true;
+            MW.api("/beta/admin/" + a.id + "/approve", { method: "POST" }).then(function (r) { showLink(a, r); load(); })
+              .catch(function (e) { MW.toast(e.message, true); ok.disabled = false; });
+          });
+          var no = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "Decline");
+          no.addEventListener("click", function () {
+            if (!window.confirm("Decline @" + a.username + "'s application?")) return;
+            MW.api("/beta/admin/" + a.id + "/decline", { method: "POST" }).then(load);
+          });
+          td.appendChild(ok);
+          td.appendChild(no);
+        }
+        tr.appendChild(td);
+        table.appendChild(tr);
+      });
+      var wrap = el("div", { class: "beta-table-wrap" });
+      wrap.appendChild(table);
+      box.appendChild(wrap);
+    }
+
     function load() {
       MW.api("/beta/admin").then(function (d) {
-        var box = $("beta-list");
-        box.textContent = "";
-        var pending = d.applications.filter(function (a) { return a.status === "pending"; }).length;
-        box.appendChild(el("p", { class: "mono muted" }, d.applications.length + " applications · " + pending + " waiting for you"));
-        if (!d.applications.length) { box.appendChild(el("p", { class: "muted" }, "No applications yet.")); return; }
-        var table = el("table", { class: "reserve-table" });
-        var head = el("tr");
-        ["Username", "Name", "Email", "Why", "Applied", "Status", ""].forEach(function (h) { head.appendChild(el("th", {}, h)); });
-        table.appendChild(head);
-        d.applications.forEach(function (a) {
-          var tr = el("tr");
-          tr.appendChild(el("td", {}, "@" + a.username));
-          tr.appendChild(el("td", {}, a.display_name));
-          tr.appendChild(el("td", {}, a.email));
-          tr.appendChild(el("td", { class: "beta-reason" }, a.reason));
-          tr.appendChild(el("td", {}, MW.formatDate(a.created_at)));
-          tr.appendChild(el("td", {}, a.status === "approved" ? "✓ Approved" : a.status === "declined" ? "Declined" : "Waiting"));
-          var td = el("td");
-          if (a.status === "pending") {
-            var ok = el("button", { type: "button", class: "btn btn-small" }, "Approve");
-            ok.addEventListener("click", function () {
-              ok.disabled = true;
-              MW.api("/beta/admin/" + a.id + "/approve", { method: "POST" }).then(function (r) { showLink(a, r); load(); })
-                .catch(function (e) { MW.toast(e.message, true); ok.disabled = false; });
-            });
-            var no = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "Decline");
-            no.addEventListener("click", function () {
-              if (!window.confirm("Decline @" + a.username + "'s application?")) return;
-              MW.api("/beta/admin/" + a.id + "/decline", { method: "POST" }).then(load);
-            });
-            td.appendChild(ok);
-            td.appendChild(no);
-          }
-          tr.appendChild(td);
-          table.appendChild(tr);
-        });
-        var wrap = el("div", { class: "beta-table-wrap" });
-        wrap.appendChild(table);
-        box.appendChild(wrap);
+        apps = d.applications;
+        var cur = fc.value;
+        fc.textContent = "";
+        fc.appendChild(el("option", { value: "" }, "All countries"));
+        apps.map(function (a) { return a.country || ""; }).filter(function (c, i, all) { return c && all.indexOf(c) === i; }).sort()
+          .forEach(function (c) { fc.appendChild(el("option", { value: c }, c)); });
+        fc.value = cur;
+        allBox.checked = false;
+        render();
       });
     }
     load();

@@ -127,17 +127,50 @@
     if (!user || user.role !== "admin") return;
     $("reserve-admin").hidden = false;
     if (window.location.hash === "#reserve-admin") $("reserve-admin").scrollIntoView();
+    // Filters: search, status, country, order.
+    var data = null;
+    var rf = el("div", { class: "admin-filters" });
+    var rq = el("input", { type: "search", placeholder: "Search username, name or email…", "aria-label": "Search reservations" });
+    var rs = el("select", { "aria-label": "Status" });
+    [["", "All"], ["claimed", "Account ready / claimed"], ["invited", "Invited"], ["waiting", "Waiting"]].forEach(function (o) { rs.appendChild(el("option", { value: o[0] }, o[1])); });
+    var rc = el("select", { "aria-label": "Country" });
+    var ro = el("select", { "aria-label": "Order" });
+    [["first", "#1 first"], ["last", "Newest first"], ["az", "Username A–Z"]].forEach(function (o) { ro.appendChild(el("option", { value: o[0] }, o[1])); });
+    [rq, rs, rc, ro].forEach(function (x) { rf.appendChild(x); x.addEventListener(x === rq ? "input" : "change", function () { if (data) draw(data); }); });
+    $("reserve-list").parentNode.insertBefore(rf, $("reserve-list"));
     function load() {
       MW.api("/reserve/admin").then(function (d) {
+        data = d;
+        var cur = rc.value;
+        rc.textContent = "";
+        rc.appendChild(el("option", { value: "" }, "All countries"));
+        d.reservations.map(function (r) { return r.country || ""; }).filter(function (c, i, all) { return c && all.indexOf(c) === i; }).sort()
+          .forEach(function (c) { rc.appendChild(el("option", { value: c }, c)); });
+        rc.value = cur;
+        draw(d);
+      });
+    }
+    function draw(d) {
+      {
         var box = $("reserve-list");
         box.textContent = "";
         var claimed = d.reservations.filter(function (r) { return r.claimed_at; }).length;
-        box.appendChild(el("p", { class: "mono muted" }, d.reservations.length + " reserved · " + claimed + " claimed" + (d.mailEnabled ? "" : " · email isn't set up, so claim links are shown here to send yourself")));
+        var q = rq.value.trim().toLowerCase().replace(/^@/, "");
+        var rows = d.reservations.filter(function (r) {
+          var st = r.claimed_at ? "claimed" : r.invited_at ? "invited" : "waiting";
+          if (rs.value && st !== rs.value) return false;
+          if (rc.value && (r.country || "") !== rc.value) return false;
+          if (q && [r.username, r.display_name, r.email].join(" ").toLowerCase().indexOf(q) < 0) return false;
+          return true;
+        });
+        if (ro.value === "last") rows.sort(function (a, b) { return b.position - a.position; });
+        if (ro.value === "az") rows.sort(function (a, b) { return a.username.localeCompare(b.username); });
+        box.appendChild(el("p", { class: "mono muted" }, d.reservations.length + " reserved · " + claimed + " claimed · " + rows.length + " shown" + (d.mailEnabled ? "" : " · email isn't set up, so claim links are shown here to send yourself")));
         var table = el("table", { class: "reserve-table" });
         var head = el("tr");
         ["#", "Username", "Name", "Email", "Reserved", "Status", ""].forEach(function (h) { head.appendChild(el("th", {}, h)); });
         table.appendChild(head);
-        d.reservations.forEach(function (r) {
+        rows.forEach(function (r) {
           var tr = el("tr");
           tr.appendChild(el("td", { class: "mono" }, "#" + r.position));
           tr.appendChild(el("td", {}, (r.pinned ? "👑 " : "") + "@" + r.username));
@@ -160,7 +193,7 @@
         var wrap = el("div", { class: "beta-table-wrap" });
         wrap.appendChild(table);
         box.appendChild(wrap);
-      });
+      }
     }
     load();
     MW.api("/reserve/admin/mine").then(function (m) {

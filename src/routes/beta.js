@@ -10,6 +10,7 @@
 
 const express = require("express");
 const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
 const rateLimit = require("express-rate-limit");
 const db = require("../db");
 const users = require("../users");
@@ -67,7 +68,37 @@ router.post("/", flags.requireFlag("reservations"), applyLimiter, async function
   if (birth.problem) problems.push({ field: "birthDate", message: birth.problem });
   if (reason.length < 10) problems.push({ field: "reason", message: "Tell us a little about why you'd like to test (a sentence or two)." });
   if (req.body.acceptTerms !== true) problems.push({ field: "acceptTerms", message: "Please accept the Terms and Privacy Policy." });
+  // New applicants choose a password: their account (and username) is made right away.
+  const password = typeof req.body.password === "string" ? req.body.password : "";
+  if (!reservation && password) {
+    const pw = signup.passwordProblem(password, username);
+    if (pw) problems.push({ field: "password", message: pw });
+    if (!country) problems.push({ field: "country", message: "Choose the country you live in." });
+  }
   if (problems.length) return res.status(400).json({ error: "Please fix the highlighted fields.", problems: problems });
+
+  let position = null;
+  let accountMade = false;
+  if (!reservation) {
+    // Hold the username straight away, so nobody else can take it while we review.
+    try {
+      if (password) {
+        const hash = await bcrypt.hash(password, 12);
+        const u = await db.query(
+          `INSERT INTO users (username, display_name, password_hash, role, email, terms_accepted_at, terms_version, birth_date, country)
+           VALUES ($1, $2, $3, 'member', $4, NOW(), $5, $6, $7) RETURNING id`,
+          [username, displayName || username, hash, email, signup.TERMS_VERSION, birth.date, country]);
+        await users.welcome(u.rows[0].id, "member");
+        accountMade = true;
+      }
+      const ins = await db.query("INSERT INTO username_reservations (username, email, display_name, country, claim_token, claimed_at) VALUES ($1, $2, $3, $4, $5, " + (password ? "NOW()" : "NULL") + ") RETURNING id",
+        [username, email, displayName || username, country, crypto.randomBytes(24).toString("hex")]);
+      position = (await db.query("SELECT position FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY pinned DESC, created_at, id)::int AS position FROM username_reservations) t WHERE id = $1", [ins.rows[0].id])).rows[0].position;
+    } catch (error) {
+      if (error.code === "23505") return res.status(409).json({ error: "Someone just took that name. Try another.", problems: [{ field: "username", message: "Just taken. Try another." }] });
+      throw error;
+    }
+  }
 
   try {
     await db.query("INSERT INTO beta_applications (username, email, display_name, country, reason) VALUES ($1, $2, $3, $4, $5)",
@@ -77,7 +108,7 @@ router.post("/", flags.requireFlag("reservations"), applyLimiter, async function
     throw error;
   }
   require("../notify").notifyAdmins({ type: "beta", title: "🧪 New beta tester application", body: "@" + username + " (" + (displayName || username) + ") wants to test Chapterhive.", link: "/hub/beta#beta-admin" }).catch(function () {});
-  res.status(201).json({ username: username, keptReservation: Boolean(reservation) });
+  res.status(201).json({ username: username, keptReservation: Boolean(reservation), position: position, account: accountMade });
 });
 
 /* ---------- Admin ---------- */

@@ -49,9 +49,12 @@ async function makeUsername(email, name) {
   let base = String((email || "").split("@")[0] || name || "member")
     .toLowerCase()
     .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/_+/g, "_")
     .replace(/^_+|_+$/g, "")
     .slice(0, 24);
   if (base.length < 3) base = (base + "_member").slice(0, 24);
+  // Usernames need an _ or - in them.
+  if (base.indexOf("_") < 0) base = (base.slice(0, 19) + "_hive").slice(0, 24);
   if (require("../users").isReserved(base)) base = (base + "_fan").slice(0, 24);
 
   let candidate = base;
