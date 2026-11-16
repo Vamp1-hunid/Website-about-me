@@ -412,7 +412,7 @@
     card.appendChild(el("span", { class: "reserve-banner-emoji", "aria-hidden": "true" }, "🐝"));
     var t = el("span", { class: "reserve-banner-text" });
     t.appendChild(el("strong", {}, "Chapterhive opens soon"));
-    t.appendChild(el("span", {}, "We're testing the waters before launch. For now you can reserve your username; accounts open at launch."));
+    t.appendChild(el("span", {}, "For readers, watchers and creators alike. Reserve your username now; your free member account opens at launch, and you can become a creator any time."));
     card.appendChild(t);
     card.appendChild(el("span", { class: "btn btn-small" }, "Reserve"));
     var beta = el("a", { class: "reserve-banner beta-banner", href: "/hub/beta" });

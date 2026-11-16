@@ -1428,3 +1428,6 @@ body[data-holiday="newyear"] .site-header { border-bottom: 4px solid #ffd23f; }
 .reserve-mine h3 { margin: 0 0 0.3rem; }
 .reserve-mine-form { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .reserve-position { font-weight: 800; font-size: 1.1rem; color: var(--pink); }
+.reserve-paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.6rem; margin: 0.9rem 0; text-align: left; }
+.reserve-paths div { display: grid; gap: 0.2rem; padding: 0.7rem 0.9rem; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+.reserve-paths span { font-size: 0.9rem; color: var(--ink-dim); }
