@@ -442,3 +442,9 @@
     }).catch(function () {});
   });
 })();
+
+// Waiting applications on the dashboard's quick links.
+(function () {
+  var box = document.getElementById("dash-quick-links");
+  if (box && window.MW && MW.adminCounts) MW.adminCounts(box);
+})();

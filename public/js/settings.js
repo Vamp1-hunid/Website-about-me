@@ -77,6 +77,9 @@
           ["following", "Only creators I follow", "Only people whose creator page you follow."],
           ["nobody", "Nobody", "No new chats. You can still start chats yourself."]
         ], p.chatPrivacy || "everyone", function (v) { save({ chatPrivacy: v }, "Message settings saved."); }));
+        s2.appendChild(switchRow("🧪 Let beta testers message me", "Beta testers can start a chat with you even if the choice above would stop them.", p.betaCanMessage === true, function (on) {
+          save({ betaCanMessage: on }, on ? "Beta testers can now message you." : "Beta testers follow your usual message settings.");
+        }));
       }
 
       var s3 = section("My member page", "Your public page with your name, picture, bio and recent comments.");

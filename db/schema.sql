@@ -649,3 +649,9 @@ CREATE TABLE IF NOT EXISTS beta_applications (
   created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   decided_at   TIMESTAMPTZ
 );
+-- Let beta testers message this account whatever the "who can message me" choice is.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS beta_can_message BOOLEAN NOT NULL DEFAULT FALSE;
+-- The site owner's account (so renaming it to a nickname doesn't make a second admin on restart),
+-- and the owner's reservation, which is always #1.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_owner BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE username_reservations ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT FALSE;

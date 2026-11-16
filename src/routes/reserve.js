@@ -83,21 +83,32 @@ router.post("/", flags.requireFlag("reservations"), reserveLimiter, async functi
         [username, displayName || username, hash, email, signup.TERMS_VERSION, birth.date, country]);
       await users.welcome(u.rows[0].id, "member");
     }
-    await db.query("INSERT INTO username_reservations (username, email, display_name, country, claim_token, claimed_at) VALUES ($1, $2, $3, $4, $5, " + (password ? "NOW()" : "NULL") + ")",
+    const ins = await db.query("INSERT INTO username_reservations (username, email, display_name, country, claim_token, claimed_at) VALUES ($1, $2, $3, $4, $5, " + (password ? "NOW()" : "NULL") + ") RETURNING id",
       [username, email, displayName || username, country, token]);
+    req.reservationId = ins.rows[0].id;
+    req.position = await positionOf(req.reservationId);
   } catch (error) {
     if (error.code === "23505") return res.status(409).json({ error: "Someone just reserved that name. Try another.", problems: [{ field: "username", message: "Just taken. Try another." }] });
     throw error;
   }
   if (mailEnabled()) {
     sendMail(email, "@" + username + " is reserved for you on Chapterhive",
-      "Hi " + (displayName || username) + ",\n\nYour username @" + username + " is reserved" + (password ? " and your account is ready. When Chapterhive opens, just log in with your username and password." : ". When Chapterhive opens, we'll email you a link to claim it and set up your account.") + "\n\nSee you in the hive!",
+      "Hi " + (displayName || username) + ",\n\nYou're #" + "{POS}" + " in line. Your username @" + username + " is reserved" + (password ? " and your account is ready. When Chapterhive opens, just log in with your username and password." : ". When Chapterhive opens, we'll email you a link to claim it and set up your account.") + "\n\nSee you in the hive!",
       "<p>Hi " + escapeHtml(displayName || username) + ",</p><p>Your username <strong>@" + escapeHtml(username) + "</strong> is reserved. When Chapterhive opens, we'll email you a link to claim it and set up your account.</p><p>See you in the hive! 🐝</p>"
     ).catch(function () {});
   }
   const count = (await db.query("SELECT COUNT(*)::int AS n FROM username_reservations")).rows[0].n;
-  res.status(201).json({ username: username, count: count, account: Boolean(password) });
+  const position = req.position;
+  require("../notify").notifyAdmins({ type: "reserve", title: "🐝 #" + position + " @" + username + " was reserved", body: count + " username" + (count === 1 ? "" : "s") + " reserved so far.", link: "/hub/reserve#reserve-admin" }).catch(function () {});
+  res.status(201).json({ username: username, count: count, position: position, account: Boolean(password) });
 });
+
+// Their place in line (the owner's own name is always #1).
+const ORDER = "ORDER BY pinned DESC, created_at, id";
+async function positionOf(id) {
+  const { rows } = await db.query("SELECT position FROM (SELECT id, ROW_NUMBER() OVER (" + ORDER + ")::int AS position FROM username_reservations) t WHERE id = $1", [id]);
+  return rows[0] ? rows[0].position : null;
+}
 
 function escapeHtml(v) {
   return String(v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]; });
@@ -113,9 +124,81 @@ router.get("/claim", async function (req, res) {
 
 /* ---------- Admin ---------- */
 
+// Waiting counts for the admin's menu and dashboard.
+router.get("/admin/counts", requireAdmin, async function (req, res) {
+  const q = async function (sql) { try { return (await db.query(sql)).rows[0].n; } catch (e) { return 0; } };
+  res.json({
+    reservations: await q("SELECT COUNT(*)::int AS n FROM username_reservations"),
+    beta: await q("SELECT COUNT(*)::int AS n FROM beta_applications WHERE status = 'pending'"),
+    creators: await q("SELECT COUNT(*)::int AS n FROM creator_profiles WHERE status = 'pending'")
+  });
+});
+
 router.get("/admin", requireAdmin, async function (req, res) {
-  const { rows } = await db.query("SELECT id, username, email, display_name, country, created_at, invited_at, claimed_at FROM username_reservations ORDER BY created_at DESC LIMIT 5000");
-  res.json({ reservations: rows, mailEnabled: mailEnabled() });
+  res.json({ reservations: await numberedList(), mailEnabled: mailEnabled() });
+});
+
+// Everyone in the order they reserved: #1 is the first person ever.
+async function numberedList() {
+  const { rows } = await db.query(
+    "SELECT ROW_NUMBER() OVER (" + ORDER + ")::int AS position, id, username, email, display_name, country, created_at, invited_at, claimed_at, pinned " +
+    "FROM username_reservations ORDER BY position LIMIT 5000");
+  rows.forEach(function (r) { if (/@chapterhive\.invalid$/.test(r.email)) r.email = "(you)"; });
+  return rows;
+}
+function statusOf(r) { return r.claimed_at ? "Account ready" : r.invited_at ? "Invited" : "Waiting"; }
+
+// Download the list: /api/reserve/admin/export.xlsx or /api/reserve/admin/export.pdf
+router.get("/admin/export.xlsx", requireAdmin, async function (req, res) {
+  const ExcelJS = require("exceljs");
+  const rows = await numberedList();
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "Chapterhive";
+  const ws = wb.addWorksheet("Reservations", { views: [{ state: "frozen", ySplit: 1 }] });
+  ws.columns = [
+    { header: "#", key: "position", width: 6 }, { header: "Username", key: "username", width: 22 },
+    { header: "Name", key: "name", width: 24 }, { header: "Email", key: "email", width: 32 },
+    { header: "Country", key: "country", width: 9 }, { header: "Reserved", key: "created", width: 20, style: { numFmt: "yyyy-mm-dd hh:mm" } },
+    { header: "Status", key: "status", width: 15 }
+  ];
+  rows.forEach(function (r) {
+    ws.addRow({ position: r.position, username: "@" + r.username, name: r.display_name, email: r.email, country: r.country || "", created: new Date(r.created_at), status: statusOf(r) });
+  });
+  ws.getRow(1).font = { bold: true, color: { argb: "FF1A1205" } };
+  ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF6B40E" } };
+  ws.autoFilter = { from: "A1", to: "G1" };
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", "attachment; filename=\"chapterhive-reservations-" + new Date().toISOString().slice(0, 10) + ".xlsx\"");
+  await wb.xlsx.write(res);
+  res.end();
+});
+
+router.get("/admin/export.pdf", requireAdmin, async function (req, res) {
+  const PDFDocument = require("pdfkit");
+  const rows = await numberedList();
+  const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 36 });
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", "attachment; filename=\"chapterhive-reservations-" + new Date().toISOString().slice(0, 10) + ".pdf\"");
+  doc.pipe(res);
+  doc.font("Helvetica-Bold").fontSize(18).text("Chapterhive: reserved usernames");
+  doc.font("Helvetica").fontSize(10).fillColor("#555").text(rows.length + " reserved · downloaded " + new Date().toUTCString());
+  doc.moveDown();
+  const cols = [["#", 35], ["Username", 130], ["Name", 140], ["Email", 210], ["Country", 50], ["Reserved", 100], ["Status", 85]];
+  const left = doc.page.margins.left;
+  function line(values, bold) {
+    if (doc.y > doc.page.height - doc.page.margins.bottom - 20) doc.addPage();
+    const y = doc.y;
+    let x = left;
+    doc.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(9).fillColor("#111");
+    values.forEach(function (v, i) { doc.text(String(v), x, y, { width: cols[i][1] - 6, lineBreak: false, ellipsis: true }); x += cols[i][1]; });
+    doc.moveTo(left, y + 14).lineTo(x, y + 14).strokeColor("#ddd").lineWidth(0.5).stroke();
+    doc.x = left; doc.y = y + 18;
+  }
+  line(cols.map(function (c) { return c[0]; }), true);
+  rows.forEach(function (r) {
+    line([r.position, "@" + r.username, r.display_name, r.email, r.country || "", new Date(r.created_at).toISOString().slice(0, 16).replace("T", " "), statusOf(r)]);
+  });
+  doc.end();
 });
 
 // Sends claim links to everyone not yet invited (or returns the links to send by hand when email isn't set up).
@@ -138,6 +221,27 @@ router.post("/admin/invite", requireAdmin, async function (req, res) {
     }
   }
   res.json({ sent: sent, total: rows.length, mailEnabled: mailEnabled(), links: mailEnabled() ? [] : links });
+});
+
+// The owner's own nickname: instant, renames the owner account, and always sits at #1.
+router.get("/admin/mine", requireAdmin, async function (req, res) {
+  const u = (await db.query("SELECT username, is_owner FROM users WHERE id = $1", [req.session.user.id])).rows[0];
+  res.json({ username: u.username, isOwner: u.is_owner });
+});
+router.post("/admin/mine", requireAdmin, async function (req, res) {
+  const me = (await db.query("SELECT id, username, email, display_name, country, is_owner FROM users WHERE id = $1", [req.session.user.id])).rows[0];
+  if (!me.is_owner) return res.status(403).json({ error: "Only the site owner's account can do this." });
+  const name = (typeof req.body.username === "string" ? req.body.username : "").trim().toLowerCase().replace(/^@/, "");
+  if (name !== me.username) {
+    const issue = await users.usernameProblem(name, me.id);
+    if (issue) return res.status(400).json({ error: issue, problems: [{ field: "mine-username", message: issue }] });
+  }
+  await db.query("UPDATE users SET username = $1 WHERE id = $2", [name, me.id]);
+  await db.query("DELETE FROM username_reservations WHERE pinned OR username = $1 OR email = $2", [name, (me.email || "").toLowerCase()]);
+  await db.query("INSERT INTO username_reservations (username, email, display_name, country, claim_token, claimed_at, pinned) VALUES ($1, $2, $3, $4, $5, NOW(), TRUE)",
+    [name, (me.email || "owner+" + me.id + "@chapterhive.invalid").toLowerCase(), me.display_name || name, me.country, crypto.randomBytes(24).toString("hex")]);
+  req.session.user.username = name;
+  res.json({ ok: true, username: name, position: 1 });
 });
 
 router.delete("/admin/:id", requireAdmin, async function (req, res) {

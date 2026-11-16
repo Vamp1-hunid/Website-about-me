@@ -76,6 +76,7 @@ router.post("/", flags.requireFlag("reservations"), applyLimiter, async function
     if (error.code === "23505") return res.status(400).json({ error: "This email has already applied.", problems: [{ field: "email", message: "Already applied." }] });
     throw error;
   }
+  require("../notify").notifyAdmins({ type: "beta", title: "🧪 New beta tester application", body: "@" + username + " (" + (displayName || username) + ") wants to test Chapterhive.", link: "/hub/beta#beta-admin" }).catch(function () {});
   res.status(201).json({ username: username, keptReservation: Boolean(reservation) });
 });
 

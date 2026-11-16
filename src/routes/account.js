@@ -452,13 +452,13 @@ router.post("/verify", async function (req, res) {
 // GET /api/account/privacy
 router.get("/privacy", requireLogin, async function (req, res) {
   const { rows } = await db.query(
-    `SELECT u.show_online, u.chat_privacy, u.profile_visible, u.max_rating, u.hide_strong_language, u.daily_verse, u.birth_date,
+    `SELECT u.show_online, u.chat_privacy, u.profile_visible, u.max_rating, u.hide_strong_language, u.daily_verse, u.birth_date, u.beta_can_message,
             u.school_email, u.school_verified_at, cp.post_visibility, cp.status AS creator_status
        FROM users u LEFT JOIN creator_profiles cp ON cp.user_id = u.id WHERE u.id = $1`, [req.session.user.id]);
   const r = rows[0];
   res.json({ showOnline: r.show_online, chatPrivacy: r.chat_privacy, profileVisible: r.profile_visible,
     postVisibility: r.post_visibility || null, isCreator: Boolean(r.creator_status),
-    maxRating: r.max_rating, hideStrongLanguage: r.hide_strong_language, dailyVerse: r.daily_verse,
+    betaCanMessage: r.beta_can_message, maxRating: r.max_rating, hideStrongLanguage: r.hide_strong_language, dailyVerse: r.daily_verse,
     adult: Boolean(r.birth_date) && !signup.isMinor(r.birth_date),
     school: { email: r.school_email || null, verified: Boolean(r.school_verified_at) } });
 });
@@ -517,6 +517,7 @@ router.put("/privacy", requireLogin, async function (req, res) {
   if (typeof req.body.showOnline === "boolean") await db.query("UPDATE users SET show_online = $1 WHERE id = $2", [req.body.showOnline, id]);
   if (["everyone", "following", "nobody"].includes(req.body.chatPrivacy)) await db.query("UPDATE users SET chat_privacy = $1 WHERE id = $2", [req.body.chatPrivacy, id]);
   if (typeof req.body.profileVisible === "boolean") await db.query("UPDATE users SET profile_visible = $1 WHERE id = $2", [req.body.profileVisible, id]);
+  if (typeof req.body.betaCanMessage === "boolean") await db.query("UPDATE users SET beta_can_message = $1 WHERE id = $2", [req.body.betaCanMessage, id]);
   if (["all", "teen", "mature"].includes(req.body.maxRating)) {
     // Mature (18+) can only be chosen by adults.
     const u = (await db.query("SELECT birth_date FROM users WHERE id = $1", [id])).rows[0];

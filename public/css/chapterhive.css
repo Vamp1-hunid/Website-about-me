@@ -1423,3 +1423,8 @@ body[data-holiday="newyear"] .site-header { border-bottom: 4px solid #ffd23f; }
 .prelaunch-strip { max-width: 40rem; margin: 0.8rem auto 0; padding: 0.6rem 0.9rem; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); font-size: 0.92rem; }
 .beta-table-wrap { overflow-x: auto; }
 .beta-table-wrap .reserve-table { min-width: 640px; }
+.count-badge { display: inline-block; min-width: 1.3em; margin-left: 0.4em; padding: 0 0.4em; border-radius: 999px; background: var(--pink); color: #1a1205; font-size: 0.75rem; font-weight: 800; text-align: center; line-height: 1.4; }
+.reserve-mine { margin: 1rem 0; padding: 0.8rem 1rem; border: 1px solid var(--pink); border-radius: 14px; }
+.reserve-mine h3 { margin: 0 0 0.3rem; }
+.reserve-mine-form { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.reserve-position { font-weight: 800; font-size: 1.1rem; color: var(--pink); }

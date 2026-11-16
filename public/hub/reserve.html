@@ -19,8 +19,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=22">
-  <link rel="stylesheet" href="/css/chapterhive.css?v=20">
+  <link rel="stylesheet" href="/css/styles.css?v=23">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=21">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -120,6 +120,16 @@
       <h2 id="reserve-admin-title">Reserved usernames</h2>
       <p class="muted">Turn on <strong>Pre-launch username reservations</strong> and turn off <strong>New accounts</strong> in Admin &rarr; Site features while the campaign runs. At launch, switch New accounts back on and press <strong>Send claim links</strong>.</p>
       <div class="hero-actions"><button type="button" id="reserve-invite" class="btn btn-small">Send claim links</button> <a class="btn btn-ghost btn-small" href="/hub/beta#beta-admin">🧪 Beta applications</a></div>
+      <div class="reserve-mine">
+        <h3>👑 Your own nickname</h3>
+        <p class="muted">Reserved instantly and always #1 on the list. This becomes your username: after changing it, log in with the new name (or your email).</p>
+        <form id="mine-form" class="reserve-mine-form">
+          <div class="reserve-at"><span aria-hidden="true">@</span><input type="text" id="mine-username" maxlength="30" autocapitalize="none" spellcheck="false" aria-label="Your nickname"></div>
+          <button type="submit" class="btn btn-small">Save my nickname</button>
+        </form>
+        <p class="error" id="mine-username-error"></p>
+      </div>
+      <div class="hero-actions"><a class="btn btn-ghost btn-small" href="/api/reserve/admin/export.xlsx" download>⬇ Download Excel (.xlsx)</a> <a class="btn btn-ghost btn-small" href="/api/reserve/admin/export.pdf" download>⬇ Download PDF</a></div>
       <div id="reserve-links"></div>
       <div id="reserve-list"></div>
     </section>

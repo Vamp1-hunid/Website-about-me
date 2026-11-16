@@ -376,6 +376,17 @@
     return box;
   };
 
+  // Admin: how many applications are waiting, shown as little badges on the menu and dashboard links.
+  MW.adminCounts = function (root) {
+    return MW.api("/reserve/admin/counts").then(function (c) {
+      root.querySelectorAll("[data-count]").forEach(function (a) {
+        var n = c[a.getAttribute("data-count")];
+        if (!n || a.querySelector(".count-badge")) return;
+        a.appendChild(el("span", { class: "count-badge", title: a.getAttribute("data-count") === "reservations" ? "reserved so far" : "waiting for you" }, String(n)));
+      });
+    }).catch(function () {});
+  };
+
   // A "create an account" box shown wherever a visitor hits something reserved for members.
   MW.guestGate = function (message) {
     var box = el("div", { class: "guest-gate", role: "note" });
@@ -621,8 +632,9 @@
         items.unshift(["/hub/apply", "Creator application (pending)"]);
       }
       if (user && user.role === "admin") {
-        items.unshift(["/hub/beta#beta-admin", "🧪 Beta applications"]);
-        items.unshift(["/hub/reserve#reserve-admin", "🐝 Reserved usernames"]);
+        items.unshift(["/admin#chapterhive", "🎨 Creator applications", null, "creators"]);
+        items.unshift(["/hub/beta#beta-admin", "🧪 Beta tester applications", null, "beta"]);
+        items.unshift(["/hub/reserve#reserve-admin", "🐝 Name reservations", null, "reservations"]);
         items.unshift(["/admin#settings", "Site settings"]);
         items.unshift(["/admin", "Dashboard"]);
       }
@@ -631,8 +643,10 @@
         var a = el("a", { href: item[0] }, item[1]);
         li.appendChild(a);
         if (typeof item[2] === "string" && MW.featureNotice(item[2])) MW.markNotice(a, MW.featureNotice(item[2]));
+        if (item[3]) a.setAttribute("data-count", item[3]);
         ul.appendChild(li);
       });
+      if (user && user.role === "admin") MW.adminCounts(ul);
       // Light/dark switch and Log out also live in the menu (on phones the header hides them to save room).
       var themeLi = el("li", { class: "menu-mobile-only" });
       var themeBtn = el("button", { type: "button", class: "menu-link-btn" }, "🌓 Switch light / dark mode");
