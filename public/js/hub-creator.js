@@ -56,12 +56,28 @@
       c.skills.forEach(function (s) { skl.appendChild(el("span", { class: "skill-chip is-on" }, s)); });
       names.appendChild(skl);
     }
-    if (c.badges && c.badges.length) {
+    names.appendChild(el("p", { class: "mono muted" }, "@" + c.handle));
+    // Official role tags: founder, top creator, beta tester. These come from the site, not from what the creator typed.
+    var tags = (c.roleTags || []).slice();
+    var topBadge = (c.badges || []).find(function (b) { return b.scope === "overall"; }) || (c.badges || [])[0];
+    if (topBadge) tags.splice(tags[0] && tags[0].key === "founder" ? 1 : 0, 0, { key: "top", icon: topBadge.icon, label: topBadge.label });
+    if (tags.length) {
+      var row = el("div", { class: "role-tags" });
+      tags.forEach(function (t) {
+        var tag = el("span", { class: "role-tag role-" + t.key, title: t.label });
+        tag.appendChild(el("span", { class: "role-tag-icon", "aria-hidden": "true" }, t.icon));
+        tag.appendChild(el("span", {}, t.label));
+        row.appendChild(tag);
+      });
+      names.appendChild(row);
+    }
+    // Any other rank stickers (e.g. top 5 in a shelf) stay small, under the big tags.
+    var others = (c.badges || []).filter(function (b) { return b !== topBadge; });
+    if (others.length) {
       var bl = el("p");
-      bl.appendChild(MW.badges(c.badges));
+      bl.appendChild(MW.badges(others));
       names.appendChild(bl);
     }
-    names.appendChild(el("p", { class: "mono muted" }, "@" + c.handle + (c.isBanditos ? " · Chapterhive founder" : "")));
     top.appendChild(names);
     var actions = el("div", { class: "profile-actions" });
     var followers = el("strong", {}, String(c.followers));
