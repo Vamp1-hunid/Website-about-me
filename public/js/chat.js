@@ -246,7 +246,7 @@
 
       var head = el("div", { class: "chat-head" });
       head.appendChild(avatar(data.with));
-      var who = el("a", { href: "/u/" + encodeURIComponent(data.with.username) }, (data.with.displayName || data.with.username) + " · @" + data.with.username);
+      var who = el("a", { href: "/hub/u/" + encodeURIComponent(data.with.username) }, (data.with.displayName || data.with.username) + " · @" + data.with.username);
       head.appendChild(who);
       var block = el("button", { type: "button", class: "btn btn-ghost btn-small" }, data.blockedByMe ? "Unblock" : "Block");
       block.addEventListener("click", function () {
@@ -338,7 +338,7 @@
     var acc = MW.account && MW.account.account;
     if (acc && !acc.hasBirthDate) {
       var p = el("p", {}, "Before you can chat, add your date of birth in ");
-      p.appendChild(el("a", { href: "/profile#details-panel" }, "Account settings"));
+      p.appendChild(el("a", { href: "/hub/profile#details-panel" }, "Account settings"));
       p.appendChild(document.createTextNode(". It keeps teen accounts and adult accounts in separate spaces, and it's never shown to anyone."));
       gate(p);
       return;

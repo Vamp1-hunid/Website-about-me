@@ -10,14 +10,14 @@
 
   MW.me().then(async function (user) {
     if (!user) {
-      window.location.replace("/hub/login?next=" + encodeURIComponent("/profile"));
+      window.location.replace("/hub/login?next=" + encodeURIComponent("/hub/profile"));
       return;
     }
 
     sub.classList.remove("loading");
     document.getElementById("profile-avatar").appendChild(MW.avatar(user, "big"));
     document.getElementById("avatar-actions").hidden = false;
-    document.getElementById("public-link").href = "/u/" + encodeURIComponent(user.username);
+    document.getElementById("public-link").href = "/hub/u/" + encodeURIComponent(user.username);
     document.getElementById("email-panel").hidden = false;
     sub.textContent = user.displayName + " · @" + user.username + (user.role === "admin" ? " · site owner" : " · member");
     document.getElementById("profile-stats").hidden = false;
@@ -111,7 +111,7 @@
   };
   if (googleResult && googleMessages[googleResult]) {
     MW.toast(googleMessages[googleResult][0], googleMessages[googleResult][1]);
-    history.replaceState(null, "", "/profile");
+    history.replaceState(null, "", "/hub/profile");
   }
 
   /* ---------- Profile picture ---------- */

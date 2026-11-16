@@ -5,7 +5,9 @@
 const db = require("./db");
 const { notify } = require("./notify");
 
-const USERNAME_PATTERN = /^[a-z0-9_]{3,30}$/;
+const USERNAME_PATTERN = /^[a-z0-9_-]{3,30}$/;
+// New usernames: lowercase letters and numbers, with at least one _ or - (not at the start or end, never two in a row).
+const NEW_USERNAME_PATTERN = /^[a-z0-9]+(?:[_-][a-z0-9]+)+$/;
 
 // Names nobody can register, so no one can pretend to be the site or its staff.
 const RESERVED = new Set([
@@ -26,9 +28,21 @@ function isReserved(name) {
 }
 
 // Returns null if the username can be used, otherwise a friendly reason.
-async function usernameProblem(name, ignoreUserId, claimToken) {
-  const username = String(name || "").trim().toLowerCase();
-  if (!USERNAME_PATTERN.test(username)) return "Use 3–30 lowercase letters, numbers or underscores.";
+// Capital letters and emoji aren't allowed, and names are compared ignoring case, so "Bob_1" can never sit beside "bob_1".
+async function usernameProblem(name, ignoreUserId, claimToken, opts) {
+  const raw = String(name || "").trim();
+  const username = raw.toLowerCase();
+  if (/[A-Z]/.test(raw)) return "Use lowercase letters only (no capital letters).";
+  if (!USERNAME_PATTERN.test(username)) return "Use 3–30 characters: lowercase letters, numbers, and _ or - (no spaces, emoji or symbols).";
+  // Names reserved before this rule (claimed with their link) and old applications keep working.
+  let legacy = Boolean(opts && opts.legacy);
+  if (!legacy && claimToken) {
+    const mine = await db.query("SELECT 1 FROM username_reservations WHERE username = $1 AND claim_token = $2", [username, claimToken]);
+    legacy = mine.rows.length > 0;
+  }
+  if (!legacy && !NEW_USERNAME_PATTERN.test(username)) {
+    return "Your username needs an _ or - in it (like bee_reader or bee-reader), not at the start or end.";
+  }
   if (isReserved(username)) return "That username is reserved. Please choose another.";
   const { rows } = await db.query(
     "SELECT 1 FROM users WHERE LOWER(username) = $1 AND ($2::int IS NULL OR id <> $2)",
@@ -102,7 +116,7 @@ async function touch(userId) {
         type: "streak",
         title: "🔥 " + row.streak_count + "-day streak!",
         body: "You've visited " + row.streak_count + " days in a row. Keep it going!",
-        link: "/profile"
+        link: "/hub/profile"
       });
     }
   }
@@ -124,4 +138,4 @@ async function followerMilestone(creatorId, count) {
   });
 }
 
-module.exports = { USERNAME_PATTERN, RESERVED, isReserved, usernameProblem, standingProblem, welcome, touch, followerMilestone };
+module.exports = { USERNAME_PATTERN, NEW_USERNAME_PATTERN, RESERVED, isReserved, usernameProblem, standingProblem, welcome, touch, followerMilestone };

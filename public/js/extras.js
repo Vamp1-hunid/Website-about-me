@@ -210,7 +210,7 @@
     "/hub/feed": ["New posts from creators you follow show up here first.", "Bell notifications tell you when a followed creator posts."],
     "/hub/collabs": ["Filter by the role you need, then press 'I'm interested' to reach out.", "Post your own request from your studio's Collabs tab."],
     "/hub/studio": ["Every post is reviewed by the team before it goes public; you'll get a note in your bell.", "Advertising products or sponsors needs admin approval first.", "Try a poll or questionnaire from Compose."],
-    "/profile": ["Switch off 'Show when I'm online' to hide your green dot.", "Add an email so you can reset your password."],
+    "/hub/profile": ["Switch off 'Show when I'm online' to hide your green dot.", "Add an email so you can reset your password."],
     "/hub/apply": ["Tell us what you make and link a few samples: it speeds up approval."]
   };
 

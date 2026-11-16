@@ -41,7 +41,7 @@ function client(req) {
 // Sends the visitor back with a short code the page turns into a message:
 // to the profile page when they were linking, otherwise to the login page.
 function fail(res, linking, code) {
-  res.redirect((linking ? "/profile" : "/hub/login") + "?google=" + code);
+  res.redirect((linking ? "/hub/profile" : "/hub/login") + "?google=" + code);
 }
 
 // Makes a username from the Google email, e.g. "Mwamba.Mulenga@gmail.com" -> "mwamba_mulenga".
@@ -96,7 +96,7 @@ router.get("/", function (req, res) {
 router.get("/callback", async function (req, res) {
   const pending = req.session.google;
   delete req.session.google;
-  const next = pending ? pending.next : "/profile";
+  const next = pending ? pending.next : "/hub/profile";
   const linking = Boolean(pending && pending.link);
 
   if (!googleEnabled()) return fail(res, linking, "off");
@@ -135,7 +135,7 @@ router.get("/callback", async function (req, res) {
     }
     await db.query("UPDATE users SET google_sub = $1, email = COALESCE($2, email) WHERE id = $3",
       [profile.sub, email, req.session.user.id]);
-    return res.redirect(safeNext(next, "/profile").split("?")[0] + "?google=linked");
+    return res.redirect(safeNext(next, "/hub/profile").split("?")[0] + "?google=linked");
   }
 
   let user = linked.rows[0];

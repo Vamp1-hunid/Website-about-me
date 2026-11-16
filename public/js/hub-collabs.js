@@ -91,7 +91,7 @@
         var li = el("li", { class: "comment" });
         var head = el("header");
         head.appendChild(MW.avatar(r.from));
-        var name = el("a", { class: "who", href: r.from.creatorHandle ? "/hub/c/" + encodeURIComponent(r.from.creatorHandle) : "/u/" + encodeURIComponent(r.from.username) }, r.from.displayName);
+        var name = el("a", { class: "who", href: r.from.creatorHandle ? "/hub/c/" + encodeURIComponent(r.from.creatorHandle) : "/hub/u/" + encodeURIComponent(r.from.username) }, r.from.displayName);
         head.append(name, el("span", {}, "@" + r.from.username + (r.from.creatorHandle ? " · creator" : "")), el("time", { datetime: r.createdAt }, MW.formatDateTime(r.createdAt)));
         li.appendChild(head);
         li.appendChild(el("p", {}, r.message));

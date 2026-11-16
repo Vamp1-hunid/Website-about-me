@@ -2,7 +2,7 @@
 
 **Site:** https://mulenga-mwamba-website.onrender.com
 **Repository:** https://github.com/Vamp1-hunid/Website-about-me (branch `main`)
-**Owner:** Mulenga Mwamba · **Report date:** 14 November 2026
+**Owner:** Mulenga Mwamba · **Report date:** 16 November 2026 (covers Versions 1–17)
 
 This report explains the whole website from the ground up: how it was built, which outside
 services it uses and how each account was set up, how every page and animation works, and
@@ -30,6 +30,9 @@ JavaScript and explains everything else as it goes.
 15. [Running the site on your laptop](#15-running-the-site-on-your-laptop)
 16. [Deploying, and fixing a failed deploy](#16-deploying-and-fixing-a-failed-deploy)
 17. [Free-plan limits and known gaps](#17-free-plan-limits-and-known-gaps)
+18. [Version 3: dashboard, stories, characters](#version-3-november-2026-dashboard-stories-characters-and-more)
+19. [Version 4: Afterframe, the creator platform](#version-4-november-2026-afterframe-the-creator-platform)
+20. [Versions 5–17: Chapterhive, from creator platform to pre-launch](#versions-517-november-2026-chapterhive-from-creator-platform-to-pre-launch)
 
 ---
 
@@ -1267,3 +1270,343 @@ link and JSON-LD for work, story, character, creator and news pages before sendi
 **Legal pages** (`public/legal/`) are drafts written as a starting point: have a Zambian lawyer review
 them. Sign-up now requires accepting the Terms and Privacy Policy; applying as a creator requires
 accepting the Creator Agreement and Content Rules.
+
+
+---
+
+## Versions 5–17 (November 2026): Chapterhive, from creator platform to pre-launch
+
+Everything from here on was added on top of Version 4. Afterframe was renamed **Chapterhive** and
+given a honey-and-hive theme. God's Banditos (`/`) stayed as the owner's view-only showcase.
+Each version below was opened as a pull request and merged into `main`. Render deploys `main`
+automatically.
+
+### At a glance: which pull request added what
+
+| Version / PR | What it added |
+|---|---|
+| v5 (#9) | Reviews, Manage users, notification bell, first feature switches, polls, help, Sponsor page; rename to Chapterhive with the hive theme |
+| v6 (#10) | No page loader; News & updates; search filters; brighter light/dark themes; guest previews; God's Banditos owner-only login, view-only for everyone else |
+| v7 (#11) | International-standard sign-up (date of birth 13+, teen accounts, country, gender, email verification, strong passwords); one-to-one chat |
+| v8 (#12) | Browse shelves; Site features tab with live / queued / suspended and scheduled launches; book, song, trailer, tutorial and other categories; creator tribute; queued Premium; Instagram-style feed; top-creator rankings with bee badges; organisation accounts |
+| v9 (#13) | Cinematic welcome with interests survey; personalised "For you" feed with See more / less; member bios; search beside the tabs; Settings page with privacy controls |
+| v10 (#14) | Welcome wording fixes; clearer search; Fund the heist and suggestion box visible to everyone |
+| v11 (#15) | Pre-launch username reservation campaign |
+| v12 (#16) | Daily Bible verse, content filters, student verification, skills, tutorials, collab posts, group chats, private posts, web comic panel maker, whistleblower badge, calendar |
+| v13 (#17) | Compact phone layout; Reserve moved out of the header |
+| v14 (#18) | Official account: grand golden circle with a verified tick |
+| v15 (#19) | Role tags (👑 Chapterhive founder, top creator, 🧪 Beta tester); team-only log in before launch |
+| v16 (#20) | Beta tester applications; reservations with passwords; numbered reservation list with Excel/PDF download; owner's nickname at #1; public list of reserved usernames; reserved members can sign in before launch; admin applications in the bell and menu; "Let beta testers message me"; readers welcome; profile links in the menu |
+| v17 (#21 and the next PR) | Owner's nickname also renames the creator page handle; profiles moved to Chapterhive (`/hub/profile`, `/hub/u/<name>`); stricter username rules with a live preview |
+
+### The Chapterhive pages
+
+All Chapterhive pages live in `public/hub/` and set `data-brand="chapterhive"` on `<body>`.
+`js/api.js` reads that to pick the header, ☰ menu, search and banners. They load
+`css/styles.css` and then `css/chapterhive.css`. New pages are made by copying
+`public/hub/sponsor.html` and replacing its `<main>`, title, meta tags and page script.
+
+| Address | File | What it is |
+|---|---|---|
+| `/hub` | `hub/index.html` | Home: banners, stories row, shelves, the member feed |
+| `/hub/creators`, `/hub/c/<handle>` | `creators.html`, `creator.html` | Creator list and creator pages |
+| `/hub/top` | `top.html` | Top 10 overall and top 5 per shelf |
+| `/hub/feed` | `feed.html` | Following feed (members only) |
+| `/hub/news` | `news.html` | News & updates (team posts) |
+| `/hub/search` | `search.html` | Search with filters |
+| `/hub/w/<slug>`, `/hub/s/<slug>` | `work.html`, `story.html` | A work and a story |
+| `/hub/studio` | `studio.html` | Creator studio |
+| `/hub/apply` | `apply.html` | Apply to become a creator |
+| `/hub/collabs` | `collabs.html`, `collab.html` | Collab board |
+| `/hub/chat` | `chat.html` | One-to-one and group chats |
+| `/hub/settings` | `settings.html` | Settings & privacy |
+| `/hub/profile` | `profile.html` | Edit my profile (picture, bio, email, password, Google link) |
+| `/hub/u/<username>` | `user.html` | A member's public page |
+| `/hub/register`, `/hub/login`, `/hub/verify` | | Sign-up, log in, email verification |
+| `/hub/join-organisation` | `join-organisation.html` | Organisation account sign-up |
+| `/hub/reserve` | `reserve.html` | Reservation campaign, public list, admin list |
+| `/hub/beta` | `beta.html` | Beta tester application and admin review |
+| `/hub/calendar` | `calendar.html` | Holidays, international days, site events |
+| `/hub/comic-maker` | `comic-maker.html` | Web comic panel maker |
+| `/hub/premium`, `/hub/sponsor` | | Premium (queued) and Sponsor & business |
+
+The old addresses `/profile` and `/u/<username>` now redirect to the Chapterhive versions, so
+editing your profile never drops you onto God's Banditos.
+
+### Accounts and sign-up (`src/signup.js`, `src/routes/account.js`, `src/users.js`)
+
+- **Date of birth is required.** Under 13 is refused and nothing is stored. Ages 13–17 get teen
+  accounts (`signup.isMinor`); teens can only chat with teens.
+- **Country** and **gender** (Male / Female / Prefer not to say; private) are asked at sign-up.
+- **Email is required** and verified by a link (`/hub/verify`). Reservations claimed with the same
+  email are verified automatically.
+- **Passwords** must be strong (`signup.passwordProblem`): at least 10 characters, not the
+  username, not a common password.
+- **Terms**: accepting the Terms and Privacy Policy is required (`TERMS_VERSION` is stored).
+- **Organisation accounts** (`account_type = 'organisation'`, table `organisations`): one shared
+  account for a group, with its creator application.
+- **Everyone starts as a member.** Readers, watchers and listeners use a free member account.
+  Anyone can later apply at `/hub/apply` to become a creator, for free, with the same account.
+
+**Username rules (v17).** Checked in `users.usernameProblem` on the server and shown live in the
+browser by `MW.usernamePreview` (in `js/api.js`):
+
+- 3–30 characters: lowercase letters and numbers, with **at least one `_` or `-`**
+  (`bee_reader`, `bee-reader`). `_` and `-` can't be first, last or doubled.
+- No capital letters, spaces, emoji or symbols. The browser removes them as you type.
+- Names are compared ignoring case, so `Bee_Reader` can never sit beside `bee_reader`.
+- Reserved words (admin, hub, support …) and other people's reserved names are refused.
+- **Existing accounts keep their names.** Names reserved before the rule (claimed with their
+  link) and older beta applications still work.
+- The preview shows `@yourname` under the box with "✓ looks good" or what to fix. It appears on
+  the reservation, beta, sign-up and organisation pages and in the owner's nickname box.
+
+**Google sign-in** (`src/routes/google.js`) works for sign-up, log in and linking. To link Google
+to an existing account (including the admin's), log in, open **✏️ Edit my profile**
+(`/hub/profile`) and press the Google button. See "Setting up Google sign-in" below.
+
+### Settings & privacy (`/hub/settings`, `js/settings.js`, `PUT /api/account/privacy`)
+
+| Setting | Column | Choices |
+|---|---|---|
+| Show when I'm active | `users.show_online` | on / off |
+| Who can message me | `users.chat_privacy` | everyone / creators I follow / nobody |
+| 🧪 Let beta testers message me | `users.beta_can_message` | on / off; beta testers can start a chat even when the choice above would stop them |
+| Let members see my page | `users.profile_visible` | on / off |
+| Who can see my posts (creators) | `creator_profiles.post_visibility` | everyone / members / followers |
+| Content filter | `users.max_rating`, `users.hide_strong_language` | All ages / Teen / Mature 18+ (adults only); hide strong language |
+| Daily Bible verse | `users.daily_verse` | on / off; shows a reference and a Good News Translation link, no copied text |
+| Student verification | `users.school_email`, `school_verified_at` | verify a school email for a student badge |
+| Reset my feed | `user_interests` | clears the personalisation |
+
+Chat also needs a date of birth on **both** accounts. It keeps teen and adult spaces apart, so an
+account without one (including the admin's) can't receive messages until one is added.
+
+### The feed, rankings and badges
+
+- **Feed** (`src/interests.js`): members get a personalised "For you" feed built from the welcome
+  survey and every "See more / See less". Visitors without an account see shelves, not a feed.
+- **Rankings** (`src/rankings.js`, table `creator_ranks`) refresh every 30 minutes: top 10 overall
+  and top 5 per shelf. Badges: 🐝 Bumblebee (#1), Honey Bee (top 3), Worker Bee (top 10), Mason Bee
+  and Busy Bee for shelves. Ranked creators get a small boost in feeds.
+- **Role tags** (`src/trust.js` → `roleTags`): 👑 Chapterhive founder (the owner), top creator,
+  🧪 Beta tester. **Trust badges**: student, whistleblower (after 3 upheld reports). **Skills**
+  under the bio (Writer, Poet, Manga artist …).
+- **Official account**: the owner's story circle is a gold ring with a blue verified tick that glows.
+
+### Posts and creating (`src/routes/posts.js`, `src/publishing.js`)
+
+- **Categories**: novel, storybook, educational, poetry, song, story-art, art, anime, film, series,
+  trailer, writing, comedy, meme, thoughts, tutorial; plus **genres**.
+- **No live-action skits**: comedy and meme posts can't contain video. Comedy films and series,
+  and authorised creators' trailers, are fine.
+- **Visibility per post** (everyone / members / followers), on top of the creator-wide setting.
+  The admin can see every post for moderation (`audienceSql` admin bypass).
+- **Collab posts** (`post_collaborators`): invite other creators; they appear on the post.
+- **Web comic panel maker** (`/hub/comic-maker`).
+- **Content filters** apply to every list (`contentFilterSql`).
+
+### Chat (`src/routes/chat.js`)
+
+One-to-one threads (`chat_threads`, `chat_messages`), blocking (`chat_blocks`), reporting, and group
+chats (`chat_groups`, `chat_group_members`, `chat_group_messages`). Teen and adult accounts can't
+chat with each other. The receiver's "Who can message me" choice is respected, except that beta
+testers get through when the receiver has "Let beta testers message me" on.
+
+### Calendar (`src/calendar.js`, `/hub/calendar`)
+
+Zambian public holidays, international days and events the admin adds (table `calendar_events`).
+On the day, the home page shows a banner and the site can switch to a holiday theme
+(`body[data-holiday]`).
+
+### Site features switches (`src/flags.js`, Admin → Site features)
+
+Every feature has an audience: **live** for everyone, admin only, beta testers, **queued**
+(off, with an optional scheduled launch time) or **suspended**. When a feature isn't live you choose
+how visitors see it: hidden, "Coming soon" or "Under maintenance". The server enforces this with
+`requireFlag(key)` (answers 503 with your chosen wording). The browser hides or labels links with
+`MW.feature`, `MW.featureNotice` and `gatePage`.
+
+| Key | Feature | Starts as |
+|---|---|---|
+| `signups` | New accounts | live |
+| `reservations` | Pre-launch username reservations | off |
+| `chat`, `group_chats` | Chat, group chats | live |
+| `comments`, `likes`, `follows` | Comments, likes & saves, following | live |
+| `notifications`, `streaks`, `online_status` | Bell, streaks, online status | admin |
+| `daily_verse`, `calendar`, `rankings` | Verse, calendar, top creators | live |
+| `creating`, `creator_applications`, `collabs`, `comic_maker` | Posting, applications, collab board, comic maker | live |
+| `polls` | Polls & questionnaires | admin |
+| `donations` | Fund the heist (God's Banditos) | live |
+| `hub_support`, `sponsor_page`, `premium` | Fund the heist on Chapterhive, Sponsor page, Premium | admin (Premium is built but queued) |
+| `updates`, `search` | News & updates, search | live |
+| `help_assistant`, `suggestion_box`, `quick_tips` | Help assistant, suggestion box, quick tips | admin |
+
+### The pre-launch campaign (v11, v15, v16)
+
+**Running it:** in Admin → Site features, turn **Pre-launch username reservations** on and
+**New accounts** off. That is what the code calls "pre-launch".
+
+**What visitors see**
+
+- The home page shows two cards: **🐝 Chapterhive opens soon · Reserve** and
+  **🧪 Become a beta tester · Apply**. Both are also in the ☰ menu.
+- The Join page sends people to `/hub/reserve`.
+- `/hub/reserve` explains that readers, watchers and creators are all welcome. Everyone gets a free
+  member account and can upgrade to creator later.
+
+**Reserving** (`POST /api/reserve`, `src/routes/reserve.js`)
+
+- The form asks for a username (with live preview and availability check), an optional name,
+  email (one per person), a **password**, date of birth (13+, checked but not stored for
+  password-less reservations) and country.
+- **With a password the account is created straight away** (a normal member account), so at
+  launch people just log in. Older reservations without a password are claimed later with a
+  link (`/hub/register?claim=<token>`).
+- After reserving, the page says **"You're #N on the reservation list"**. The confirmation email
+  says the same, and the browser remembers the name so it's highlighted on the list.
+
+**The public list** (`GET /api/reserve/list`)
+
+- The reservation page shows every reserved username, numbered from #1, with a search box.
+- Only the number and the username are sent. Names, emails and everything else stay in the admin
+  list. A test checks this.
+
+**Signing in before launch** (`src/prelaunch.js`)
+
+- Anyone with an account can log in before launch. The home page greets them with
+  **"You're in early!"** and buttons to **My place** (the list) and **Updates** (News & updates).
+- Until launch, people who aren't admin or beta testers can't make changes: no posting,
+  comments, follows, chat and so on. `guardWrites` answers 403 with a friendly message.
+  Account settings, notifications, reservations, beta applications, contact and help keep
+  working.
+- The admin and beta testers can use everything.
+
+**Beta testers** (`src/routes/beta.js`, table `beta_applications`)
+
+- `/hub/beta` asks for email, the username wanted (or keep the one already reserved/owned), a
+  name, date of birth, country and why they'd like to test.
+- You review at `/hub/beta#beta-admin`: **Approve** or **Decline**.
+- Approving holds the name as a reservation marked `beta` and emails a set-up link. If email
+  isn't configured, the link is shown with a **Copy link** button to send yourself. If the person
+  already has an account, it simply becomes a beta account.
+- Claiming the link creates a normal member account with `users.is_beta = TRUE`. Beta testers can
+  log in and use the site before launch and wear the 🧪 Beta tester tag.
+
+**At launch**
+
+1. Turn **New accounts** back on (and reservations off when you're ready).
+2. Press **Send claim links** on the reservation list for the older, password-less reservations.
+3. Everyone who reserved with a password just logs in.
+
+### The admin's tools
+
+- **☰ menu (admin):** Dashboard, Site settings, 🐝 Name reservations, 🧪 Beta tester applications,
+  🎨 Creator applications. Each has a number badge: reservations shows the total; beta and
+  creators show how many are waiting (`GET /api/reserve/admin/counts`).
+- **Dashboard:** an **Applications** row under the tabs with the same three links and badges.
+- **Notification bell:** you get a note for every new reservation (with its number), every beta
+  application and every creator application (`notifyAdmins` in `src/notify.js`).
+- **Reservation list** (`/hub/reserve#reserve-admin`):
+  - Every reservation in order from #1, with name, email, date and status (Waiting / Invited /
+    Claimed or Account ready) and **Release** to free a name.
+  - **⬇ Download Excel (.xlsx)** (`exceljs`) and **⬇ Download PDF** (`pdfkit`) give the full
+    numbered list (`/api/reserve/admin/export.xlsx`, `/export.pdf`).
+- **👑 Your own nickname:** a box on the reservation list.
+  - It reserves instantly and is always **#1** (`username_reservations.pinned`), with a crown.
+  - It renames your account username and your creator page @handle (unless the name breaks
+    handle rules or another creator page uses it).
+  - Afterwards, log in with the new name or your email.
+  - `users.is_owner` marks the owner's account, so renaming it never creates a second admin
+    when the site restarts.
+- **Settings:** the header ⚙ was moved into the ☰ menu ("⚙ Settings & privacy").
+- **Every account's menu** has **👤 My profile** (`/hub/u/<name>`) and **✏️ Edit my profile**
+  (`/hub/profile`).
+
+### New database tables and columns since Version 4
+
+All created or upgraded automatically by `db/schema.sql` on every start (idempotent:
+`IF NOT EXISTS`, guarded constraints).
+
+- **Tables:** `collab_posts`, `collab_replies`, `form_responses` (polls), `notifications`,
+  `announcements`, `feature_flags`, `chat_threads`, `chat_messages`, `chat_blocks`,
+  `premium_waitlist`, `creator_ranks`, `organisations`, `user_interests`,
+  `username_reservations`, `post_collaborators`, `chat_groups`, `chat_group_members`,
+  `chat_group_messages`, `calendar_events`, `beta_applications`.
+- **`users` columns:** `birth_date`, `country`, `gender`, `email_verified_at`, `terms_version`,
+  `marketing_opt_in`, `account_type`, `chat_privacy`, `show_online`, `profile_visible`,
+  `max_rating`, `hide_strong_language`, `daily_verse`, `school_email`, `school_verified_at`,
+  `skills`, `is_beta`, `beta_can_message`, `is_owner`, `onboarded_at`, streak columns.
+- **`username_reservations` columns:** `claim_token`, `invited_at`, `claimed_at`, `beta`, `pinned`.
+
+### New API routes since Version 4 (main ones)
+
+| Route | What it does |
+|---|---|
+| `GET/PUT /api/account/privacy` | Settings & privacy |
+| `/api/chat/...` | Threads, messages, groups, blocks, reports |
+| `/api/calendar/...` | Today's holidays/events, admin events |
+| `GET /api/reserve`, `/check`, `/list`, `/claim` | Campaign status, name check, public numbered list, claim link details |
+| `POST /api/reserve` | Reserve (with or without a password) |
+| `GET /api/reserve/admin`, `/admin/counts`, `/admin/export.xlsx`, `/admin/export.pdf` | Admin list, waiting counts, downloads |
+| `POST /api/reserve/admin/invite`, `DELETE /admin/:id` | Send claim links, release a name |
+| `GET/POST /api/reserve/admin/mine` | Owner's nickname (#1) |
+| `GET/POST /api/beta`, `GET /api/beta/admin`, `POST /admin/:id/approve`, `/decline` | Beta tester applications |
+| `/api/admin/flags/...` | Site features switches |
+
+### New packages
+
+`exceljs` (Excel download) and `pdfkit` (PDF download), added to `package.json`. Render installs them
+automatically on deploy.
+
+### Setting up Google sign-in (free)
+
+1. At **console.cloud.google.com**, create a project called "Chapterhive" (no card needed).
+2. Open **APIs & Services → OAuth consent screen** (or **Google Auth Platform → Get started**).
+   App name Chapterhive, your Gmail as support and contact email, audience **External**, then save.
+3. Under **Audience**, press **Publish app** so anyone can sign in. Chapterhive only asks for name,
+   email and picture, so Google shouldn't need a review.
+4. **Clients / Credentials → Create client → OAuth client ID**, type **Web application**:
+   - Authorised JavaScript origin: `https://mulenga-mwamba-website.onrender.com`
+   - Authorised redirect URI: `https://mulenga-mwamba-website.onrender.com/auth/google/callback`
+5. Copy the **Client ID** and **Client secret**.
+6. On Render → Environment, add `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and
+   `PUBLIC_URL=https://mulenga-mwamba-website.onrender.com`, then save. "Continue with Google"
+   appears after the restart.
+7. If you move to your own domain, add the new origin and callback in Google and update `PUBLIC_URL`.
+
+### Render settings used by these versions
+
+| Setting | Needed? | What it does |
+|---|---|---|
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | optional | Continue with Google |
+| `PUBLIC_URL` | recommended | The site's address, used in emails, claim links and Google |
+| `BREVO_API_KEY` or `RESEND_API_KEY`, `MAIL_FROM` | optional | Sends verification, claim, beta and reset emails. Without them, links are shown to the admin to send by hand |
+| `CONTACT_EMAIL` | optional | Where contact messages go (kept out of the code) |
+| `SIGNUP_LIMIT_PER_HOUR` | optional | Sign-ups / reservations / applications allowed per connection per hour (default 5) |
+
+### How these versions were tested
+
+Each version added an automated test script run against a fresh local PostgreSQL 16 database,
+plus the earlier suites, so nothing that worked before was broken. The latest suites cover:
+
+- beta applications and approval
+- reservations with passwords
+- signing in before launch, with changes blocked
+- the bell, counts and the beta-message switch
+- numbering, Excel and PDF downloads
+- the owner's nickname at #1 and its creator handle
+- the public list containing usernames only
+- the new username rules
+
+Pages were also checked in a headless Chrome at phone size (390 × 844). The checks covered the
+banners, the menu, the admin lists, the public list and the username preview.
+
+### Still to decide or do
+
+- **Name for member accounts:** the site says "member" for now. Ideas so far: Hive member, Bee,
+  Reader, Hiver.
+- **The admin account needs a date of birth** before anyone can chat with it (teen/adult safety rule).
+- **Email** isn't configured yet. Until a Brevo or Resend key is added, claim and beta links appear
+  on screen for the admin to send.
+- **Legal pages** are still drafts. Have them reviewed by a Zambian lawyer before launch.
