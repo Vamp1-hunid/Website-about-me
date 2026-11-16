@@ -152,7 +152,7 @@
   MW.categoryName = function (category) {
     return { "story-art": "Story art", anime: "Anime works", writing: "Writing", updates: "Update", news: "News",
       art: "Art", comedy: "Comedy", film: "Live action film", series: "Series", meme: "Meme", thoughts: "Thoughts", poll: "Poll",
-      novel: "Novel", storybook: "Storybook", educational: "Educational", poetry: "Poetry", song: "Song & music", trailer: "Trailer" }[category] || category;
+      novel: "Novel", storybook: "Storybook", educational: "Educational", poetry: "Poetry", song: "Song & music", trailer: "Trailer", tutorial: "Tutorial" }[category] || category;
   };
 
   // "2026-11-20T15:00:00Z" -> "20 Nov 2026, 17:00" (in the visitor's own time zone)
@@ -388,9 +388,27 @@
     return box;
   };
 
+  // Holidays and events: a small banner on the Chapterhive home page, and a theme hook for the whole site.
+  function holidayBanner() {
+    if (!MW.isHub || !MW.feature("calendar")) return;
+    MW.api("/calendar/today").then(function (d) {
+      var items = d.events.concat(d.holidays);
+      if (d.theme) document.body.setAttribute("data-holiday", d.theme);
+      var path = window.location.pathname.replace(/\/$/, "");
+      if (!items.length || (path !== "/hub")) return;
+      var main = document.getElementById("main");
+      if (!main || document.querySelector(".holiday-banner")) return;
+      var top = items[0];
+      var banner = el("a", { class: "holiday-banner", href: top.link || "/hub/calendar" });
+      banner.appendChild(el("span", { class: "holiday-emoji", "aria-hidden": "true" }, top.emoji));
+      banner.appendChild(el("span", {}, (top.kind === "event" ? "" : "Happy ") + top.title + (top.kind === "event" && top.details ? ": " + top.details : "") + (items.length > 1 ? " · and " + (items.length - 1) + " more today" : "")));
+      main.insertBefore(banner, main.firstChild);
+    }).catch(function () {});
+  }
+
   // Pages that belong to a switchable feature. While it's off, the page shows a friendly notice instead.
   var PAGE_FEATURES = { "/hub/chat": "chat", "/hub/collabs": "collabs", "/hub/premium": "premium", "/hub/sponsor": "sponsor_page",
-    "/hub/apply": "creator_applications", "/hub/search": "search", "/search": "search", "/hub/feed": "follows", "/hub/news": "updates", "/hub/top": "rankings" };
+    "/hub/apply": "creator_applications", "/hub/search": "search", "/search": "search", "/hub/feed": "follows", "/hub/news": "updates", "/hub/top": "rankings", "/hub/calendar": "calendar", "/hub/comic-maker": "comic_maker" };
   function gatePage() {
     var path = window.location.pathname.replace(/\/$/, "");
     var key = PAGE_FEATURES[path] || (path.indexOf("/hub/collabs/") === 0 ? "collabs" : null);
@@ -463,7 +481,7 @@
     menu.appendChild(search);
 
     var groups = MW.isHub ? [
-      ["Chapterhive", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following", true], ["/hub/news", "News & updates", false, "updates"], ["/hub/top", "Top creators", false, "rankings"]]],
+      ["Chapterhive", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following", true], ["/hub/news", "News & updates", false, "updates"], ["/hub/top", "Top creators", false, "rankings"], ["/hub/calendar", "Calendar", false, "calendar"]]],
       ["Create", [["/hub/collabs", "Collab board", true, "collabs"], ["/hub/collabs#suggest", "Suggestion box", true, "suggestion_box"], ["/hub/apply", "Become a creator", true, "creator_applications"], ["/legal/content-rules", "Content Rules"]]],
       ["More", [["/help", "Help & FAQ"], ["/hub/premium", "Premium", false, "premium"], ["/hub/sponsor", "Sponsor & business", false, "sponsor_page"], ["/", "God's Banditos"], ["/contact", "Contact"], ["/legal/terms", "Terms"]]]
     ] : [
@@ -520,6 +538,7 @@
         document.querySelectorAll(".header-search, .menu-search").forEach(function (f) { f.hidden = true; });
       }
       gatePage();
+      holidayBanner();
       // Suggestion box: a link in every footer (and the help page / collab board keep the full form).
       if (MW.feature("suggestion_box")) {
         var foot = document.querySelector(".site-footer p:last-child");

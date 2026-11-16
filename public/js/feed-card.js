@@ -110,7 +110,14 @@
     var nameLine = el("strong", {}, post.creator ? post.creator.name : "Chapterhive");
     if (post.creator && post.creator.badges && post.creator.badges.length) nameLine.appendChild(MW.badges(post.creator.badges, true));
     names.appendChild(nameLine);
-    names.appendChild(el("span", { class: "muted" }, MW.categoryName(post.category) + (post.series ? " · " + post.series.title : "") + " · " + ago(post.createdAt)));
+    if (post.collaborators && post.collaborators.length) {
+      names.appendChild(el("span", { class: "feed-collab" }, "with " + post.collaborators.map(function (c) { return c.name; }).join(" & ")));
+    }
+    var metaLine = MW.categoryName(post.category) + (post.series ? " · " + post.series.title : "") + " · " + ago(post.createdAt);
+    if (post.contentRating === "teen") metaLine += " · Teen";
+    if (post.contentRating === "mature") metaLine += " · 18+";
+    if (post.visibility === "followers") metaLine += " · 🔒 Followers";
+    names.appendChild(el("span", { class: "muted" }, metaLine));
     who.appendChild(names);
     head.appendChild(who);
     head.appendChild(moreMenu(post, user, card));

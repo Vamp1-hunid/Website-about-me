@@ -12,6 +12,7 @@
   var SHELVES = [
     ["", "For you", "✦"],
     ["trailers", "Trailers", "🎞️", null],
+    ["tutorials", "Tutorials", "✏️", null],
     ["series", "Series", "📺", [["", "All series"], ["series", "Live action series"], ["anime", "Animation"]]],
     ["books", "Books", "📚", [["", "All books"], ["novel", "Novels"], ["storybook", "Storybooks"], ["educational", "Educational"]]],
     ["comics", "Comics & manga", "💥", null],
@@ -108,6 +109,22 @@
       if (!append) results.textContent = "";
       var filtered = state.shelf || state.category || state.genre;
       summary.textContent = filtered ? describe(d.total || 0) : "";
+      // Daily Bible verse at the top of the feed, for members who switched it on in Settings.
+      var acc = MW.account && MW.account.account;
+      if (!append && state.view === "feed" && acc && acc.dailyVerse && MW.feature("daily_verse")) {
+        var vc = el("article", { class: "verse-card" });
+        results.appendChild(vc);
+        MW.api("/calendar/verse").then(function (v) {
+          vc.appendChild(el("p", { class: "node-label" }, "📖 Verse of the day"));
+          if (v.verse.text) vc.appendChild(el("p", { class: "verse-text" }, "“" + v.verse.text + "”"));
+          else if (v.verse.theme) vc.appendChild(el("p", { class: "verse-text" }, v.verse.theme));
+          var ref = el("p", { class: "verse-ref" });
+          ref.appendChild(el("strong", {}, v.verse.reference));
+          ref.appendChild(document.createTextNode(" · "));
+          ref.appendChild(el("a", { href: v.verse.link, target: "_blank", rel: "noopener" }, "Read it in the " + v.verse.translation + " ↗"));
+          vc.appendChild(ref);
+        }).catch(function () { vc.remove(); });
+      }
       if (!d.posts.length && !append) {
         results.appendChild(el("p", { class: "empty" }, "Nothing here yet. Try another filter, or be the first to post one!"));
       } else if (state.view === "grid") {

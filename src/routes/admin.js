@@ -661,9 +661,10 @@ router.post("/creators/:id/review", async function (req, res) {
   res.json({ creator: toCreatorAdmin(row), emailed: emailed });
 });
 
-// DELETE /api/admin/chat-messages/:id  -> removes a reported chat message
+// DELETE /api/admin/chat-messages/:id[?group=1]  -> removes a reported chat message
 router.delete("/chat-messages/:id", async function (req, res) {
-  await db.query("UPDATE chat_messages SET deleted = TRUE, body = '', post_id = NULL WHERE id = $1", [Number(req.params.id)]);
+  const table = req.query.group === "1" ? "chat_group_messages" : "chat_messages";
+  await db.query(`UPDATE ${table} SET deleted = TRUE, body = '', post_id = NULL WHERE id = $1`, [Number(req.params.id)]);
   res.json({ ok: true });
 });
 
@@ -681,6 +682,8 @@ router.get("/reports", async function (req, res) {
                                 FROM creator_profiles cp WHERE cp.user_id = r.target_id)
          WHEN 'collab' THEN (SELECT json_build_object('title', c.title, 'id', c.id, 'creator', cp.handle)
                                FROM collab_posts c JOIN creator_profiles cp ON cp.user_id = c.user_id WHERE c.id = r.target_id)
+         WHEN 'group_message' THEN (SELECT json_build_object('id', m.id, 'body', m.body, 'deleted', m.deleted, 'sender', su.username, 'group', true)
+                               FROM chat_group_messages m LEFT JOIN users su ON su.id = m.sender_id WHERE m.id = r.target_id)
          WHEN 'message' THEN (SELECT json_build_object('id', m.id, 'body', m.body, 'deleted', m.deleted, 'sender', su.username)
                                FROM chat_messages m LEFT JOIN users su ON su.id = m.sender_id WHERE m.id = r.target_id)
        END AS target

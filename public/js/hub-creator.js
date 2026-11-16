@@ -45,6 +45,16 @@
     h1.appendChild(MW.onlineDot(c.online));
     names.appendChild(h1);
     if (c.premium) names.appendChild(el("span", { class: "premium-badge" }, "✦ Premium"));
+    if (c.trustBadges && c.trustBadges.length) {
+      var tbl = el("p", { class: "trust-badges" });
+      c.trustBadges.forEach(function (b) { tbl.appendChild(el("span", { class: "trust-badge trust-" + b.key, title: b.label }, b.icon + " " + b.label.split(":")[0])); });
+      names.appendChild(tbl);
+    }
+    if (c.skills && c.skills.length) {
+      var skl = el("p", { class: "skill-list" });
+      c.skills.forEach(function (s) { skl.appendChild(el("span", { class: "skill-chip is-on" }, s)); });
+      names.appendChild(skl);
+    }
     if (c.badges && c.badges.length) {
       var bl = el("p");
       bl.appendChild(MW.badges(c.badges));

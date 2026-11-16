@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comic panel maker | Chapterhive</title>
+  <meta name="description" content="Lay out web comic panels with speech bubbles and captions.">
+  
+  <meta property="og:site_name" content="Chapterhive">
+  <meta property="og:title" content="Comic panel maker | Chapterhive">
+  <meta property="og:description" content="Lay out web comic panels with speech bubbles and captions.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://mulenga-mwamba-website.onrender.com/images/chapterhive-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#0e0b07">
+  <link rel="icon" href="/images/chapterhive-mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css?v=19">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=16">
+  <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
+  <script src="/js/theme-boot.js"></script>
+</head>
+<body data-page="comic-maker" data-brand="chapterhive">
+
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <a class="af-brand" href="/hub" aria-label="Chapterhive, home">
+      <img src="/images/chapterhive-mark.svg" alt="" width="34" height="34">
+      <span>Chapter<b>hive</b></span>
+    </a>
+    <div class="header-actions">
+      <div class="auth-area" id="auth-area"></div>
+      <form class="header-search" action="/hub/search" method="get" role="search">
+        <label class="sr-only" for="header-q">Search Chapterhive</label>
+        <input type="search" id="header-q" name="q" placeholder="Search creators, works&hellip;" maxlength="80" autocomplete="off">
+      </form>
+      <button id="menu-toggle" class="btn btn-ghost btn-small menu-toggle" type="button"
+              aria-expanded="false" aria-controls="site-menu" aria-label="Open menu">
+        <span class="bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
+      <button id="theme-toggle" class="btn btn-ghost btn-small" type="button">Light mode</button>
+    </div>
+  </header>
+
+  <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+    <a href="/hub" data-nav="hub">Home</a>
+    <a href="/hub/creators" data-nav="creators">Creators</a>
+    <a href="/hub/top" data-nav="top">Top creators</a>
+    <a href="/hub/feed" data-nav="feed">Following</a>
+    <a href="/hub/news" data-nav="news">News &amp; updates</a>
+    <a href="/hub/collabs" data-nav="collabs">Collabs</a>
+    <a href="/hub/apply" data-nav="apply">Become a creator</a>
+    <a href="/hub/sponsor" data-nav="sponsor">Sponsor</a>
+  </nav>
+
+  <main id="main" class="comic-main">
+    <section class="panel" aria-labelledby="cm-title">
+      <p class="node-label">Studio // comic panel maker</p>
+      <h1 id="cm-title">Comic panel maker</h1>
+      <p class="muted">Pick a layout, drop your drawings into the panels, add speech bubbles and captions, then download the page and add it to a post. Everything stays on your device until you upload it.</p>
+      <div class="cm-tools">
+        <label>Layout
+          <select id="cm-layout">
+            <option value="1">1 big panel</option>
+            <option value="2h">2 panels (stacked)</option>
+            <option value="2v">2 panels (side by side)</option>
+            <option value="3" selected>3 panels (strip)</option>
+            <option value="3a">3 panels (1 wide + 2)</option>
+            <option value="4">4 panels (grid)</option>
+            <option value="6">6 panels (grid)</option>
+          </select>
+        </label>
+        <label>Page
+          <select id="cm-size">
+            <option value="page">Comic page (portrait)</option>
+            <option value="strip">Web strip (landscape)</option>
+            <option value="square">Square (for the feed)</option>
+          </select>
+        </label>
+        <label>Gutter <input type="range" id="cm-gutter" min="0" max="60" value="24"></label>
+        <label>Paper <input type="color" id="cm-paper" value="#ffffff"></label>
+        <label>Ink <input type="color" id="cm-ink" value="#111111"></label>
+      </div>
+      <div class="cm-tools">
+        <button type="button" class="btn btn-small" id="cm-bubble">🗯️ Speech bubble</button>
+        <button type="button" class="btn btn-small" id="cm-thought">💭 Thought bubble</button>
+        <button type="button" class="btn btn-small" id="cm-caption">▭ Caption box</button>
+        <button type="button" class="btn btn-small" id="cm-sfx">💥 Sound effect</button>
+        <button type="button" class="btn btn-ghost btn-small" id="cm-delete" disabled>Delete selected</button>
+        <button type="button" class="btn btn-ghost btn-small" id="cm-clear">Start over</button>
+        <button type="button" class="btn" id="cm-download">⬇ Download page</button>
+      </div>
+      <p class="muted cm-hint">Tip: click a panel to add a picture. Drag bubbles to move them; double-click one to change its words.</p>
+      <div class="cm-stage"><canvas id="cm-canvas" width="1200" height="1700" aria-label="Comic page"></canvas></div>
+      <input type="file" id="cm-file" accept="image/*" class="sr-only">
+      <p class="muted">Done? <a href="/hub/studio#compose">Start a new post</a> and add the downloaded page as a picture.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p class="footer-brand"><img src="/images/chapterhive-mark.svg" alt="" width="28" height="28"> &copy; 2026 Chapterhive &middot; a <a href="/">God's Banditos</a> production</p>
+    <p><a href="/legal/terms">Terms</a> &middot; <a href="/legal/privacy">Privacy</a> &middot; <a href="/legal/creator-agreement">Creator Agreement</a> &middot; <a href="/legal/content-rules">Content Rules</a> &middot; <a href="/contact">Contact</a></p>
+  </footer>
+
+  <script src="/js/api.js" defer></script>
+  <script src="/js/script.js" defer></script>
+  <script src="/js/markup.js" defer></script>
+  <script src="/js/hub.js" defer></script>
+  <script src="/js/comic-maker.js" defer></script>
+</body>
+</html>

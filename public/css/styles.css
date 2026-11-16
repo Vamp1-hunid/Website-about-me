@@ -4458,3 +4458,21 @@ html.onboarding-open, html.onboarding-open body { overflow: hidden; }
 .site-nav .nav-search-go { display: inline-flex; align-items: center; gap: 0.35rem; height: 2.6rem; padding: 0 1rem; border-radius: 999px; }
 .search-svg { display: block; }
 @media (max-width: 760px) { .site-nav .nav-search-go span { display: none; } }
+
+/* ===== v14: skills and trust badges ===== */
+.skill-chips, .skill-list { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.skill-chip { font: 600 0.8rem/1 var(--font-ui); padding: 0.4rem 0.7rem; border-radius: 99px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); cursor: pointer; }
+.skill-chip.is-on { background: color-mix(in srgb, var(--pink) 18%, var(--panel)); border-color: var(--pink); }
+span.skill-chip { cursor: default; }
+.trust-badges { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.3rem 0; }
+.trust-badge { font: 700 0.78rem/1.3 var(--font-ui); padding: 0.2rem 0.6rem; border-radius: 99px; border: 1px solid var(--line); background: var(--panel-2); }
+.trust-student { border-color: #5aa7ff; }
+.trust-whistleblower { border-color: #3fbf7f; background: color-mix(in srgb, #3fbf7f 15%, var(--panel)); }
+.chat-list-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 0.8rem 0 0.2rem; }
+.chat-new-group { justify-content: center; border-style: dashed !important; border-color: var(--line) !important; }
+.chat-sender { display: block; font: 700 0.75rem/1.3 var(--font-ui); color: var(--pink); margin-bottom: 0.15rem; }
+.chat-group-title { flex: 1; display: grid; min-width: 0; }
+.chat-group-title .muted { font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-group-form { display: grid; gap: 0.6rem; max-width: 480px; }
+.compose-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.6rem; }
+.compose-grid label { display: grid; gap: 0.3rem; text-transform: none; letter-spacing: normal; font-family: var(--font-ui); }

@@ -365,7 +365,7 @@ ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_category_check;
 ALTER TABLE posts ADD CONSTRAINT posts_category_check CHECK (category IN (
   'story-art', 'anime', 'writing', 'updates', 'news',
   'art', 'comedy', 'film', 'series', 'meme', 'thoughts', 'poll',
-  'novel', 'storybook', 'educational', 'poetry', 'song', 'trailer'));
+  'novel', 'storybook', 'educational', 'poetry', 'song', 'trailer', 'tutorial'));
 
 -- Polls and questionnaires attached to a post (questions, options, when results show).
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS form JSONB;
@@ -563,3 +563,73 @@ CREATE TABLE IF NOT EXISTS username_reservations (
   invited_at   TIMESTAMPTZ,
   claimed_at   TIMESTAMPTZ
 );
+
+-- ===== v14 =====
+-- Daily Bible verse in the feed (members opt in).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_verse BOOLEAN NOT NULL DEFAULT FALSE;
+-- Content filters: each post has an age rating and a strong-language flag; members choose what they see.
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS content_rating VARCHAR(8) NOT NULL DEFAULT 'all';
+DO $$ BEGIN
+  ALTER TABLE posts ADD CONSTRAINT posts_content_rating_check CHECK (content_rating IN ('all', 'teen', 'mature'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS strong_language BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS max_rating VARCHAR(8) NOT NULL DEFAULT 'teen';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS hide_strong_language BOOLEAN NOT NULL DEFAULT FALSE;
+-- Per-post privacy: 'followers' makes one post followers-only even if the creator's page is public.
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS visibility VARCHAR(10) NOT NULL DEFAULT 'public';
+DO $$ BEGIN
+  ALTER TABLE posts ADD CONSTRAINT posts_visibility_check CHECK (visibility IN ('public', 'followers'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- Student verification with a school email.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS school_email VARCHAR(254);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS school_token VARCHAR(64);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS school_verified_at TIMESTAMPTZ;
+-- Skills shown under the bio (writer, voice actor, singer ...).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS skills VARCHAR(30)[] NOT NULL DEFAULT '{}';
+-- Collab posts: co-creators invited onto a post (shown as "by A & B" once they accept).
+CREATE TABLE IF NOT EXISTS post_collaborators (
+  post_id    INTEGER NOT NULL REFERENCES posts (id) ON DELETE CASCADE,
+  user_id    INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  status     VARCHAR(10) NOT NULL DEFAULT 'invited' CHECK (status IN ('invited', 'accepted', 'declined')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (post_id, user_id)
+);
+-- Group chats.
+CREATE TABLE IF NOT EXISTS chat_groups (
+  id         SERIAL PRIMARY KEY,
+  name       VARCHAR(60) NOT NULL,
+  owner_id   INTEGER REFERENCES users (id) ON DELETE SET NULL,
+  teen       BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS chat_group_members (
+  group_id  INTEGER NOT NULL REFERENCES chat_groups (id) ON DELETE CASCADE,
+  user_id   INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  read_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (group_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS chat_group_messages (
+  id         SERIAL PRIMARY KEY,
+  group_id   INTEGER NOT NULL REFERENCES chat_groups (id) ON DELETE CASCADE,
+  sender_id  INTEGER REFERENCES users (id) ON DELETE SET NULL,
+  body       VARCHAR(2000) NOT NULL DEFAULT '',
+  post_id    INTEGER REFERENCES posts (id) ON DELETE SET NULL,
+  deleted    BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS chat_group_messages_idx ON chat_group_messages (group_id, id);
+-- Site calendar: events the admin adds (holidays are worked out in code).
+CREATE TABLE IF NOT EXISTS calendar_events (
+  id         SERIAL PRIMARY KEY,
+  title      VARCHAR(100) NOT NULL,
+  starts_on  DATE NOT NULL,
+  ends_on    DATE,
+  details    VARCHAR(500) NOT NULL DEFAULT '',
+  link       VARCHAR(300) NOT NULL DEFAULT '',
+  emoji      VARCHAR(8) NOT NULL DEFAULT '📅',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE reports DROP CONSTRAINT IF EXISTS reports_target_type_check;
+ALTER TABLE reports ADD CONSTRAINT reports_target_type_check CHECK (target_type IN ('post', 'comment', 'creator', 'collab', 'message', 'group_message'));

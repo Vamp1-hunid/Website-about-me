@@ -25,7 +25,17 @@
       if (u.streak > 1 && MW.feature("streaks")) { var sp = el("p"); sp.appendChild(el("span", { class: "streak-chip" }, "🔥 " + u.streak + "-day streak")); text.appendChild(sp); }
       var line = "@" + u.username + " · joined " + MW.formatDate(u.joined);
       text.appendChild(el("p", { class: "mono muted" }, line));
+      if (u.trustBadges && u.trustBadges.length) {
+        var tb = el("p", { class: "trust-badges" });
+        u.trustBadges.forEach(function (b) { tb.appendChild(el("span", { class: "trust-badge trust-" + b.key, title: b.label }, b.icon + " " + b.label.split(":")[0])); });
+        text.appendChild(tb);
+      }
       if (u.bio) text.appendChild(el("p", { class: "member-bio" }, u.bio));
+      if (u.skills && u.skills.length) {
+        var sk = el("p", { class: "skill-list", "aria-label": "Skills" });
+        u.skills.forEach(function (s) { sk.appendChild(el("span", { class: "skill-chip is-on" }, s)); });
+        text.appendChild(sk);
+      }
       MW.me().then(function (me) {
         if (me && me.username !== u.username && MW.feature("chat")) {
           var mp = el("p");

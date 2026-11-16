@@ -145,11 +145,14 @@ router.get("/threads", async function (req, res) {
 
 router.get("/unread", async function (req, res) {
   const id = req.session.user.id;
+  const groupsUnread = (await db.query(
+    `SELECT COUNT(DISTINCT m.group_id)::int AS n FROM chat_group_members m JOIN chat_group_messages gm ON gm.group_id = m.group_id
+      WHERE m.user_id = $1 AND gm.sender_id <> $1 AND NOT gm.deleted AND gm.created_at > m.read_at`, [id])).rows[0].n;
   const { rows } = await db.query(
     `SELECT COUNT(DISTINCT t.id)::int AS n FROM chat_threads t JOIN chat_messages m ON m.thread_id = t.id
       WHERE (t.user_a = $1 OR t.user_b = $1) AND m.sender_id <> $1 AND NOT m.deleted
         AND m.created_at > CASE WHEN t.user_a = $1 THEN t.a_read_at ELSE t.b_read_at END`, [id]);
-  res.json({ unread: rows[0].n });
+  res.json({ unread: rows[0].n + groupsUnread });
 });
 
 router.post("/threads", openLimiter, async function (req, res) {
@@ -249,6 +252,149 @@ router.post("/messages/:id/report", async function (req, res) {
       [userId, id, reason.slice(0, 30), details]);
   }
   res.status(201).json({ ok: true });
+});
+
+/* ---------- Group chats ---------- */
+
+const MAX_GROUP = 30;
+
+async function groupFor(id, userId) {
+  const { rows } = await db.query(
+    "SELECT g.* FROM chat_groups g JOIN chat_group_members m ON m.group_id = g.id AND m.user_id = $2 WHERE g.id = $1", [id, userId]);
+  return rows[0] || null;
+}
+
+// Can this person be added to a group run by "owner"? Same age band, not blocked, and their chat settings allow it.
+async function canJoin(owner, user) {
+  if (!user || user.status !== "active") return "can't join chats right now";
+  if (!user.birth_date) return "hasn't set up chat yet";
+  if (band(owner) !== band(user)) return band(owner) === "teen" ? "isn't a teen account" : "has a teen account";
+  if (await blockedEitherWay(owner.id, user.id)) return "can't be added";
+  if (user.chat_privacy === "nobody") return "isn't accepting new chats";
+  if (user.chat_privacy === "following") {
+    const f = await db.query("SELECT 1 FROM follows WHERE follower_id = $1 AND creator_id = $2", [user.id, owner.id]);
+    if (!f.rows.length) return "only accepts chats from creators they follow";
+  }
+  return null;
+}
+
+router.get("/groups", requireFlag("group_chats"), async function (req, res) {
+  const id = req.session.user.id;
+  const { rows } = await db.query(
+    `SELECT g.id, g.name, g.last_at,
+        (SELECT COUNT(*) FROM chat_group_members x WHERE x.group_id = g.id)::int AS members,
+        (SELECT body FROM chat_group_messages gm WHERE gm.group_id = g.id AND NOT gm.deleted ORDER BY gm.id DESC LIMIT 1) AS last_body,
+        (SELECT COUNT(*) FROM chat_group_messages gm WHERE gm.group_id = g.id AND gm.sender_id <> $1 AND NOT gm.deleted AND gm.created_at > m.read_at)::int AS unread
+       FROM chat_groups g JOIN chat_group_members m ON m.group_id = g.id AND m.user_id = $1
+      ORDER BY g.last_at DESC LIMIT 100`, [id]);
+  res.json({ groups: rows.map(function (r) { return { id: r.id, name: r.name, members: r.members, lastAt: r.last_at, unread: r.unread, preview: (r.last_body || "").slice(0, 90) }; }) });
+});
+
+router.post("/groups", requireFlag("group_chats"), openLimiter, async function (req, res) {
+  const self = await me(req);
+  if (!self.birth_date) return res.status(403).json({ code: "needs-birth-date", error: "Add your date of birth in Account settings before using chat." });
+  const name = typeof req.body.name === "string" ? req.body.name.trim().slice(0, 60) : "";
+  if (name.length < 2) return res.status(400).json({ error: "Give the group a name." });
+  const usernames = (Array.isArray(req.body.usernames) ? req.body.usernames : []).map(function (u) { return String(u || "").trim().toLowerCase().replace(/^@/, ""); })
+    .filter(function (u, i, all) { return u && all.indexOf(u) === i; }).slice(0, MAX_GROUP - 1);
+  if (!usernames.length) return res.status(400).json({ error: "Add at least one member." });
+  const found = (await db.query("SELECT id, username, birth_date, status, chat_privacy FROM users WHERE username = ANY ($1::text[]) AND id <> $2", [usernames, self.id])).rows;
+  const skipped = [];
+  const ok = [];
+  for (const u of found) { const why = await canJoin(self, u); if (why) skipped.push("@" + u.username + " " + why); else ok.push(u); }
+  usernames.forEach(function (u) { if (!found.some(function (f) { return f.username === u; })) skipped.push("@" + u + " doesn't exist"); });
+  if (!ok.length) return res.status(400).json({ error: "Nobody could be added: " + skipped.join("; ") + "." });
+  const g = await db.query("INSERT INTO chat_groups (name, owner_id, teen) VALUES ($1, $2, $3) RETURNING id", [name, self.id, band(self) === "teen"]);
+  for (const uid of [self.id].concat(ok.map(function (u) { return u.id; }))) {
+    await db.query("INSERT INTO chat_group_members (group_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", [g.rows[0].id, uid]);
+  }
+  res.status(201).json({ id: g.rows[0].id, skipped: skipped });
+});
+
+router.get("/groups/:id", requireFlag("group_chats"), async function (req, res) {
+  const userId = req.session.user.id;
+  const g = await groupFor(Number(req.params.id), userId);
+  if (!g) return res.status(404).json({ error: "That group could not be found." });
+  const after = Math.max(0, parseInt(req.query.after, 10) || 0);
+  const msgs = await db.query(
+    MESSAGE_SELECT.replace("FROM chat_messages m", "FROM chat_group_messages m") + " WHERE m.group_id = $1 AND m.id > $2 ORDER BY m.id DESC LIMIT 200", [g.id, after]);
+  msgs.rows.reverse();
+  await db.query("UPDATE chat_group_members SET read_at = NOW() WHERE group_id = $1 AND user_id = $2", [g.id, userId]);
+  const members = await db.query(
+    "SELECT u.username, u.display_name, u.avatar_url FROM chat_group_members m JOIN users u ON u.id = m.user_id WHERE m.group_id = $1 ORDER BY m.joined_at", [g.id]);
+  res.json({
+    id: g.id, name: g.name, isOwner: g.owner_id === userId,
+    members: members.rows.map(function (u) { return { username: u.username, displayName: u.display_name, avatarUrl: avatarUrl(u.avatar_url) || null }; }),
+    messages: msgs.rows.map(function (r) { return messageOut(r, userId); })
+  });
+});
+
+router.post("/groups/:id/messages", requireFlag("group_chats"), sendLimiter, async function (req, res) {
+  const self = await me(req);
+  const g = await groupFor(Number(req.params.id), self.id);
+  if (!g) return res.status(404).json({ error: "That group could not be found." });
+  if (self.status !== "active") return res.status(403).json({ error: "Your account can't send messages right now." });
+  const body = typeof req.body.body === "string" ? req.body.body.replace(/\r\n/g, "\n").trim() : "";
+  if (body.length > 2000) return res.status(400).json({ error: "Messages can be up to 2000 characters." });
+  let postId = null;
+  if (req.body.postSlug) {
+    const p = await db.query(`SELECT p.id FROM posts p LEFT JOIN users ou ON ou.id = p.user_id LEFT JOIN creator_profiles cp ON cp.user_id = p.user_id WHERE p.slug = $1 AND ${VISIBLE}`,
+      [String(req.body.postSlug).slice(0, 120)]);
+    if (!p.rows.length) return res.status(404).json({ error: "That work can't be shared." });
+    postId = p.rows[0].id;
+  }
+  if (!body && !postId) return res.status(400).json({ error: "Write a message first." });
+  const ins = await db.query("INSERT INTO chat_group_messages (group_id, sender_id, body, post_id) VALUES ($1, $2, $3, $4) RETURNING id", [g.id, self.id, body, postId]);
+  await db.query("UPDATE chat_groups SET last_at = NOW() WHERE id = $1", [g.id]);
+  await db.query("UPDATE chat_group_members SET read_at = NOW() WHERE group_id = $1 AND user_id = $2", [g.id, self.id]);
+  const { rows } = await db.query(MESSAGE_SELECT.replace("FROM chat_messages m", "FROM chat_group_messages m") + " WHERE m.id = $1", [ins.rows[0].id]);
+  res.status(201).json({ message: messageOut(rows[0], self.id) });
+});
+
+router.post("/groups/:id/members", requireFlag("group_chats"), async function (req, res) {
+  const self = await me(req);
+  const g = await groupFor(Number(req.params.id), self.id);
+  if (!g || g.owner_id !== self.id) return res.status(403).json({ error: "Only the group's creator can add people." });
+  const count = (await db.query("SELECT COUNT(*)::int AS n FROM chat_group_members WHERE group_id = $1", [g.id])).rows[0].n;
+  if (count >= MAX_GROUP) return res.status(400).json({ error: "Groups can have up to " + MAX_GROUP + " people." });
+  const username = String(req.body.username || "").trim().toLowerCase().replace(/^@/, "");
+  const u = (await db.query("SELECT id, username, birth_date, status, chat_privacy FROM users WHERE username = $1", [username])).rows[0];
+  if (!u) return res.status(404).json({ error: "There's no member with that username." });
+  const why = await canJoin(self, u);
+  if (why) return res.status(403).json({ error: "@" + u.username + " " + why + "." });
+  await db.query("INSERT INTO chat_group_members (group_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", [g.id, u.id]);
+  res.status(201).json({ ok: true });
+});
+
+// Leave a group, or (owner) remove someone.
+router.delete("/groups/:id/members/:username", requireFlag("group_chats"), async function (req, res) {
+  const self = await me(req);
+  const g = await groupFor(Number(req.params.id), self.id);
+  if (!g) return res.status(404).json({ error: "That group could not be found." });
+  const u = (await db.query("SELECT id FROM users WHERE username = $1", [String(req.params.username).toLowerCase()])).rows[0];
+  if (!u) return res.status(404).json({ error: "There's no member with that username." });
+  if (u.id !== self.id && g.owner_id !== self.id) return res.status(403).json({ error: "Only the group's creator can remove people." });
+  await db.query("DELETE FROM chat_group_members WHERE group_id = $1 AND user_id = $2", [g.id, u.id]);
+  res.json({ ok: true });
+});
+
+router.post("/groups/messages/:id/report", requireFlag("group_chats"), async function (req, res) {
+  const userId = req.session.user.id;
+  const id = Number(req.params.id);
+  const { rows } = await db.query(
+    `SELECT gm.id FROM chat_group_messages gm JOIN chat_group_members m ON m.group_id = gm.group_id AND m.user_id = $2
+      WHERE gm.id = $1 AND gm.sender_id <> $2`, [id, userId]);
+  if (!rows.length) return res.status(404).json({ error: "That message could not be found." });
+  const reason = REASONS.includes(req.body.reason) ? req.body.reason : "other";
+  await db.query("INSERT INTO reports (reporter_id, target_type, target_id, reason, details) VALUES ($1, 'group_message', $2, $3, '')", [userId, id, reason]);
+  res.status(201).json({ ok: true });
+});
+
+router.delete("/groups/messages/:id", requireFlag("group_chats"), async function (req, res) {
+  const { rows } = await db.query("UPDATE chat_group_messages SET deleted = TRUE, body = '', post_id = NULL WHERE id = $1 AND sender_id = $2 RETURNING id",
+    [Number(req.params.id), req.session.user.id]);
+  if (!rows.length) return res.status(404).json({ error: "That message could not be found." });
+  res.json({ ok: true });
 });
 
 /* ---------- Blocking ---------- */

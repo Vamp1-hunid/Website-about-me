@@ -20,6 +20,10 @@ const DEFAULTS = [
   ["follows", "Following creators", "Members can follow creators and get their posts in the Following feed.", "everyone", "Accounts & community"],
   ["notifications", "Notification bell", "Bell with new posts from people you follow, new followers, milestones, trending and announcements.", "admin", "Accounts & community"],
   ["streaks", "Online streaks", "Counts the days in a row someone visits, shown on their profile and the menu.", "admin", "Accounts & community"],
+  ["group_chats", "Group chats", "Members can make group chats (up to 30 people) and share works in them.", "everyone", "Accounts & community"],
+  ["daily_verse", "Daily Bible verse", "Members can choose to see a daily Bible verse at the top of their feed (Settings).", "everyone", "Accounts & community"],
+  ["calendar", "Calendar & holiday themes", "The calendar page with Zambian and international holidays and your events, plus holiday banners and themes.", "everyone", "Help & discovery"],
+  ["comic_maker", "Web comic panel maker", "A tool in the studio for laying out comic panels with speech bubbles and saving them as a page.", "everyone", "Creating"],
   ["rankings", "Top creators & badges", "Ranks the most popular creators (top 10 overall, top 5 per shelf), gives them badges and boosts their posts in the home feed.", "everyone", "Accounts & community"],
   ["online_status", "Online status", "Green dot on creators and members who are online (they can turn it off).", "admin", "Accounts & community"],
   // Creating
