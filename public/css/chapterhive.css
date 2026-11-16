@@ -1370,3 +1370,48 @@ body[data-holiday="newyear"] .site-header { border-bottom: 4px solid #ffd23f; }
   .feed-list { gap: 0.8rem; }
   .guest-releases-title { font-size: 1.3rem; margin: 0.3rem 0 0.5rem; }
 }
+.reserve-banner { display: flex; align-items: center; gap: 0.8rem; max-width: 1060px; margin: 0 auto 1rem; padding: 0.8rem 1rem; border-radius: 16px;
+  text-decoration: none; color: var(--ink); background: linear-gradient(90deg, color-mix(in srgb, var(--pink) 22%, var(--panel)), var(--panel)); border: 1px solid var(--pink); }
+.reserve-banner-emoji { font-size: 1.8rem; }
+.reserve-banner-text { flex: 1; display: grid; line-height: 1.3; }
+.reserve-banner-text span { font-size: 0.88rem; color: var(--ink-dim); }
+@media (max-width: 760px) { .reserve-banner { margin: 0 0 0.6rem; padding: 0.6rem 0.8rem; } .reserve-banner-emoji { font-size: 1.4rem; } }
+
+/* ===== Official account: grand golden circle with a verified tick ===== */
+.story.is-official { width: 92px; }
+.story.is-official .story-ring {
+  position: relative; width: 86px; height: 86px; padding: 4px;
+  background: conic-gradient(from 0deg, #fff3b0, #f6b40e, #ff9f1c, #ffd23f, #c98200, #fff3b0);
+  box-shadow: 0 0 0 2px rgba(246, 180, 14, 0.35), 0 0 22px rgba(246, 180, 14, 0.55);
+  animation: official-spin 6s linear infinite;
+}
+.story.is-official .story-pic { animation: official-spin 6s linear infinite reverse; border-width: 3px; }
+.story.is-official .story-name { max-width: 92px; font-weight: 800; color: var(--pink); }
+@keyframes official-spin { to { transform: rotate(360deg); } }
+.verified-tick {
+  position: absolute; right: -2px; bottom: 2px; z-index: 2; width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center; font: 900 0.85rem/1 var(--font-ui); color: #fff;
+  background: #1d9bf0; border: 3px solid var(--bg); box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+.story.is-official .verified-tick { animation: official-spin 6s linear infinite reverse; }
+.verified-inline {
+  display: inline-grid; place-items: center; width: 1.05em; height: 1.05em; margin-left: 0.3em; border-radius: 50%;
+  background: #1d9bf0; color: #fff; font: 900 0.65em/1 var(--font-ui); vertical-align: 0.15em;
+}
+@media (max-width: 760px) {
+  .story.is-official { width: 72px; }
+  .story.is-official .story-ring { width: 68px; height: 68px; padding: 3px; }
+  .verified-tick { width: 22px; height: 22px; font-size: 0.75rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .story.is-official .story-ring, .story.is-official .story-pic, .story.is-official .verified-tick { animation: none; }
+}
+/* Keep the tick fixed at the bottom-right: the ring glows instead of spinning. */
+.story.is-official .story-ring, .story.is-official .story-pic, .story.is-official .verified-tick { animation: none; }
+.story.is-official .story-ring { animation: official-glow 2.4s ease-in-out infinite alternate; }
+@keyframes official-glow {
+  from { box-shadow: 0 0 0 2px rgba(246, 180, 14, 0.3), 0 0 10px rgba(246, 180, 14, 0.4); }
+  to { box-shadow: 0 0 0 3px rgba(246, 180, 14, 0.5), 0 0 26px rgba(246, 180, 14, 0.8); }
+}
+.story-row { padding-top: 0.5rem; }
+@media (prefers-reduced-motion: reduce) { .story.is-official .story-ring { animation: none; } }

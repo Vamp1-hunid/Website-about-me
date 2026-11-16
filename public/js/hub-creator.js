@@ -43,6 +43,7 @@
     var names = el("div");
     var h1 = el("h1", {}, c.name);
     h1.appendChild(MW.onlineDot(c.online));
+    if (c.isBanditos) h1.appendChild(el("span", { class: "verified-inline", title: "Verified official account", "aria-label": "Verified official account" }, "✓"));
     names.appendChild(h1);
     if (c.premium) names.appendChild(el("span", { class: "premium-badge" }, "✦ Premium"));
     if (c.trustBadges && c.trustBadges.length) {
