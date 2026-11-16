@@ -60,14 +60,14 @@
     var button = form.querySelector("button[type='submit']");
     button.disabled = true;
     MW.api("/reserve", { method: "POST", json: {
-      username: $("username").value, displayName: $("displayName").value, email: $("email").value,
+      username: $("username").value, displayName: $("displayName").value, email: $("email").value, password: $("password").value,
       birthDate: $("birthDate").value, country: $("country").value, acceptTerms: $("acceptTerms").checked
     } }).then(function (d) {
       form.hidden = true;
       var done = $("reserve-done");
       done.hidden = false;
       done.appendChild(el("p", { class: "reserve-success" }, "🐝 @" + d.username + " is yours."));
-      done.appendChild(el("p", { class: "lead" }, "We'll email you a link to claim it the moment Chapterhive opens. " + (d.count === 1 ? "You're the very first person waiting!" : "You're one of " + d.count.toLocaleString() + " people already waiting.")));
+      done.appendChild(el("p", { class: "lead" }, (d.account ? "Your account is ready. When Chapterhive opens, just log in with @" + d.username + " and your password. " : "We'll email you a link to claim it the moment Chapterhive opens. ") + (d.count === 1 ? "You're the very first person waiting!" : "You're one of " + d.count.toLocaleString() + " people already waiting.")));
       var share = el("button", { type: "button", class: "btn" }, "Invite friends to reserve theirs");
       share.addEventListener("click", function () {
         var url = window.location.origin + "/hub/reserve";

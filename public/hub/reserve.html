@@ -63,7 +63,7 @@
       <p class="node-label">Chapterhive // launching soon</p>
       <h1 id="reserve-title">Claim your name in the hive.</h1>
       <p class="lead">Chapterhive opens soon: a home for writers, storytellers, songwriters, artists and filmmakers. Reserve your username now, before anyone else gets it.</p>
-      <p class="prelaunch-strip">🧪 We're testing our market before launch, so for now visitors can only <strong>reserve a username</strong>. Accounts, posting and logging in open to everyone at launch, and you'll get a link to claim your name.</p>
+      <p class="prelaunch-strip">🧪 We're testing our market before launch, so for now visitors can only <strong>reserve a username</strong>. Pick a password now and your account is ready and waiting: when we launch, just log in.</p>
       <div class="reserve-stats">
         <div><strong id="reserve-count">&hellip;</strong><span>names reserved</span></div>
         <div id="reserve-countdown-box" hidden><strong id="reserve-countdown">&ndash;</strong><span>until launch</span></div>
@@ -89,6 +89,12 @@
           <input type="email" id="email" name="email" maxlength="254" required autocomplete="email">
           <p class="muted">We'll send your claim link here when we open. One name per email.</p>
           <p class="error" id="email-error"></p>
+        </div>
+        <div class="form-row">
+          <label for="password">Choose a password</label>
+          <input type="password" id="password" name="password" maxlength="200" required autocomplete="new-password" aria-describedby="password-hint password-error">
+          <p class="muted" id="password-hint">Your account is made now, so at launch you just log in. At least 10 characters; a short phrase works well.</p>
+          <p class="error" id="password-error"></p>
         </div>
         <div class="form-row">
           <label for="birthDate">Date of birth</label>

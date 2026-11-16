@@ -44,7 +44,7 @@
       var section = loginForm.closest("section");
       var note = el("div", { class: "prelaunch-note", role: "note" });
       note.appendChild(el("p", { class: "prelaunch-title" }, "🔒 Team only until launch"));
-      note.appendChild(el("p", {}, "Chapterhive isn't open to the public yet. This log in is only for the Chapterhive team while we test our market before launch."));
+      note.appendChild(el("p", {}, "Chapterhive isn't open to the public yet. This log in is only for the Chapterhive team and beta testers while we test our market. Reserved a username with a password? You'll log in right here at launch."));
       var p = el("p", {}, "Want in? ");
       p.appendChild(el("a", { class: "btn btn-small", href: "/hub/reserve" }, "🐝 Reserve your username"));
       note.appendChild(p);

@@ -9,6 +9,7 @@
 
 const express = require("express");
 const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
 const rateLimit = require("express-rate-limit");
 const db = require("../db");
 const users = require("../users");
@@ -60,6 +61,13 @@ router.post("/", flags.requireFlag("reservations"), reserveLimiter, async functi
   }
   if (birth.problem) problems.push({ field: "birthDate", message: birth.problem });
   if (req.body.acceptTerms !== true) problems.push({ field: "acceptTerms", message: "Please accept the Terms and Privacy Policy." });
+  // With a password, the reservation is a real account straight away: it just can't log in until launch.
+  const password = typeof req.body.password === "string" ? req.body.password : "";
+  if (password) {
+    const pw = signup.passwordProblem(password, username);
+    if (pw) problems.push({ field: "password", message: pw });
+    if (!country) problems.push({ field: "country", message: "Choose the country you live in." });
+  }
   if (problems.length) {
     const taken = problems.length === 1 && problems[0].field === "username";
     return res.status(taken ? 409 : 400).json({ error: "Please fix the highlighted fields.", problems: problems });
@@ -67,7 +75,15 @@ router.post("/", flags.requireFlag("reservations"), reserveLimiter, async functi
   // The date of birth is only checked (13+), not stored: it's asked again when the account is claimed.
   const token = crypto.randomBytes(24).toString("hex");
   try {
-    await db.query("INSERT INTO username_reservations (username, email, display_name, country, claim_token) VALUES ($1, $2, $3, $4, $5)",
+    if (password) {
+      const hash = await bcrypt.hash(password, 12);
+      const u = await db.query(
+        `INSERT INTO users (username, display_name, password_hash, role, email, terms_accepted_at, terms_version, birth_date, country)
+         VALUES ($1, $2, $3, 'member', $4, NOW(), $5, $6, $7) RETURNING id`,
+        [username, displayName || username, hash, email, signup.TERMS_VERSION, birth.date, country]);
+      await users.welcome(u.rows[0].id, "member");
+    }
+    await db.query("INSERT INTO username_reservations (username, email, display_name, country, claim_token, claimed_at) VALUES ($1, $2, $3, $4, $5, " + (password ? "NOW()" : "NULL") + ")",
       [username, email, displayName || username, country, token]);
   } catch (error) {
     if (error.code === "23505") return res.status(409).json({ error: "Someone just reserved that name. Try another.", problems: [{ field: "username", message: "Just taken. Try another." }] });
@@ -75,12 +91,12 @@ router.post("/", flags.requireFlag("reservations"), reserveLimiter, async functi
   }
   if (mailEnabled()) {
     sendMail(email, "@" + username + " is reserved for you on Chapterhive",
-      "Hi " + (displayName || username) + ",\n\nYour username @" + username + " is reserved. When Chapterhive opens, we'll email you a link to claim it and set up your account.\n\nSee you in the hive!",
+      "Hi " + (displayName || username) + ",\n\nYour username @" + username + " is reserved" + (password ? " and your account is ready. When Chapterhive opens, just log in with your username and password." : ". When Chapterhive opens, we'll email you a link to claim it and set up your account.") + "\n\nSee you in the hive!",
       "<p>Hi " + escapeHtml(displayName || username) + ",</p><p>Your username <strong>@" + escapeHtml(username) + "</strong> is reserved. When Chapterhive opens, we'll email you a link to claim it and set up your account.</p><p>See you in the hive! 🐝</p>"
     ).catch(function () {});
   }
   const count = (await db.query("SELECT COUNT(*)::int AS n FROM username_reservations")).rows[0].n;
-  res.status(201).json({ username: username, count: count });
+  res.status(201).json({ username: username, count: count, account: Boolean(password) });
 });
 
 function escapeHtml(v) {

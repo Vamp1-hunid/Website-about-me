@@ -50,9 +50,12 @@ router.post("/", flags.requireFlag("reservations"), applyLimiter, async function
     problems.push({ field: "email", message: "Enter your email: that's where your invite will go." });
   } else if ((await db.query("SELECT 1 FROM beta_applications WHERE email = $1", [email])).rows.length) {
     problems.push({ field: "email", message: "This email has already applied. We'll be in touch." });
-  } else if ((await db.query("SELECT 1 FROM users WHERE lower(email) = $1", [email])).rows.length) {
-    problems.push({ field: "email", message: "This email already has an account." });
   } else {
+    const acct = (await db.query("SELECT username, is_beta, role FROM users WHERE lower(email) = $1", [email])).rows[0];
+    if (acct && (acct.is_beta || acct.role === "admin")) problems.push({ field: "email", message: "This account can already log in." });
+    else if (acct) reservation = { username: acct.username };
+  }
+  if (!reservation && !problems.length) {
     reservation = (await db.query("SELECT username FROM username_reservations WHERE email = $1 AND claimed_at IS NULL", [email])).rows[0] || null;
   }
   if (reservation) {
