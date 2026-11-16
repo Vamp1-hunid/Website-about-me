@@ -281,7 +281,7 @@
 
     if (!user && MW.isHub && MW.feature("reservations") && !MW.feature("signups")) {
       // Before launch the header stays small: just Log in. "Reserve your name" lives on the home page and in the menu.
-      area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub/login", title: "Logging in is for the Chapterhive team until launch" }, "Team log in"));
+      area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub/login", title: "Reserved a name with a password? Log in to follow the list and team updates" }, "Log in"));
       reservationBanner();
       return;
     }
@@ -310,6 +310,7 @@
     }
 
     // Settings live in the ☰ menu (keeps the header roomy on phones).
+    if (MW.isHub && MW.account && MW.account.waitingForLaunch) waitingBanner();
 
     var me = el("a", { class: "auth-name", href: "/profile", title: "Your profile" });
     me.appendChild(MW.avatar(user));
@@ -425,6 +426,25 @@
     main.insertBefore(beta, main.firstChild);
     main.insertBefore(card, main.firstChild);
   }
+
+  // Signed in but waiting for launch: point them to their place in line and the team's updates.
+  function waitingBanner() {
+    var path = window.location.pathname.replace(/\/$/, "");
+    var main = document.getElementById("main");
+    if (path !== "/hub" || !main || document.querySelector(".waiting-banner")) return;
+    var card = el("div", { class: "reserve-banner waiting-banner", role: "note" });
+    card.appendChild(el("span", { class: "reserve-banner-emoji", "aria-hidden": "true" }, "🐝"));
+    var t = el("span", { class: "reserve-banner-text" });
+    t.appendChild(el("strong", {}, "You're in early! Chapterhive opens soon"));
+    t.appendChild(el("span", {}, "Check how the list is growing and read the team's updates. Posting, comments and chat open at launch."));
+    card.appendChild(t);
+    var acts = el("span", { class: "waiting-actions" });
+    acts.appendChild(el("a", { class: "btn btn-small", href: "/hub/reserve#reserve-public" }, "My place"));
+    acts.appendChild(el("a", { class: "btn btn-small btn-ghost", href: "/hub/news" }, "Updates"));
+    card.appendChild(acts);
+    main.insertBefore(card, main.firstChild);
+  }
+  MW.waitingBanner = waitingBanner;
 
   // Holidays and events: a small banner on the Chapterhive home page, and a theme hook for the whole site.
   function holidayBanner() {
@@ -605,7 +625,7 @@
       }
       var items = user
         ? [["/u/" + encodeURIComponent(user.username), "👤 My profile"], ["/profile", "✏️ Edit my profile"], ["/hub/settings", "⚙ Settings & privacy"]]
-        : [["/hub/login?next=" + encodeURIComponent(MW.currentPath()), MW.isHub && MW.feature("reservations") && !MW.feature("signups") ? "Team log in" : "Log in"],
+        : [["/hub/login?next=" + encodeURIComponent(MW.currentPath()), "Log in"],
            MW.isHub && MW.feature("reservations") && !MW.feature("signups") ? ["/hub/reserve", "🐝 Reserve your username"] : ["/hub/register", "Create a free account"]];
       if (!user && MW.isHub && MW.feature("reservations") && !MW.feature("signups")) items.push(["/hub/beta", "🧪 Become a beta tester"]);
       // God's Banditos: no accounts here. Visitors are pointed to Chapterhive instead.

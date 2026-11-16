@@ -37,6 +37,12 @@ router.get("/", async function (req, res) {
   res.json({ open: await flags.isOn("reservations", req), count: count, launchAt: await launchAt() });
 });
 
+// Public list: only the number and the username. Names, emails and everything else stay admin-only.
+router.get("/list", async function (req, res) {
+  const { rows } = await db.query("SELECT ROW_NUMBER() OVER (" + ORDER + ")::int AS position, username FROM username_reservations " + ORDER + " LIMIT 10000");
+  res.json({ names: rows.map(function (r) { return { position: r.position, username: r.username }; }) });
+});
+
 router.get("/check", async function (req, res) {
   const problem = await users.usernameProblem(typeof req.query.u === "string" ? req.query.u : "");
   res.json({ available: !problem, message: problem || "That name is free. Reserve it before someone else does!" });

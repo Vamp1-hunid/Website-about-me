@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=23">
-  <link rel="stylesheet" href="/css/chapterhive.css?v=22">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=24">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -117,6 +117,16 @@
       </form>
       <div id="reserve-done" hidden></div>
       <p class="form-foot">Already have an account? <a href="/hub/login">Log in</a></p>
+    </section>
+
+    <section class="panel" id="reserve-public" aria-labelledby="reserve-public-title">
+      <p class="node-label">Chapterhive // the hive so far</p>
+      <h2 id="reserve-public-title">Reserved usernames</h2>
+      <p class="muted">Find your place in line and see who's joining. Only usernames are shown here: names and emails stay private.</p>
+      <input type="search" id="reserve-find" placeholder="Find a username&hellip;" maxlength="30" autocomplete="off" aria-label="Find a username">
+      <p id="reserve-mine-pos" class="reserve-position" hidden></p>
+      <ol id="reserve-public-list" class="reserve-public-list"></ol>
+      <p class="muted" id="reserve-public-more" hidden></p>
     </section>
 
     <section class="panel" id="reserve-admin" aria-labelledby="reserve-admin-title" hidden>

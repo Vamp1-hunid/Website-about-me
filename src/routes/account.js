@@ -338,10 +338,8 @@ router.post("/login", loginLimiter, async function (req, res) {
   }
 
   // The God's Banditos login is only for the site owner; members sign in on Chapterhive.
-  // Before launch (reservations on, new accounts off) only the team can log in: the admin and beta testers.
-  if (user.role !== "admin" && !user.is_beta && (await flags.isOn("reservations", req)) && !(await flags.isOn("signups", req))) {
-    return res.status(403).json({ error: "Chapterhive isn't open yet. Logging in is only for the Chapterhive team while we test things before launch. You can reserve your username now.", prelaunch: true });
-  }
+  // Before launch everyone with an account can sign in to follow the list and team updates;
+  // only the team (admin and beta testers) can post or chat until launch (see src/prelaunch.js).
   if (req.body.adminOnly === true && user.role !== "admin") {
     return res.status(403).json({ error: "This login is only for the site owner. Members log in on Chapterhive.", hub: "/hub/login" });
   }
@@ -396,6 +394,7 @@ router.get("/me", async function (req, res) {
         } };
     }
   }
+  if (req.session.user) extra.waitingForLaunch = await require("../prelaunch").waitingMember(req);
   const flagUser = req.session.user ? Object.assign({}, req.session.user, { is_beta: extra.isBeta }) : null;
   const features = await flags.enabledFor(flagUser);
   const featureNotices = await flags.noticesFor(flagUser);

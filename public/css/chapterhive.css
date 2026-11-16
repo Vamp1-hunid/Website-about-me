@@ -1431,3 +1431,10 @@ body[data-holiday="newyear"] .site-header { border-bottom: 4px solid #ffd23f; }
 .reserve-paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.6rem; margin: 0.9rem 0; text-align: left; }
 .reserve-paths div { display: grid; gap: 0.2rem; padding: 0.7rem 0.9rem; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
 .reserve-paths span { font-size: 0.9rem; color: var(--ink-dim); }
+.reserve-public-list { list-style: none; padding: 0; margin: 0.8rem 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.4rem; }
+.reserve-name { display: flex; gap: 0.5rem; align-items: center; padding: 0.4rem 0.7rem; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reserve-num { font-family: var(--mono, monospace); color: var(--ink-dim); font-size: 0.8rem; }
+.reserve-name.is-first { border-color: #f6b40e; box-shadow: 0 0 10px rgba(246, 180, 14, 0.35); font-weight: 800; }
+.reserve-name.is-mine { border-color: var(--pink); background: color-mix(in srgb, var(--pink) 18%, var(--panel)); font-weight: 800; }
+#reserve-find { width: 100%; max-width: 360px; }
+.waiting-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }

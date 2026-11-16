@@ -67,6 +67,8 @@
       var done = $("reserve-done");
       done.hidden = false;
       done.appendChild(el("p", { class: "reserve-success" }, "🐝 @" + d.username + " is yours."));
+      try { localStorage.setItem("ch-reserved", d.username); } catch (e) { /* private mode */ }
+      loadNames();
       if (d.position) done.appendChild(el("p", { class: "reserve-position" }, "You're #" + d.position.toLocaleString() + " on the reservation list."));
       done.appendChild(el("p", { class: "lead" }, (d.account ? "Your account is ready. When Chapterhive opens, just log in with @" + d.username + " and your password. " : "We'll email you a link to claim it the moment Chapterhive opens. ") + (d.count === 1 ? "You're the very first person waiting!" : "You're one of " + d.count.toLocaleString() + " people already waiting.")));
       var share = el("button", { type: "button", class: "btn" }, "Invite friends to reserve theirs");
@@ -89,6 +91,35 @@
       button.disabled = false;
     });
   });
+
+  // Public list: number + username only.
+  var allNames = [];
+  var SHOW = 120;
+  function mine() { try { return localStorage.getItem("ch-reserved") || ""; } catch (e) { return ""; } }
+  function drawList() {
+    var q = ($("reserve-find").value || "").toLowerCase().replace(/^@/, "").trim();
+    var list = $("reserve-public-list");
+    list.textContent = "";
+    var hits = allNames.filter(function (n) { return !q || n.username.indexOf(q) >= 0; });
+    hits.slice(0, SHOW).forEach(function (n) {
+      var li = el("li", { class: "reserve-name" + (n.username === mine() ? " is-mine" : "") + (n.position === 1 ? " is-first" : "") });
+      li.appendChild(el("span", { class: "reserve-num" }, "#" + n.position));
+      li.appendChild(el("span", {}, (n.position === 1 ? "👑 " : "") + "@" + n.username));
+      list.appendChild(li);
+    });
+    var more = $("reserve-public-more");
+    more.hidden = hits.length <= SHOW;
+    more.textContent = "…and " + (hits.length - SHOW).toLocaleString() + " more. Search to find a name.";
+    if (q && !hits.length) list.appendChild(el("li", { class: "muted" }, "No reserved username matches that. It might be free!"));
+    var m = allNames.filter(function (n) { return n.username === mine(); })[0];
+    $("reserve-mine-pos").hidden = !m;
+    if (m) $("reserve-mine-pos").textContent = "🐝 You're #" + m.position.toLocaleString() + " (@" + m.username + ")";
+  }
+  function loadNames() {
+    MW.api("/reserve/list").then(function (d) { allNames = d.names; drawList(); }).catch(function () {});
+  }
+  $("reserve-find").addEventListener("input", drawList);
+  loadNames();
 
   // Admin: the list, and sending claim links at launch
   MW.me().then(function (user) {

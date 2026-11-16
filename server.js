@@ -78,6 +78,7 @@ const api = express.Router();
 api.use(sameOriginOnly);
 // Online status, streaks and ban checks for logged-in people.
 api.use(require("./src/auth").trackActivity);
+api.use(require("./src/prelaunch").guardWrites);
 api.use("/account", require("./src/routes/account"));
 api.use("/posts", require("./src/routes/posts"));
 api.use("/comments", require("./src/routes/comments"));

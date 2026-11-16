@@ -156,11 +156,6 @@ router.get("/callback", async function (req, res) {
 
   const blocked = require("../users").standingProblem(user);
   if (blocked) return res.redirect("/hub/login?error=" + encodeURIComponent(blocked));
-  // Before launch only the team (admin and beta testers) can log in.
-  const flagsLib = require("../flags");
-  if (user.role !== "admin" && !user.is_beta && (await flagsLib.isOn("reservations", req)) && !(await flagsLib.isOn("signups", req))) {
-    return res.redirect("/hub/login?error=" + encodeURIComponent("Chapterhive isn't open yet. Logging in is only for the team until launch. You can reserve your username now."));
-  }
 
   await startSession(req, user);
   res.redirect(next);

@@ -43,14 +43,14 @@
       if (!(MW.feature("reservations") && !MW.feature("signups"))) return;
       var section = loginForm.closest("section");
       var note = el("div", { class: "prelaunch-note", role: "note" });
-      note.appendChild(el("p", { class: "prelaunch-title" }, "🔒 Team only until launch"));
-      note.appendChild(el("p", {}, "Chapterhive isn't open to the public yet. This log in is only for the Chapterhive team and beta testers while we test our market. Reserved a username with a password? You'll log in right here at launch."));
+      note.appendChild(el("p", { class: "prelaunch-title" }, "🐝 Chapterhive opens soon"));
+      note.appendChild(el("p", {}, "Reserved a username with a password? Log in to check your place on the list and read team updates. Posting, comments and chat open at launch (the team and beta testers can use them now)."));
       var p = el("p", {}, "Want in? ");
       p.appendChild(el("a", { class: "btn btn-small", href: "/hub/reserve" }, "🐝 Reserve your username"));
       note.appendChild(p);
       section.insertBefore(note, loginForm);
       var title = document.getElementById("login-title");
-      if (title) title.textContent = "Team log in";
+      if (title) title.textContent = "Log in";
       var foot = section.querySelector(".form-foot");
       if (foot) foot.remove();
     });
