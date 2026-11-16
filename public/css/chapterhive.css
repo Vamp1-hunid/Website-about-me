@@ -1455,3 +1455,5 @@ body[data-holiday="newyear"] .site-header { border-bottom: 4px solid #ffd23f; }
 .admin-filters input[type="search"] { flex: 1 1 220px; }
 .admin-filters select { flex: 0 1 auto; width: auto; }
 .admin-bulk { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 0.3rem 0; }
+.beta-quick { display: grid; gap: 0.5rem; }
+.beta-quick textarea { width: 100%; }

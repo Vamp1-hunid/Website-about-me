@@ -31,11 +31,42 @@ function escapeHtml(v) {
   return String(v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]; });
 }
 
+// Is it open, and (for signed-in people) where do they stand?
 router.get("/", async function (req, res) {
-  res.json({ open: await flags.isOn("reservations", req) });
+  const out = { open: await flags.isOn("beta_applications", req) };
+  if (req.session && req.session.user) {
+    const u = (await db.query("SELECT username, email, is_beta, role, birth_date FROM users WHERE id = $1", [req.session.user.id])).rows[0];
+    const app = u && u.email ? (await db.query("SELECT status, created_at FROM beta_applications WHERE email = $1", [u.email.toLowerCase()])).rows[0] : null;
+    out.me = { username: u.username, isBeta: u.is_beta || u.role === "admin", hasEmail: Boolean(u.email), hasBirthDate: Boolean(u.birth_date),
+      application: app ? { status: app.status, appliedAt: app.created_at } : null };
+  }
+  res.json(out);
 });
 
-router.post("/", flags.requireFlag("reservations"), applyLimiter, async function (req, res) {
+// Signed-in members apply in one step: their username, email and details come from their account.
+router.post("/me", flags.requireFlag("beta_applications"), applyLimiter, async function (req, res) {
+  if (!req.session || !req.session.user) return res.status(401).json({ error: "Log in first." });
+  const u = (await db.query("SELECT id, username, email, display_name, country, birth_date, is_beta, role FROM users WHERE id = $1", [req.session.user.id])).rows[0];
+  if (u.is_beta || u.role === "admin") return res.status(400).json({ error: "You're already a beta tester." });
+  if (!u.email) return res.status(400).json({ error: "Add an email to your account first (Edit my profile), so we can tell you when you're approved.", needsEmail: true });
+  if (!u.birth_date) return res.status(400).json({ error: "Add your date of birth in Edit my profile first.", needsBirthDate: true });
+  const reason = (typeof req.body.reason === "string" ? req.body.reason.trim() : "").slice(0, 1000);
+  if (reason.length < 10) return res.status(400).json({ error: "Tell us a little about why you'd like to test.", problems: [{ field: "reason", message: "A sentence or two, please." }] });
+  const email = u.email.toLowerCase();
+  const existing = (await db.query("SELECT id, status FROM beta_applications WHERE email = $1", [email])).rows[0];
+  if (existing && existing.status === "pending") return res.status(400).json({ error: "You've already applied. We'll let you know soon." });
+  if (existing) {
+    // Declined before? They can apply again.
+    await db.query("UPDATE beta_applications SET status = 'pending', reason = $1, username = $2, created_at = NOW(), decided_at = NULL WHERE id = $3", [reason, u.username, existing.id]);
+  } else {
+    await db.query("INSERT INTO beta_applications (username, email, display_name, country, reason) VALUES ($1, $2, $3, $4, $5)",
+      [u.username, email, u.display_name || u.username, u.country, reason]);
+  }
+  require("../notify").notifyAdmins({ type: "beta", title: "🧪 New beta tester application", body: "@" + u.username + " (" + (u.display_name || u.username) + ") wants to test Chapterhive.", link: "/hub/beta#beta-admin" }).catch(function () {});
+  res.status(201).json({ username: u.username, account: true });
+});
+
+router.post("/", flags.requireFlag("beta_applications"), applyLimiter, async function (req, res) {
   const clean = function (v) { return typeof v === "string" ? v.trim() : ""; };
   let username = clean(req.body.username).toLowerCase().replace(/^@/, "");
   const email = clean(req.body.email).toLowerCase();
