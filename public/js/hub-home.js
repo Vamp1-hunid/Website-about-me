@@ -36,17 +36,21 @@
       var seen = {};
       var ring = [];
       (data.latest || []).forEach(function (p) {
-        if (p.creator && !seen[p.creator.handle]) { seen[p.creator.handle] = 1; ring.push({ handle: p.creator.handle, name: p.creator.name, avatarUrl: p.creator.avatarUrl, fresh: true }); }
+        if (p.creator && !seen[p.creator.handle]) { seen[p.creator.handle] = 1; ring.push({ handle: p.creator.handle, name: p.creator.name, avatarUrl: p.creator.avatarUrl, fresh: true, official: p.creator.isBanditos }); }
       });
-      data.creators.forEach(function (c) { if (!seen[c.handle]) { seen[c.handle] = 1; ring.push({ handle: c.handle, name: c.name, avatarUrl: c.avatarUrl }); } });
+      data.creators.forEach(function (c) { if (!seen[c.handle]) { seen[c.handle] = 1; ring.push({ handle: c.handle, name: c.name, avatarUrl: c.avatarUrl, official: c.isBanditos }); } });
+      // The official account (the site owner's) always comes first, in a bigger golden circle with a verified badge.
+      ring.sort(function (a, b) { return (b.official ? 1 : 0) - (a.official ? 1 : 0); });
       ring.slice(0, 20).forEach(function (c) {
-        var a = el("a", { class: "story" + (c.fresh ? " is-fresh" : ""), href: "/hub/c/" + encodeURIComponent(c.handle), title: c.name + (c.fresh ? " posted recently" : "") });
+        var a = el("a", { class: "story" + (c.fresh ? " is-fresh" : "") + (c.official ? " is-official" : ""), href: "/hub/c/" + encodeURIComponent(c.handle),
+          title: c.name + (c.official ? " · Official account" : c.fresh ? " posted recently" : "") });
         var circle = el("span", { class: "story-ring" });
+        if (c.official) circle.appendChild(el("span", { class: "verified-tick", "aria-label": "Verified official account", title: "Verified official account" }, "✓"));
         var pic = el("span", { class: "story-pic" });
         if (c.avatarUrl) pic.appendChild(el("img", { src: c.avatarUrl, alt: "" })); else pic.textContent = (c.name || "?").charAt(0);
         circle.appendChild(pic);
         a.appendChild(circle);
-        a.appendChild(el("span", { class: "story-name" }, c.name));
+        a.appendChild(el("span", { class: "story-name" }, c.official ? "★ Official" : c.name));
         stories.appendChild(a);
       });
       var more = el("a", { class: "story story-more", href: "/hub/creators" });

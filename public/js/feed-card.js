@@ -108,6 +108,7 @@
     who.appendChild(av);
     var names = el("span", { class: "feed-names" });
     var nameLine = el("strong", {}, post.creator ? post.creator.name : "Chapterhive");
+    if (post.creator && post.creator.isBanditos) nameLine.appendChild(el("span", { class: "verified-inline", title: "Verified official account", "aria-label": "Verified official account" }, "✓"));
     if (post.creator && post.creator.badges && post.creator.badges.length) nameLine.appendChild(MW.badges(post.creator.badges, true));
     names.appendChild(nameLine);
     if (post.collaborators && post.collaborators.length) {
