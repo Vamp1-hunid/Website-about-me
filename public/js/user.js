@@ -25,6 +25,16 @@
       if (u.streak > 1 && MW.feature("streaks")) { var sp = el("p"); sp.appendChild(el("span", { class: "streak-chip" }, "🔥 " + u.streak + "-day streak")); text.appendChild(sp); }
       var line = "@" + u.username + " · joined " + MW.formatDate(u.joined);
       text.appendChild(el("p", { class: "mono muted" }, line));
+      if (u.roleTags && u.roleTags.length) {
+        var rt = el("div", { class: "role-tags" });
+        u.roleTags.forEach(function (t) {
+          var tag = el("span", { class: "role-tag role-" + t.key, title: t.label });
+          tag.appendChild(el("span", { class: "role-tag-icon", "aria-hidden": "true" }, t.icon));
+          tag.appendChild(el("span", {}, t.label));
+          rt.appendChild(tag);
+        });
+        text.appendChild(rt);
+      }
       if (u.trustBadges && u.trustBadges.length) {
         var tb = el("p", { class: "trust-badges" });
         u.trustBadges.forEach(function (b) { tb.appendChild(el("span", { class: "trust-badge trust-" + b.key, title: b.label }, b.icon + " " + b.label.split(":")[0])); });
