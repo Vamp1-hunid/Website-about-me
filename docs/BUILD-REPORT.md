@@ -1637,3 +1637,23 @@ banners, the menu, the admin lists, the public list and the username preview.
 - **Bell on phones:** the notification panel opens as a full-width sheet under the header, so
   nothing is cut off.
 - Google sign-up now makes usernames that follow the new rule (adds `_hive` when there's no `_`).
+
+### Version 20 (16 November 2026): applying to beta test after reserving
+
+- **Separate switch:** beta applications have their own Site features switch, `beta_applications`
+  (live for everyone). They no longer close when the reservation campaign ends, so people can apply
+  during or after it.
+- **One-step apply for signed-in people** (`POST /api/beta/me`):
+  - Anyone logged in, including people who reserved with a password, sees just one box on
+    `/hub/beta`: "Why would you like to test?" and an **Apply as @theirname** button.
+  - Their username, email, name, country and date of birth come from their account.
+  - The page shows their status: already a beta tester, application waiting, or "you can apply
+    again" after a decline.
+- **Visitors who aren't logged in** see a note at the top of the form: "Already reserved a name or
+  have an account? Log in and apply in one step."
+- **Easier to find:**
+  - **🧪 Become a beta tester** is in the ☰ menu for every signed-in member who isn't a beta
+    tester yet.
+  - The "You're in early!" home banner has a **🧪 Beta test** button.
+- **Re-applying:** someone who was declined can apply again; their application goes back to
+  Waiting with the new reason.

@@ -473,6 +473,7 @@
     var acts = el("span", { class: "waiting-actions" });
     acts.appendChild(el("a", { class: "btn btn-small", href: "/hub/reserve#reserve-public" }, "My place"));
     acts.appendChild(el("a", { class: "btn btn-small btn-ghost", href: "/hub/news" }, "Updates"));
+    if (MW.feature("beta_applications")) acts.appendChild(el("a", { class: "btn btn-small btn-ghost", href: "/hub/beta" }, "🧪 Beta test"));
     card.appendChild(acts);
     main.insertBefore(card, main.firstChild);
   }
@@ -659,7 +660,7 @@
         ? [["/hub/u/" + encodeURIComponent(user.username), "👤 My profile"], ["/hub/members", "👥 Find members"], ["/hub/profile", "✏️ Edit my profile"], ["/hub/settings", "⚙ Settings & privacy"]]
         : [["/hub/login?next=" + encodeURIComponent(MW.currentPath()), "Log in"],
            MW.isHub && MW.feature("reservations") && !MW.feature("signups") ? ["/hub/reserve", "🐝 Reserve your username"] : ["/hub/register", "Create a free account"]];
-      if (!user && MW.isHub && MW.feature("reservations") && !MW.feature("signups")) items.push(["/hub/beta", "🧪 Become a beta tester"]);
+      if (MW.isHub && MW.feature("beta_applications") && (!user ? (MW.feature("reservations") && !MW.feature("signups")) : !(MW.account && MW.account.isBeta) && user.role !== "admin")) items.push(["/hub/beta", "🧪 Become a beta tester"]);
       // God's Banditos: no accounts here. Visitors are pointed to Chapterhive instead.
       if (!MW.isHub && (!user || user.role !== "admin")) {
         account.querySelector(".node-label").textContent = "Chapterhive";

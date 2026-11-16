@@ -21,8 +21,56 @@
   $("birthDate").max = new Date().toISOString().slice(0, 10);
 
   MW.api("/beta").then(function (d) {
-    if (!d.open) { form.hidden = true; $("beta-closed").hidden = false; }
+    if (!d.open) { form.hidden = true; $("beta-closed").hidden = false; return; }
+    if (d.me) quickApply(d.me);
+    else {
+      var hint = el("p", { class: "prelaunch-strip" });
+      hint.appendChild(document.createTextNode("Already reserved a name or have an account? "));
+      hint.appendChild(el("a", { href: "/hub/login?next=" + encodeURIComponent("/hub/beta") }, "Log in"));
+      hint.appendChild(document.createTextNode(" and apply in one step: no need to fill all of this in again."));
+      form.parentNode.insertBefore(hint, form);
+    }
   });
+
+  // Signed in: no long form. Just say why, and press Apply.
+  function quickApply(me) {
+    form.hidden = true;
+    var foot = form.parentNode.querySelector(".form-foot");
+    if (foot) foot.hidden = true;
+    var box = el("div", { class: "beta-quick" });
+    form.parentNode.insertBefore(box, form);
+    if (me.isBeta) {
+      box.appendChild(el("p", { class: "reserve-success" }, "🧪 You're already a beta tester. Thank you!"));
+      return;
+    }
+    if (me.application && me.application.status === "pending") {
+      box.appendChild(el("p", { class: "reserve-success" }, "🐝 You've applied as @" + me.username + "."));
+      box.appendChild(el("p", { class: "lead" }, "We'll let you know in your bell as soon as you're approved."));
+      return;
+    }
+    box.appendChild(el("p", { class: "lead" }, "You're signed in as @" + me.username + ". We'll use your account details, so all we need is a line about why you'd like to test." +
+      (me.application && me.application.status === "declined" ? " (You can apply again.)" : "")));
+    if (!me.hasEmail || !me.hasBirthDate) {
+      var fix = el("p", { class: "feedback feedback-error" }, "First add your " + (!me.hasEmail ? "email" : "date of birth") + " in ");
+      fix.appendChild(el("a", { href: "/hub/profile" }, "Edit my profile"));
+      box.appendChild(fix);
+    }
+    var label = el("label", { for: "quick-reason" }, "Why would you like to test? What do you make or enjoy?");
+    var ta = el("textarea", { id: "quick-reason", maxlength: "1000", rows: "4" });
+    var err = el("p", { class: "error" });
+    var btn = el("button", { type: "button", class: "btn" }, "🧪 Apply as @" + me.username);
+    box.appendChild(label); box.appendChild(ta); box.appendChild(err);
+    var actions = el("div", { class: "hero-actions" }); actions.appendChild(btn); box.appendChild(actions);
+    btn.addEventListener("click", function () {
+      err.textContent = "";
+      btn.disabled = true;
+      MW.api("/beta/me", { method: "POST", json: { reason: ta.value } }).then(function () {
+        box.textContent = "";
+        box.appendChild(el("p", { class: "reserve-success" }, "🧪 Application sent!"));
+        box.appendChild(el("p", { class: "lead" }, "As soon as you're approved you can start testing. You'll get a note in your bell."));
+      }).catch(function (e) { err.textContent = e.message; btn.disabled = false; });
+    });
+  }
 
   $("username").addEventListener("input", function () {
     var u = $("username");
