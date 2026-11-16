@@ -258,7 +258,7 @@
       d.announcements.forEach(function (a) {
         list.appendChild(ADMIN.listItem({
           title: a.title,
-          meta: MW.formatDateTime(a.created_at) + " · " + (a.audience === "creators" ? "creators" : "everyone") + (a.body ? " · " + a.body.slice(0, 80) : ""),
+          meta: MW.formatDateTime(a.created_at) + " · " + ({ creators: "creators", beta: "🧪 beta testers", staff: "🛡️ staff" }[a.audience] || "everyone") + (a.body ? " · " + a.body.slice(0, 80) : ""),
           actions: [ADMIN.confirmButton("Delete", function () {
             return MW.api("/admin/announcements/" + a.id, { method: "DELETE" }).then(loadAnnouncements);
           })]
@@ -278,7 +278,12 @@
       loadAnnouncements();
     }).catch(function (e) { fb.className = "feedback feedback-error"; fb.textContent = e.message; });
   });
-  ADMIN.onShow("announce", loadAnnouncements);
+  ADMIN.onShow("announce", function () {
+    // "📣 Post an update" from the menu opens here with Beta testers already chosen.
+    var to = new URLSearchParams(window.location.search).get("to");
+    if (to && $("an-audience").querySelector("option[value='" + to + "']")) $("an-audience").value = to;
+    loadAnnouncements();
+  });
 
   /* ---------- Features (feature flags) ---------- */
 

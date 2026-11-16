@@ -107,7 +107,7 @@
 
   // Admin: review applications
   MW.me().then(function (user) {
-    if (!user || user.role !== "admin") return;
+    if (!user || (user.role !== "admin" && (((MW.account && MW.account.staffPerms) || []).indexOf("approve_beta") < 0))) return;
     $("beta-admin").hidden = false;
     if (window.location.hash === "#beta-admin") $("beta-admin").scrollIntoView();
     function showLink(app, d) {

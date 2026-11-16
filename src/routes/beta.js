@@ -16,7 +16,8 @@ const db = require("../db");
 const users = require("../users");
 const signup = require("../signup");
 const flags = require("../flags");
-const { requireAdmin } = require("../auth");
+const { requireStaff } = require("../staff");
+const requireAdmin = requireStaff("approve_beta");
 const { mailEnabled, sendMail } = require("../mail");
 
 const router = express.Router();
@@ -62,7 +63,7 @@ router.post("/me", flags.requireFlag("beta_applications"), applyLimiter, async f
     await db.query("INSERT INTO beta_applications (username, email, display_name, country, reason) VALUES ($1, $2, $3, $4, $5)",
       [u.username, email, u.display_name || u.username, u.country, reason]);
   }
-  require("../notify").notifyAdmins({ type: "beta", title: "🧪 New beta tester application", body: "@" + u.username + " (" + (u.display_name || u.username) + ") wants to test Chapterhive.", link: "/hub/beta#beta-admin" }).catch(function () {});
+  require("../notify").notifyStaff("approve_beta", { type: "beta", title: "🧪 New beta tester application", body: "@" + u.username + " (" + (u.display_name || u.username) + ") wants to test Chapterhive.", link: "/hub/beta#beta-admin" }).catch(function () {});
   res.status(201).json({ username: u.username, account: true });
 });
 
@@ -138,7 +139,7 @@ router.post("/", flags.requireFlag("beta_applications"), applyLimiter, async fun
     if (error.code === "23505") return res.status(400).json({ error: "This email has already applied.", problems: [{ field: "email", message: "Already applied." }] });
     throw error;
   }
-  require("../notify").notifyAdmins({ type: "beta", title: "🧪 New beta tester application", body: "@" + username + " (" + (displayName || username) + ") wants to test Chapterhive.", link: "/hub/beta#beta-admin" }).catch(function () {});
+  require("../notify").notifyStaff("approve_beta", { type: "beta", title: "🧪 New beta tester application", body: "@" + username + " (" + (displayName || username) + ") wants to test Chapterhive.", link: "/hub/beta#beta-admin" }).catch(function () {});
   res.status(201).json({ username: username, keptReservation: Boolean(reservation), position: position, account: accountMade });
 });
 

@@ -203,5 +203,9 @@
   }
 
   ADMIN.onReady(refreshBadge);
-  ADMIN.onShow("chapterhive", function () { loadCreators(); loadReports(); });
+  ADMIN.onShow("chapterhive", function () {
+    var perms = (MW.account && MW.account.staffPerms) || [];
+    if (!ADMIN.isStaff || perms.indexOf("approve_creators") >= 0) loadCreators();
+    if (!ADMIN.isStaff || perms.indexOf("handle_reports") >= 0) loadReports();
+  });
 })();

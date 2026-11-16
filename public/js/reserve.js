@@ -6,6 +6,39 @@
   if (!MW || !form) return;
   var el = MW.el;
   var $ = function (id) { return document.getElementById(id); };
+
+  // Continue with Google: Google gives us a verified email, so no email box or password needed.
+  var useGoogle = false;
+  MW.me().then(function (user) {
+    if (user) {
+      // Already signed in: reserving here would make a second account, so point that out instead.
+      var note = el("p", { class: "prelaunch-strip" });
+      note.appendChild(document.createTextNode("You're signed in as @" + user.username + ", so your name is already yours. To reserve a different name for someone else, log out first. "));
+      note.appendChild(el("a", { href: "#reserve-public" }, "See the list"));
+      form.parentNode.insertBefore(note, form);
+      form.hidden = true;
+      return;
+    }
+    if (!MW.googleEnabled) return;
+    var params = new URLSearchParams(window.location.search);
+    if (params.get("google") === "1") {
+      MW.api("/account/google-pending").then(function (d) {
+        if (!d.pending || !d.pending.email) { $("reserve-google").hidden = false; return; }
+        useGoogle = true;
+        $("email-row").hidden = true;
+        $("password-row").hidden = true;
+        $("email").required = false;
+        $("password").required = false;
+        var using = $("reserve-google-using");
+        using.hidden = false;
+        using.textContent = "✓ Using your Google account (" + d.pending.email + "). Pick your username and finish below.";
+        if (!$("displayName").value) $("displayName").value = d.pending.displayName || "";
+        if (!$("username").value && d.pending.username) { $("username").value = d.pending.username; $("username").dispatchEvent(new Event("input")); }
+      });
+    } else {
+      $("reserve-google").hidden = false;
+    }
+  });
   MW.usernamePreview(document.getElementById("username"));
 
   // Countries
@@ -61,7 +94,7 @@
     var button = form.querySelector("button[type='submit']");
     button.disabled = true;
     MW.api("/reserve", { method: "POST", json: {
-      username: $("username").value, displayName: $("displayName").value, email: $("email").value, password: $("password").value,
+      username: $("username").value, displayName: $("displayName").value, email: useGoogle ? "" : $("email").value, password: useGoogle ? "" : $("password").value, useGoogle: useGoogle,
       birthDate: $("birthDate").value, country: $("country").value, acceptTerms: $("acceptTerms").checked
     } }).then(function (d) {
       form.hidden = true;
@@ -71,7 +104,7 @@
       try { localStorage.setItem("ch-reserved", d.username); } catch (e) { /* private mode */ }
       loadNames();
       if (d.position) done.appendChild(el("p", { class: "reserve-position" }, "You're #" + d.position.toLocaleString() + " on the reservation list."));
-      done.appendChild(el("p", { class: "lead" }, (d.account ? "Your account is ready. When Chapterhive opens, just log in with @" + d.username + " and your password. " : "We'll email you a link to claim it the moment Chapterhive opens. ") + (d.count === 1 ? "You're the very first person waiting!" : "You're one of " + d.count.toLocaleString() + " people already waiting.")));
+      done.appendChild(el("p", { class: "lead" }, (d.google ? "Your account is ready and you're signed in. When Chapterhive opens, just press Continue with Google. " : d.account ? "Your account is ready. When Chapterhive opens, just log in with @" + d.username + " and your password. " : "We'll email you a link to claim it the moment Chapterhive opens. ") + (d.count === 1 ? "You're the very first person waiting!" : "You're one of " + d.count.toLocaleString() + " people already waiting.")));
       var share = el("button", { type: "button", class: "btn" }, "Invite friends to reserve theirs");
       share.addEventListener("click", function () {
         var url = window.location.origin + "/hub/reserve";
@@ -124,7 +157,7 @@
 
   // Admin: the list, and sending claim links at launch
   MW.me().then(function (user) {
-    if (!user || user.role !== "admin") return;
+    if (!user || (user.role !== "admin" && (((MW.account && MW.account.staffPerms) || []).indexOf("manage_reservations") < 0))) return;
     $("reserve-admin").hidden = false;
     if (window.location.hash === "#reserve-admin") $("reserve-admin").scrollIntoView();
     // Filters: search, status, country, order.
@@ -196,7 +229,9 @@
       }
     }
     load();
-    MW.api("/reserve/admin/mine").then(function (m) {
+    document.querySelector(".reserve-mine").hidden = true;
+    if (MW.account && MW.account.isOwner) MW.api("/reserve/admin/mine").then(function (m) {
+      document.querySelector(".reserve-mine").hidden = false;
       if (!m.isOwner) { document.querySelector(".reserve-mine").hidden = true; return; }
       $("mine-username").value = m.username;
       MW.usernamePreview($("mine-username"));

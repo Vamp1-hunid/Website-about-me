@@ -10,6 +10,7 @@ const express = require("express");
 const cloudinary = require("cloudinary").v2;
 const db = require("../db");
 const { requireAdmin, requireCreator } = require("../auth");
+const staff = require("../staff");
 const storage = require("../storage");
 const { mailEnabled, mailProvider, sendMail } = require("../mail");
 const { googleEnabled } = require("./google");
@@ -19,8 +20,22 @@ const { resolveMedia, parsePublishAt, statusOf, deleteAll } = require("../media"
 const router = express.Router();
 // Stories, characters and uploads are open to approved Chapterhive creators (each sees only their own);
 // everything else here is for the admin only.
+// Which staff power opens which part of the dashboard (admins can use everything).
+const STAFF_ROUTES = [
+  [/^\/(reviews|review-templates)(\/|$)/, ["approve_posts"]],
+  [/^\/creators(\/|$)/, ["approve_creators"]],
+  [/^\/(reports|chat-messages)(\/|$)/, ["handle_reports"]],
+  [/^\/users\/\d+\/beta$/, ["approve_beta"]],
+  [/^\/users(\/\d+\/(standing|posts))?$/, ["moderate_users"]],
+  [/^\/announcements(\/|$)/, ["post_updates"]]
+];
 router.use(function (req, res, next) {
   if (/^\/(series|characters|media|import-document)(\/|$)/.test(req.path)) return requireCreator(req, res, next);
+  if (/^\/staff(\/|$)/.test(req.path)) return staff.requireOwner(req, res, next);
+  if (req.session.user && req.session.user.role !== "admin") {
+    const match = STAFF_ROUTES.find(function (r) { return r[0].test(req.path); });
+    if (match) return staff.requireStaff.apply(null, match[1])(req, res, next);
+  }
   return requireAdmin(req, res, next);
 });
 
@@ -888,10 +903,10 @@ router.post("/users/:id/standing", async function (req, res) {
   const { rows } = await db.query(
     `UPDATE users SET status = $1::varchar, status_reason = $2,
             suspended_until = CASE WHEN $1::varchar = 'suspended' THEN NOW() + ($3 || ' days')::interval ELSE NULL END
-      WHERE id = $4 AND role <> 'admin' RETURNING id, username, status, suspended_until`,
-    [status, status === "active" ? "" : reason, String(days), id]
+      WHERE id = $4 AND role <> 'admin' AND NOT is_owner AND ($5 OR cardinality(staff_perms) = 0) RETURNING id, username, status, suspended_until`,
+    [status, status === "active" ? "" : reason, String(days), id, req.session.user.role === "admin"]
   );
-  if (!rows.length) return res.status(404).json({ error: "That account could not be found (or it's an admin)." });
+  if (!rows.length) return res.status(404).json({ error: "That account could not be found (or it's an admin or staff member)." });
   if (status !== "active") {
     // Sign them out everywhere right away.
     await db.query("DELETE FROM user_sessions WHERE (sess -> 'user' ->> 'id')::int = $1", [id]);
@@ -906,9 +921,54 @@ router.post("/users/:id/beta", async function (req, res) {
   const { rows } = await db.query("UPDATE users SET is_beta = $1 WHERE id = $2 RETURNING id, is_beta", [req.body.isBeta === true, Number(req.params.id)]);
   if (!rows.length) return res.status(404).json({ error: "That account could not be found." });
   if (rows[0].is_beta) {
-    await notify(rows[0].id, { type: "info", title: "You're a beta tester! 🧪", body: "You'll see some new features before everyone else. Tell us what you think through the suggestion box.", link: "/help" });
+    await notify(rows[0].id, { type: "info", title: "You're a beta tester! 🧪", body: "You'll see some new features before everyone else. Tell us what you think through the suggestion box.", link: "/hub/help" });
   }
   res.json({ isBeta: rows[0].is_beta });
+});
+
+/* ---------- Team & powers (owner only) ---------- */
+
+// GET /api/admin/staff -> everyone with admin rights or staff powers, plus the powers that exist
+router.get("/staff", async function (req, res) {
+  const { rows } = await db.query(
+    `SELECT id, username, display_name, role, is_owner, is_beta, staff_perms, status, last_seen_at, created_at
+       FROM users WHERE role = 'admin' OR cardinality(staff_perms) > 0 OR is_owner
+      ORDER BY is_owner DESC, (role = 'admin') DESC, username`);
+  res.json({
+    powers: staff.PERMS.map(function (p) { return { key: p[0], label: p[1], description: p[2] }; }),
+    people: rows.map(function (u) {
+      return { id: u.id, username: u.username, displayName: u.display_name, isOwner: u.is_owner, isAdmin: u.role === "admin",
+        isBeta: u.is_beta, powers: u.staff_perms || [], status: u.status, lastSeenAt: u.last_seen_at };
+    })
+  });
+});
+
+// PUT /api/admin/staff/:username { powers: ["approve_beta", ...] }  -> give or take powers
+router.put("/staff/:username", async function (req, res) {
+  const powers = Array.isArray(req.body.powers) ? req.body.powers.filter(function (p) { return staff.KEYS.includes(p); }) : null;
+  if (!powers) return res.status(400).json({ error: "Choose which powers to give." });
+  const username = String(req.params.username || "").toLowerCase().replace(/^@/, "");
+  const target = (await db.query("SELECT id, username, is_owner, status FROM users WHERE username = $1", [username])).rows[0];
+  if (!target) return res.status(404).json({ error: "No account called @" + username + "." });
+  if (target.is_owner) return res.status(400).json({ error: "The owner's account always has every power." });
+  if (target.status === "banned") return res.status(400).json({ error: "That account is banned." });
+  const unique = Array.from(new Set(powers));
+  await db.query("UPDATE users SET staff_perms = $1 WHERE id = $2", [unique, target.id]);
+  if (unique.length) {
+    const labels = staff.PERMS.filter(function (p) { return unique.includes(p[0]); }).map(function (p) { return p[1].toLowerCase(); });
+    await notify(target.id, { type: "info", title: "🛡️ You've been given staff powers", body: "You can now: " + labels.join(", ") + ". Find your tools under Staff tools in the menu.", link: "/admin" });
+  }
+  res.json({ username: target.username, powers: unique });
+});
+
+// POST /api/admin/staff/:username/remove-admin -> takes full admin rights away (keeps any staff powers)
+router.post("/staff/:username/remove-admin", async function (req, res) {
+  const username = String(req.params.username || "").toLowerCase();
+  const { rows } = await db.query("UPDATE users SET role = 'member' WHERE username = $1 AND role = 'admin' AND NOT is_owner RETURNING id, username", [username]);
+  if (!rows.length) return res.status(400).json({ error: "That account isn't a removable admin (the owner's account can't be changed)." });
+  // Sign them out so the change takes effect at once.
+  await db.query("DELETE FROM user_sessions WHERE (sess -> 'user' ->> 'id')::int = $1", [rows[0].id]);
+  res.json({ ok: true, username: rows[0].username });
 });
 
 /* ---------- Announcements (news from the admin, in everyone's bell) ---------- */
@@ -924,7 +984,7 @@ router.post("/announcements", async function (req, res) {
   let link = typeof req.body.link === "string" ? req.body.link.trim().slice(0, 300) : "";
   if (!title) return res.status(400).json({ error: "Give the announcement a title." });
   if (link && !/^(\/[^\s]*|https:\/\/[^\s<>"]+)$/.test(link)) return res.status(400).json({ error: "Links must start with / or https://" });
-  const audience = req.body.audience === "creators" ? "creators" : "all";
+  const audience = ["creators", "beta", "staff"].includes(req.body.audience) ? req.body.audience : "all";
   const { rows } = await db.query(
     "INSERT INTO announcements (title, body, link, audience) VALUES ($1, $2, $3, $4) RETURNING *",
     [title, body, link, audience]
