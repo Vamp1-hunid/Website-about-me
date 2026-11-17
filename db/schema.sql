@@ -543,7 +543,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS bio VARCHAR(300) NOT NULL DEFAULT '';
 --  profile_visible: whether other members can open my member page
 --  creator_profiles.post_visibility: everyone | members (signed-in only) | followers (only my followers)
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_chat_privacy_check;
-ALTER TABLE users ADD CONSTRAINT users_chat_privacy_check CHECK (chat_privacy IN ('everyone', 'following', 'nobody'));
+ALTER TABLE users ADD CONSTRAINT users_chat_privacy_check CHECK (chat_privacy IN ('everyone', 'followers', 'buddies', 'following', 'nobody'));
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_visible BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS post_visibility VARCHAR(10) NOT NULL DEFAULT 'everyone';
 DO $$ BEGIN
