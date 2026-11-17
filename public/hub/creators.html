@@ -24,8 +24,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=27">
-  <link rel="stylesheet" href="/css/chapterhive.css?v=32">
+  <link rel="stylesheet" href="/css/styles.css?v=28">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=33">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -55,7 +55,7 @@
   <nav id="site-nav" class="site-nav" aria-label="Main navigation">
     <a href="/hub" data-nav="hub">Home</a>
     <a href="/hub/creators" data-nav="creators">Creators</a>
-    <a href="/hub/top" data-nav="top">Top creators</a>
+    <a href="/hub/buddies" data-nav="buddies">Buddies</a>
     <a href="/hub/feed" data-nav="feed">Following</a>
     <a href="/hub/news" data-nav="news">News &amp; updates</a>
     <a href="/hub/collabs" data-nav="collabs">Collabs</a>
@@ -101,7 +101,17 @@
         <button type="submit" class="btn-small">Apply</button>
       </form>
     </section>
-    <section class="panel" aria-label="Creators">
+    <section class="panel top-in-creators" id="top" aria-labelledby="overall-title">
+      <p class="node-label">Hall of the hive</p>
+      <h2 id="overall-title">🐝 Top creators</h2>
+      <p class="muted">The most loved creators right now, based on likes, saves, comments, new followers and new work over the last 30 days.</p>
+      <p class="mono muted" id="top-updated"></p>
+      <div id="top-admin"></div>
+      <ol id="top-overall" class="top-list"></ol>
+      <details class="top-more"><summary>Top creators by shelf</summary><div id="top-scopes" class="top-scopes"></div></details>
+    </section>
+    <section class="panel" aria-label="All creators">
+      <h2>All creators</h2>
       <div id="creator-list" class="creator-grid" aria-live="polite"><p class="loading">Loading&hellip;</p></div>
       <nav class="pager" aria-label="Pages"><a id="cprev" class="btn btn-ghost btn-small" hidden>Previous</a><span id="cpage"></span><a id="cnext" class="btn btn-ghost btn-small" hidden>Next</a></nav>
     </section>
@@ -115,6 +125,8 @@
   <script src="/js/api.js" defer></script>
   <script src="/js/script.js" defer></script>
   <script src="/js/hub.js" defer></script>
+  <script src="/js/markup.js" defer></script>
   <script src="/js/hub-creators.js" defer></script>
+  <script src="/js/hub-top.js" defer></script>
 </body>
 </html>

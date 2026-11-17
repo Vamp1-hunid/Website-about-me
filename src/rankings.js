@@ -110,7 +110,7 @@ async function refresh() {
           const b = badgeFor(scope, rank);
           await notify(row.user_id, { type: "milestone", title: b.icon + " You earned a badge: " + b.label,
             body: "Your work is one of the most loved on Chapterhive right now. Your posts get a boost in the home feed while you hold it.",
-            link: "/hub/top" }).catch(function () {});
+            link: "/hub/creators#top" }).catch(function () {});
         }
       }
     }

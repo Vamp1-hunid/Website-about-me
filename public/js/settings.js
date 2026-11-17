@@ -69,13 +69,29 @@
         save({ showOnline: on }, on ? "People can see when you're online." : "You now appear offline to everyone.");
       }));
 
+      // Tips: turn the quick tips and welcome-back tour back on (or off) on this device.
+      var sTips = section("Tips", "Quick tips on each page and a short tour when you come back after a few days.");
+      var tipsOn = true;
+      try { tipsOn = localStorage.getItem("ch-tips-off") !== "1"; } catch (e) { /* ignore */ }
+      sTips.appendChild(switchRow("💡 Show tips", "Turning this on also brings back tips you hid on individual pages.", tipsOn, function (on) {
+        try {
+          if (on) {
+            localStorage.removeItem("ch-tips-off");
+            localStorage.removeItem("ch-welcome-back-off");
+            Object.keys(localStorage).forEach(function (k) { if (/^(mw-tips-hidden-|ch-tips-snooze-)/.test(k)) localStorage.removeItem(k); });
+          } else localStorage.setItem("ch-tips-off", "1");
+        } catch (e) { /* ignore */ }
+        MW.toast(on ? "Tips are back on." : "Tips are off.");
+      }));
       if (MW.feature("chat")) {
         var teen = MW.account && MW.account.account && MW.account.account.teen;
         var s2 = section("Messages", teen ? "Teen accounts can only ever be messaged by other teen accounts." : null);
         s2.appendChild(choiceRow("chatPrivacy", [
           ["everyone", "Everyone", teen ? "Any teen account can start a chat with you." : "Any member can start a chat with you."],
-          ["following", "Only creators I follow", "Only people whose creator page you follow."],
-          ["nobody", "Nobody", "No new chats. You can still start chats yourself."]
+          ["followers", "My followers", "Only people who follow you."],
+          ["buddies", "My buddies", "Only people on your buddy list."],
+          ["following", "People I follow", "Only creators and members you follow."],
+          ["nobody", "Nobody", "No new chats. You can still start chats yourself. (Admins can always reach you for safety.)"]
         ], p.chatPrivacy || "everyone", function (v) { save({ chatPrivacy: v }, "Message settings saved."); }));
         s2.appendChild(switchRow("🧪 Let beta testers message me", "Beta testers can start a chat with you even if the choice above would stop them.", p.betaCanMessage === true, function (on) {
           save({ betaCanMessage: on }, on ? "Beta testers can now message you." : "Beta testers follow your usual message settings.");

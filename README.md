@@ -1,8 +1,11 @@
-# God's Banditos
+# God's Banditos & Chapterhive
 
-The website of **God's Banditos**, the story creation brand of Mulenga Mwamba.
+> ## 📘 [Read the project report → PROJECT-REPORT.md](PROJECT-REPORT.md)
+> Where Chapterhive stands today, your owner tools, the launch-day steps, Render settings,
+> and full details of every version (1–24): what was built, how it works and how to change it.
 
-📘 **Full build report:** [docs/BUILD-REPORT.md](docs/BUILD-REPORT.md) — how everything was built, every third-party account, every animation and how to change it.
+The website of **God's Banditos**, the story creation brand of Mulenga Mwamba, and **Chapterhive**,
+its creator platform at `/hub`.
 
 Live website: https://mulenga-mwamba-website.onrender.com
 

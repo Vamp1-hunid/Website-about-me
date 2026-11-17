@@ -223,45 +223,135 @@
 
   /* ---------- Quick tips ---------- */
 
+  // Quick tips for every page. Each page's tips can be skipped for a few days or switched off for good,
+  // and "Turn off all tips" stops them everywhere.
   var TIPS = {
     "/": ["Press ☰ for every section of the site, plus search.", "Tap any work to read it, like it and join the comments.", "Chapterhive is where other creators post: find it in the menu."],
     "/gallery": ["Filter by category or tag, or sort by newest and most liked.", "Search finds titles, loglines and tags."],
     "/stories": ["Each story has its chapters, characters and concept art in one place."],
-    "/hub": ["Follow creators to get their new posts in your bell and Following feed.", "Looking for a collaborator? Try the collab board.", "Got an idea for the site? Drop it in the suggestion box on the collab board."],
-    "/hub/creators": ["Filter by what people make: art, comics, films, comedy and more.", "The green dot means a creator is online right now."],
+    "/hub": ["Tap your picture next to the search box to open your profile.", "Tap ☰ (top right) for your account, settings and every section.", "The 🔔 bell shows new followers, buddy requests and team announcements.",
+      "Tap ⋯ on any post to see more or less like it: your feed learns what you enjoy.", "The Buddies tab is where your friends, chats and \"find buddies\" live.", "Stuck? The glittering ? button in the corner answers questions."],
+    "/hub/creators": ["Top creators are at the top of this page; everyone else is below.", "Filter by what people make: art, comics, films, comedy and more.", "Follow a creator to get their new work in your bell and Following feed.", "The green dot means a creator is online right now."],
+    "/hub/buddies": ["Buddies are friends who accepted your request (or whose request you accepted).", "Use 🔍 Find buddies to search names or see people you may know.", "Tap 💬 next to a buddy to start a chat.", "Buddy requests you receive show at the top, ready to accept."],
+    "/hub/people": ["Tap Follow back on a follower to follow them too.", "Requests shows buddy requests you've sent and received."],
+    "/hub/members": ["Search any name or username, then Follow, Add buddy or 💬 Message."],
     "/hub/feed": ["New posts from creators you follow show up here first.", "Bell notifications tell you when a followed creator posts."],
+    "/hub/news": ["Team announcements sit at the top; news posts are below.", "Announcements also pop up once, so you won't miss them."],
+    "/hub/chat": ["Start a chat from someone's page, Find members or your buddy list.", "You can block or report from inside a chat. Choose who can message you in Settings."],
     "/hub/collabs": ["Filter by the role you need, then press 'I'm interested' to reach out.", "Post your own request from your studio's Collabs tab."],
     "/hub/studio": ["Every post is reviewed by the team before it goes public; you'll get a note in your bell.", "Advertising products or sponsors needs admin approval first.", "Try a poll or questionnaire from Compose."],
-    "/hub/profile": ["Switch off 'Show when I'm online' to hide your green dot.", "Add an email so you can reset your password."],
-    "/hub/apply": ["Tell us what you make and link a few samples: it speeds up approval."]
+    "/hub/profile": ["Change your picture, name and bio here. Your picture shows next to the search box.", "Add an email so you can reset your password.", "Link Google to log in with one tap."],
+    "/hub/settings": ["Choose who can message you: everyone, followers, buddies, people you follow, or nobody.", "Switch off 'Show when I'm active' to hide your green dot.", "Content filters hide posts you'd rather not see."],
+    "/hub/apply": ["Tell us what you make and link a few samples: it speeds up approval."],
+    "/hub/reserve": ["Reserve with Google for one-tap log in at launch.", "Find your place on the list below the form."],
+    "/hub/beta": ["Signed in? You only need to write a line about why you'd like to test."],
+    "/hub/calendar": ["Holidays and site events show here; on the day, the site dresses up for them."],
+    "/hub/help": ["Ask the help bee a question, or browse the FAQs below."]
   };
+  MW.TIPS = TIPS;
+  function tipsOff() { try { return localStorage.getItem("ch-tips-off") === "1"; } catch (e) { return false; } }
 
   function showTips() {
+    if (tipsOff()) return;
     var path = window.location.pathname.replace(/\/+$/, "") || "/";
+    if (/^\/hub\/u\//.test(path)) path = "/hub/u";
     var tips = TIPS[path];
     var header = document.querySelector(".site-header");
     if (!tips || !header) return;
-    var key = "mw-tips-hidden-" + path;
-    try { if (localStorage.getItem(key)) return; } catch (e) { /* ignore */ }
+    var key = "mw-tips-hidden-" + path;          // "never" for this page
+    var snoozeKey = "ch-tips-snooze-" + path;     // "skip for now" until a date
+    try {
+      if (localStorage.getItem(key)) return;
+      if (Number(localStorage.getItem(snoozeKey) || 0) > Date.now()) return;
+    } catch (e) { /* ignore */ }
     var bar = el("aside", { class: "tips-bar", "aria-label": "Quick tips" });
     bar.appendChild(el("span", { class: "tips-label" }, "Quick tip"));
     var textNode = el("span", { class: "tips-text" }, tips[0]);
     bar.appendChild(textNode);
     var i = 0;
+    var row = el("span", { class: "tips-actions" });
     if (tips.length > 1) {
-      var next = el("button", { type: "button", class: "link-button" }, "Next tip");
-      next.addEventListener("click", function () { i = (i + 1) % tips.length; textNode.textContent = tips[i]; });
-      bar.appendChild(next);
+      var next = el("button", { type: "button", class: "link-button" }, "Next tip (" + (i + 1) + "/" + tips.length + ")");
+      next.addEventListener("click", function () {
+        i = (i + 1) % tips.length; textNode.textContent = tips[i];
+        next.textContent = "Next tip (" + (i + 1) + "/" + tips.length + ")";
+      });
+      row.appendChild(next);
     }
-    bar.appendChild(el("a", { href: MW.isHub ? "/hub/help" : "/help", class: "tips-help" }, "Help & FAQ"));
-    var hide = el("button", { type: "button", class: "tips-close", "aria-label": "Hide tips for this page" }, "×");
-    hide.addEventListener("click", function () {
+    var skip = el("button", { type: "button", class: "link-button" }, "Skip for now");
+    skip.addEventListener("click", function () {
+      bar.remove();
+      try { localStorage.setItem(snoozeKey, String(Date.now() + 3 * 24 * 3600 * 1000)); } catch (e) { /* ignore */ }
+    });
+    var never = el("button", { type: "button", class: "link-button" }, "Don't show again");
+    never.addEventListener("click", function () {
       bar.remove();
       try { localStorage.setItem(key, "1"); } catch (e) { /* ignore */ }
+      MW.toast("Tips for this page are off. (\"Turn off all tips\" stops them everywhere.)");
     });
+    var allOff = el("button", { type: "button", class: "link-button" }, "Turn off all tips");
+    allOff.addEventListener("click", function () {
+      bar.remove();
+      try { localStorage.setItem("ch-tips-off", "1"); } catch (e) { /* ignore */ }
+      MW.toast("All tips are off. You can turn them back on in Settings.");
+    });
+    row.appendChild(skip);
+    row.appendChild(never);
+    row.appendChild(allOff);
+    row.appendChild(el("a", { href: MW.isHub ? "/hub/help" : "/help", class: "tips-help" }, "Help & FAQ"));
+    bar.appendChild(row);
+    var hide = el("button", { type: "button", class: "tips-close", "aria-label": "Skip tips for now" }, "×");
+    hide.addEventListener("click", function () { skip.click(); });
     bar.appendChild(hide);
     var menu = document.getElementById("site-menu");
     (menu || header).after(bar);
+  }
+
+  // Back after three days or more? A short "here's where things are" tour, once.
+  function welcomeBack() {
+    if (!MW.isHub || tipsOff()) return;
+    var now = Date.now(), last = 0;
+    try { last = Number(localStorage.getItem("ch-last-visit") || 0); localStorage.setItem("ch-last-visit", String(now)); } catch (e) { return; }
+    try { if (localStorage.getItem("ch-welcome-back-off") === "1") return; } catch (e) { /* ignore */ }
+    if (!last || now - last < 3 * 24 * 3600 * 1000) return;
+    if (/^\/hub\/(login|register|verify)/.test(window.location.pathname)) return;
+    var steps = [
+      ["👤 Your profile", "Tap your picture next to the search box to open your profile. ☰ (top right) has Edit my profile and Settings."],
+      ["🤝 Buddies", "The Buddies tab holds your friends, your chats and 🔍 Find buddies, with people you may know."],
+      ["🔔 The bell", "New followers, buddy requests, replies and team announcements land in the bell at the top."],
+      ["🐝 Creators", "The Creators tab starts with the top creators, then everyone else. Follow the ones you like."],
+      ["❓ Help", "The glittering ? in the corner answers questions, any time."]
+    ];
+    var dialog = el("dialog", { class: "heist-dialog welcome-back", "aria-labelledby": "wb-title" });
+    dialog.appendChild(el("p", { class: "node-label" }, "Welcome back"));
+    dialog.appendChild(el("h2", { id: "wb-title" }, "Good to see you again! 🐝 Here's where things are:"));
+    var ol = el("ol", { class: "wb-steps" });
+    steps.forEach(function (st) {
+      var li = el("li");
+      li.appendChild(el("strong", {}, st[0]));
+      li.appendChild(el("span", {}, st[1]));
+      ol.appendChild(li);
+    });
+    dialog.appendChild(ol);
+    var actions = el("div", { class: "form-actions" });
+    var ok = el("button", { type: "button", class: "btn" }, "Thanks!");
+    var later = el("button", { type: "button", class: "btn btn-ghost" }, "Skip for now");
+    var never = el("button", { type: "button", class: "btn btn-ghost" }, "Never show this");
+    ok.addEventListener("click", function () { dialog.close(); });
+    later.addEventListener("click", function () { dialog.close(); });
+    never.addEventListener("click", function () {
+      try { localStorage.setItem("ch-welcome-back-off", "1"); } catch (e) { /* ignore */ }
+      dialog.close();
+    });
+    actions.appendChild(ok); actions.appendChild(later); actions.appendChild(never);
+    dialog.appendChild(actions);
+    dialog.addEventListener("close", function () { dialog.remove(); });
+    // Let the first-visit welcome and announcements go first.
+    setTimeout(function () {
+      if (document.querySelector("dialog[open], .onboard")) return;
+      document.body.appendChild(dialog);
+      if (dialog.showModal) dialog.showModal(); else dialog.setAttribute("open", "");
+    }, 2500);
   }
 
   /* ---------- Help assistant ---------- */
@@ -351,7 +441,7 @@
       s.onload = function () { if (MW.runOnboarding) MW.runOnboarding(user, function () { showWelcome(user); }); };
       document.head.appendChild(s);
     } else if (user) showWelcome(user);
-    if (MW.feature("quick_tips")) showTips();
+    if (MW.feature("quick_tips")) { showTips(); MW.me().then(function (user) { if (user) welcomeBack(); }); }
     if (MW.feature("help_assistant")) buildHelpButton();
   });
 })();

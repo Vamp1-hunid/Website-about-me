@@ -1487,3 +1487,24 @@ body[data-holiday="newyear"] .site-header { border-bottom: 4px solid #ffd23f; }
 .install-banner-text span { color: var(--ink-dim); }
 .install-banner-close { background: none; border: 0; color: var(--ink-dim); font-size: 1.3rem; padding: 0 0.3rem; cursor: pointer; }
 @media (min-width: 761px) { .install-banner { max-width: 1100px; margin: 0.6rem auto 0; } }
+/* Help button in the very bottom-right corner, mirroring the Fund the heist button in the bottom-left. */
+body[data-brand="chapterhive"] .help-fab, body[data-brand="chapterhive"] .help-glitter { right: 1rem; bottom: 1rem; }
+@media (max-width: 520px) {
+  body[data-brand="chapterhive"] .help-fab, body[data-brand="chapterhive"] .help-glitter { right: 0.6rem; bottom: 0.6rem; }
+}
+.buddy-requests { margin: 0.6rem 0; padding: 0.7rem 0.9rem; border: 1px solid var(--pink); border-radius: 14px; }
+.buddy-requests h2 { margin: 0 0 0.4rem; font-size: 1.05rem; }
+#b-q { width: 100%; max-width: 420px; margin: 0.6rem 0 0.2rem; }
+.chat-row { color: var(--ink); text-decoration: none; }
+.chat-row .member-card-text { flex: 1; }
+.chat-row.is-unread strong { color: var(--pink); }
+.people-links { margin-top: 1rem; }
+.top-in-creators .top-more { margin-top: 0.8rem; }
+.stat-tappable { cursor: pointer; border-radius: 10px; }
+.stat-tappable:hover, .stat-tappable:focus-visible { background: color-mix(in srgb, var(--pink) 14%, transparent); }
+.stat-tappable dt::after { content: " ›"; }
+.people-dialog { width: min(92vw, 460px); }
+.people-dialog-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.people-dialog-head h2 { margin: 0; font-size: 1.15rem; }
+.people-dialog-list { max-height: 60vh; overflow-y: auto; margin-top: 0.6rem; }
+.people-dialog-list .member-card { color: var(--ink); text-decoration: none; }

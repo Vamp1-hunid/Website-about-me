@@ -84,10 +84,19 @@
       box.appendChild(head);
 
       var stats = el("dl", { class: "stat-row" });
-      [["Followers", u.followers || 0, "member-followers"], ["Following", u.followingCount || 0], ["Buddies", u.buddies || 0], ["Comments", u.comments], ["Likes given", u.likes]].forEach(function (s) {
-        var d = el("div", { class: "stat" });
+      [["Followers", u.followers || 0, "member-followers", "followers"], ["Following", u.followingCount || 0, null, "following"], ["Buddies", u.buddies || 0, null, "buddies"], ["Comments", u.comments], ["Likes given", u.likes]].forEach(function (s) {
+        var d = el("div", { class: "stat" + (s[3] ? " stat-tappable" : "") });
         d.appendChild(el("dt", {}, s[0]));
         d.appendChild(el("dd", s[2] ? { id: s[2] } : {}, String(s[1])));
+        if (s[3]) {
+          // Tap to see the accounts, with their pictures and usernames.
+          d.setAttribute("role", "button");
+          d.setAttribute("tabindex", "0");
+          d.setAttribute("aria-label", "Show " + s[0].toLowerCase());
+          var open = function () { MW.showPeopleList(s[0] + " · @" + u.username, "/users/" + encodeURIComponent(u.username) + "/list/" + s[3]); };
+          d.addEventListener("click", open);
+          d.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+        }
         stats.appendChild(d);
       });
       box.appendChild(stats);

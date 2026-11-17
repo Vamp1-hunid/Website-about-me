@@ -4605,3 +4605,12 @@ body[data-brand="chapterhive"] .help-glitter { width: 2.9rem; height: 3.2rem; }
   .mobile-search-bar .nav-search-go { display: none !important; }
   .search-profile { width: 2.2rem; height: 2.2rem; }
 }
+.name-suggest { display: grid; gap: 0.25rem; margin: 0.3rem 0 0.6rem; padding: 0.3rem; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); max-height: 280px; overflow-y: auto; }
+.name-suggest-item { display: flex; align-items: center; gap: 0.5rem; width: 100%; text-align: left; padding: 0.4rem 0.5rem; border: 0; border-radius: 8px; background: none; color: var(--ink); cursor: pointer; }
+.name-suggest-item:hover, .name-suggest-item:focus-visible { background: color-mix(in srgb, var(--pink) 16%, transparent); }
+.name-suggest-item .avatar { width: 2rem; height: 2rem; font-size: 0.85rem; }
+.tips-actions { display: inline-flex; flex-wrap: wrap; gap: 0.2rem 0.8rem; align-items: center; }
+.welcome-back { width: min(92vw, 500px); }
+.wb-steps { display: grid; gap: 0.6rem; padding-left: 1.2rem; margin: 0.6rem 0 1rem; }
+.wb-steps li { display: grid; gap: 0.15rem; }
+.wb-steps span { color: var(--ink-dim); font-size: 0.93rem; }

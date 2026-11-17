@@ -159,6 +159,8 @@ app.get("/hub/u/:username", function (req, res) {
   pages.sendPage(req, res, "hub/user.html", null);
 });
 // Profiles live on Chapterhive now (God's Banditos has no member accounts).
+// Top creators now live on the Creators page.
+app.get("/hub/top", function (req, res) { res.redirect(301, "/hub/creators#top"); });
 app.get("/profile", function (req, res) {
   res.redirect(302, "/hub/profile" + (req.url.indexOf("?") >= 0 ? req.url.slice(req.url.indexOf("?")) : ""));
 });

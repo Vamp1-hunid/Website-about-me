@@ -25,10 +25,10 @@ router.get("/", requireLogin, async function (req, res) {
             (SELECT CASE WHEN b.status = 'accepted' THEN 'buddies' WHEN b.requester_id = $2 THEN 'sent' ELSE 'received' END
                FROM buddies b WHERE LEAST(b.requester_id, b.addressee_id) = LEAST(u.id, $2) AND GREATEST(b.requester_id, b.addressee_id) = GREATEST(u.id, $2)) AS buddy_state
        FROM users u LEFT JOIN creator_profiles cp ON cp.user_id = u.id AND cp.status = 'approved'
-      WHERE u.status = 'active' AND u.profile_visible AND u.id <> $2
+      WHERE u.status = 'active' AND (u.profile_visible OR $3) AND u.id <> $2
         AND ($1 = '%%' OR u.username ILIKE $1 OR u.display_name ILIKE $1)
       ORDER BY u.is_beta DESC, (u.role = 'admin') DESC, u.last_seen_at DESC NULLS LAST, u.created_at DESC
-      LIMIT 60`, [like, me]);
+      LIMIT 60`, [like, me, req.session.user.role === "admin"]);
   res.json({ members: rows.map(function (u) {
     return { username: u.username, displayName: u.display_name, avatarUrl: avatarUrl(u.avatar_url), isBeta: u.is_beta,
       isAdmin: u.role === "admin", creatorHandle: u.creator_handle || null, online: Boolean(u.online), following: u.following, buddyState: u.buddy_state || "none",
@@ -73,6 +73,32 @@ const PERSON = "u.username, u.display_name, u.avatar_url, u.is_beta, u.role";
 function person(u) {
   return { username: u.username, displayName: u.display_name, avatarUrl: avatarUrl(u.avatar_url), isBeta: u.is_beta, isAdmin: u.role === "admin" };
 }
+
+// GET /api/users/suggestions -> "People you may know": buddies of my buddies (with mutual count),
+// people who follow me or I follow, then active beta testers and members. Existing buddies are left out.
+router.get("/suggestions", requireLogin, async function (req, res) {
+  const me = req.session.user.id;
+  const { rows } = await db.query(
+    `WITH my_buddies AS (
+       SELECT CASE WHEN requester_id = $1 THEN addressee_id ELSE requester_id END AS id FROM buddies
+        WHERE (requester_id = $1 OR addressee_id = $1) AND status = 'accepted'),
+     linked AS (SELECT requester_id AS a, addressee_id AS b FROM buddies WHERE status = 'accepted'
+                UNION ALL SELECT addressee_id, requester_id FROM buddies WHERE status = 'accepted')
+     SELECT ${PERSON}, u.id,
+            (SELECT COUNT(*) FROM linked l WHERE l.a = u.id AND l.b IN (SELECT id FROM my_buddies))::int AS mutual,
+            EXISTS (SELECT 1 FROM follows f WHERE f.follower_id = u.id AND f.creator_id = $1) AS follows_me,
+            EXISTS (SELECT 1 FROM follows f WHERE f.follower_id = $1 AND f.creator_id = u.id) AS i_follow,
+            (SELECT CASE WHEN b.requester_id = $1 THEN 'sent' ELSE 'received' END FROM buddies b
+              WHERE b.status = 'pending' AND LEAST(b.requester_id, b.addressee_id) = LEAST(u.id, $1) AND GREATEST(b.requester_id, b.addressee_id) = GREATEST(u.id, $1)) AS pending
+       FROM users u
+      WHERE u.id <> $1 AND u.status = 'active' AND u.profile_visible AND u.id NOT IN (SELECT id FROM my_buddies)
+      ORDER BY mutual DESC, follows_me DESC, i_follow DESC, u.is_beta DESC, u.last_seen_at DESC NULLS LAST
+      LIMIT 30`, [me]);
+  res.json({ people: rows.map(function (u) {
+    const why = u.mutual ? u.mutual + " mutual buddy" + (u.mutual === 1 ? "" : "s") : u.follows_me ? "Follows you" : u.i_follow ? "You follow them" : u.is_beta ? "Beta tester" : "On Chapterhive";
+    return Object.assign(person(u), { why: why, buddyState: u.pending || "none" });
+  }) });
+});
 
 // GET /api/users/me/people -> my followers, who I follow, my buddies and buddy requests
 router.get("/me/people", requireLogin, async function (req, res) {
@@ -120,6 +146,26 @@ function buddyState(row, me) {
   if (row.status === "accepted") return "buddies";
   return row.requester_id === me ? "sent" : "received";
 }
+
+// GET /api/users/:username/list/:which  (which = followers | following | buddies) -> names and pictures.
+// Anyone signed in can see these for pages that are visible to members (your own always).
+router.get("/:username/list/:which", requireLogin, async function (req, res) {
+  const which = req.params.which;
+  if (!["followers", "following", "buddies"].includes(which)) return res.status(404).json({ error: "Unknown list." });
+  const { rows } = await db.query("SELECT id, profile_visible, status FROM users WHERE username = $1", [String(req.params.username || "").toLowerCase()]);
+  const u = rows[0];
+  if (!u || u.status !== "active") return res.status(404).json({ error: "That member could not be found." });
+  const mine = u.id === req.session.user.id;
+  if (!mine && !u.profile_visible && req.session.user.role !== "admin") return res.status(403).json({ error: "This member keeps their page private." });
+  const sql = {
+    followers: `SELECT ${PERSON} FROM follows f JOIN users u ON u.id = f.follower_id WHERE f.creator_id = $1 AND u.status = 'active' ORDER BY f.created_at DESC LIMIT 500`,
+    following: `SELECT ${PERSON} FROM follows f JOIN users u ON u.id = f.creator_id WHERE f.follower_id = $1 AND u.status = 'active' ORDER BY f.created_at DESC LIMIT 500`,
+    buddies: `SELECT ${PERSON} FROM buddies b JOIN users u ON u.id = CASE WHEN b.requester_id = $1 THEN b.addressee_id ELSE b.requester_id END
+               WHERE (b.requester_id = $1 OR b.addressee_id = $1) AND b.status = 'accepted' AND u.status = 'active' ORDER BY u.username LIMIT 500`
+  }[which];
+  const list = await db.query(sql, [u.id]);
+  res.json({ people: list.rows.map(person) });
+});
 
 // POST /api/users/:username/buddy -> send a buddy request (or accept theirs if they already asked you)
 router.post("/:username/buddy", requireLogin, async function (req, res) {

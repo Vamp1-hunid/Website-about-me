@@ -17,6 +17,7 @@ async function migrate() {
   await openCommunityFeatures();
   await openHelpAndTeamWording();
   await openBellForEveryone();
+  await openTipsForEveryone();
 }
 
 // One time only: the suggestion box and the Fund the heist button go live for everyone
@@ -34,6 +35,14 @@ async function openBellForEveryone() {
   if (done.rows.length) return;
   await db.query("UPDATE feature_flags SET audience = 'everyone', updated_at = NOW() WHERE key = 'notifications'");
   await db.query("INSERT INTO app_settings (key, value) VALUES ('bell_everyone_v23', '1') ON CONFLICT (key) DO NOTHING");
+}
+
+// v24: quick tips are for everyone.
+async function openTipsForEveryone() {
+  const done = await db.query("SELECT 1 FROM app_settings WHERE key = 'tips_everyone_v24'");
+  if (done.rows.length) return;
+  await db.query("UPDATE feature_flags SET audience = 'everyone', updated_at = NOW() WHERE key = 'quick_tips'");
+  await db.query("INSERT INTO app_settings (key, value) VALUES ('tips_everyone_v24', '1') ON CONFLICT (key) DO NOTHING");
 }
 
 // v19: the help assistant is for everyone, and the Fund the heist message credits the whole team.
