@@ -126,7 +126,7 @@
   };
 
   // Small pop-up message.
-  MW.toast = function (message, isError) {
+  MW.toast = function (message, isError, ms) {
     var area = document.querySelector(".toast-area");
     if (!area) {
       area = document.createElement("div");
@@ -139,7 +139,7 @@
     toast.className = "toast" + (isError ? " is-error" : "");
     toast.textContent = message;
     area.appendChild(toast);
-    window.setTimeout(function () { toast.remove(); }, 4200);
+    window.setTimeout(function () { toast.remove(); }, ms || 4200);
   };
 
   // "2026-11-12T05:17:33Z" -> "12 Nov 2026"
@@ -735,7 +735,8 @@
         ul.appendChild(li);
       });
       if (user && (user.role === "admin" || perms.length)) MW.adminCounts(ul);
-      if (installEvent || (/iphone|ipad|ipod/i.test(navigator.userAgent))) setTimeout(addInstallItem, 0);
+      // "📲 Install the app" in the menu on phones and PCs (one tap where supported, otherwise the steps).
+      if (MW.isHub) setTimeout(addInstallItem, 0);
       // Light/dark switch and Log out also live in the menu (on phones the header hides them to save room).
       var themeLi = el("li", { class: "menu-mobile-only" });
       var themeBtn = el("button", { type: "button", class: "menu-link-btn" }, "🌓 Switch light / dark mode");
@@ -1002,12 +1003,22 @@
   // "📲 Install the app": Android/desktop Chrome offer a one-tap install; iPhones get the Share-menu steps.
   var installEvent = null;
   window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); installEvent = e; addInstallItem(); installBanner(); });
+  // How to install where the browser has no one-tap install button.
+  function installHelp() {
+    var ua = navigator.userAgent;
+    if (/iphone|ipad|ipod/i.test(ua)) return "On iPhone: tap the Share button at the bottom of Safari, then \"Add to Home Screen\".";
+    if (/android/i.test(ua)) return "On Android: open Chapterhive in Chrome, tap ⋮ (top right), then \"Install app\" or \"Add to Home screen\".";
+    if (/edg\//i.test(ua)) return "On your PC (Edge): click ⋯ at the top right, then Apps → \"Install Chapterhive\".";
+    if (/chrome/i.test(ua)) return "On your PC (Chrome): click the install icon at the right end of the address bar, or ⋮ → \"Save and share\" → \"Install Chapterhive\".";
+    if (/safari/i.test(ua) && /mac/i.test(ua)) return "On a Mac (Safari): choose File → \"Add to Dock\".";
+    return "To install on your PC, open Chapterhive in Chrome or Edge, then use the install icon in the address bar.";
+  }
   function installNow(after) {
     if (installEvent) {
       installEvent.prompt();
       installEvent.userChoice.then(function () { installEvent = null; if (after) after(); });
     } else {
-      MW.toast("On iPhone: tap the Share button at the bottom of Safari, then \"Add to Home Screen\".");
+      MW.toast(installHelp(), false, 9000);
     }
   }
   // A slim, easy-to-spot "Get the app" bar under the header (Chapterhive pages). Hiding it keeps it away for two weeks.
@@ -1021,7 +1032,7 @@
     bar.appendChild(el("img", { src: "/icons/icon-192.png", alt: "", width: "36", height: "36" }));
     var t = el("span", { class: "install-banner-text" });
     t.appendChild(el("strong", {}, "Get the Chapterhive app"));
-    t.appendChild(el("span", {}, installEvent ? "Free, quick to open, works like an app." : "On iPhone: Share → Add to Home Screen."));
+    t.appendChild(el("span", {}, installEvent ? "Free, quick to open, works like an app on your phone or PC." : (/iphone|ipad|ipod/i.test(navigator.userAgent) ? "On iPhone: Share → Add to Home Screen." : "Free on your phone or PC.")));
     bar.appendChild(t);
     var go = el("button", { type: "button", class: "btn btn-small" }, installEvent ? "📲 Install" : "How?");
     go.addEventListener("click", function () { installNow(function () { bar.remove(); }); });
@@ -1046,7 +1057,67 @@
     li.appendChild(b);
     menu.insertBefore(li, menu.firstChild);
   }
+  // Count each installed device once: when the browser reports the install, or the first time the app opens installed.
+  function deviceId() {
+    var id = null;
+    try { id = localStorage.getItem("ch-device"); } catch (e) { /* ignore */ }
+    if (!id) {
+      id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2, 14));
+      try { localStorage.setItem("ch-device", id); } catch (e) { /* ignore */ }
+    }
+    return id;
+  }
+  function countInstall() {
+    try { if (localStorage.getItem("ch-install-counted")) return; } catch (e) { return; }
+    var platform = /android/i.test(navigator.userAgent) ? "android" : /iphone|ipad|ipod/i.test(navigator.userAgent) ? "ios" : "desktop";
+    MW.api("/app/installed", { method: "POST", json: { deviceId: deviceId(), platform: platform } }).then(function () {
+      try { localStorage.setItem("ch-install-counted", "1"); } catch (e) { /* ignore */ }
+    }).catch(function () {});
+  }
+  if (isStandalone()) countInstall();
+
+  // Milestone pop-up: "Chapterhive has been installed 100 times!" Shown once per milestone on each device.
+  function milestonePopup() {
+    if (!MW.isHub || /^\/hub\/(login|register|verify)/.test(window.location.pathname)) return;
+    Promise.all([MW.api("/app/stats"), MW.me().catch(function () { return null; })]).then(function (both) {
+      var d = both[0], me = both[1];
+      if (!d.milestone) return;
+      // Only for people who haven't installed the app on this device yet; admins always see milestones.
+      var isAdmin = me && me.role === "admin";
+      var installedHere = isStandalone();
+      try { installedHere = installedHere || Boolean(localStorage.getItem("ch-install-counted")); } catch (e) { /* ignore */ }
+      if (installedHere && !isAdmin) return;
+      var seen = 0;
+      try { seen = Number(localStorage.getItem("ch-milestone-seen") || 0); } catch (e) { return; }
+      if (seen >= d.milestone) return;
+      if (document.querySelector("dialog[open], .onboard")) { setTimeout(milestonePopup, 5000); return; }
+      var dialog = el("dialog", { class: "heist-dialog milestone-dialog", "aria-labelledby": "ms-title" });
+      dialog.appendChild(el("div", { class: "milestone-burst", "aria-hidden": "true" }, "🎉"));
+      dialog.appendChild(el("p", { class: "node-label" }, "Hive milestone"));
+      dialog.appendChild(el("h2", { id: "ms-title" }, "Chapterhive has been installed " + d.milestone.toLocaleString() + " times!"));
+      dialog.appendChild(el("p", { class: "milestone-count" }, d.installs.toLocaleString() + " devices and counting. Thank you for buzzing with us. 🐝"));
+      var actions = el("div", { class: "form-actions" });
+      if (!installedHere) {
+        var get = el("button", { type: "button", class: "btn" }, "📲 Get the app too");
+        get.addEventListener("click", function () { dialog.close(); installNow(); });
+        actions.appendChild(get);
+      }
+      var ok = el("button", { type: "button", class: "btn btn-ghost" }, "Yay!");
+      ok.addEventListener("click", function () { dialog.close(); });
+      actions.appendChild(ok);
+      dialog.appendChild(actions);
+      dialog.addEventListener("close", function () {
+        try { localStorage.setItem("ch-milestone-seen", String(d.milestone)); } catch (e) { /* ignore */ }
+        dialog.remove();
+      });
+      document.body.appendChild(dialog);
+      if (dialog.showModal) dialog.showModal(); else dialog.setAttribute("open", "");
+    }).catch(function () {});
+  }
+  setTimeout(milestonePopup, 6000);
+
   window.addEventListener("appinstalled", function () {
+    countInstall();
     var i = document.querySelector(".install-app"); if (i) i.parentNode.remove();
     var bnr = document.querySelector(".install-banner"); if (bnr) bnr.remove();
     MW.toast("Chapterhive is installed. 🐝");

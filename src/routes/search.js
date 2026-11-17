@@ -46,7 +46,8 @@ router.get("/search", flagsLib.requireFlag("search", { adminAlways: true }), sea
   if (q.length < 2) return res.json(empty);
   const want = function (name) { return type === "all" || type === name; };
   const wantWorks = type === "all" || type === "posts" || Array.isArray(TYPES[type]) && TYPES[type].length > 0;
-  const like = "%" + q.replace(/[\\%_]/g, "\\$&") + "%";
+  // Forgiving match (see ch_match in db/schema.sql): case, hyphens, spaces and small typos don't matter.
+  const like = q.replace(/[\\%_]/g, " ").replace(/\s+/g, " ").trim();
   // God's Banditos searches only its own works; Chapterhive searches every creator's.
   const workScope = hub ? "" : " AND " + BANDITOS_ONLY;
   const ownerScope = function (alias) { return hub ? "" : " AND " + alias + ".user_id IN (SELECT id FROM users WHERE role = 'admin')"; };
@@ -57,14 +58,14 @@ router.get("/search", flagsLib.requireFlag("search", { adminAlways: true }), sea
     `${SELECT_POST} WHERE ${VISIBLE}${workScope} AND p.category <> 'news'
         AND ($2::text[] IS NULL OR p.category = ANY($2::text[]) OR ($3 AND p.series_id IS NOT NULL))
         AND ${audienceSql(4)} AND ${contentFilterSql(4)}
-        AND (p.title ILIKE $1 OR p.summary ILIKE $1 OR p.logline ILIKE $1
-        OR array_to_string(p.tags, ' ') ILIKE $1 OR p.body ILIKE $1)
-      ORDER BY (p.title ILIKE $1) DESC, p.created_at DESC LIMIT ${type === "all" ? 24 : 48}`,
+        AND (ch_match(p.title, $1) OR ch_match(p.summary, $1) OR ch_match(p.logline, $1)
+        OR ch_match(array_to_string(p.tags, ' '), $1) OR ch_match(p.body, $1))
+      ORDER BY ch_score(p.title, $1) DESC, p.created_at DESC LIMIT ${type === "all" ? 24 : 48}`,
     [like, cats, type === "episodes", req.session && req.session.user ? req.session.user.id : null]
   );
   const stories = !want("stories") ? none : await db.query(
     `SELECT s.* FROM series s
-      WHERE (s.title ILIKE $1 OR s.logline ILIKE $1 OR s.description ILIKE $1)${ownerScope("s")}
+      WHERE (ch_match(s.title, $1) OR ch_match(s.logline, $1) OR ch_match(s.description, $1))${ownerScope("s")}
         AND (EXISTS (SELECT 1 FROM posts p WHERE p.series_id = s.id AND ${VISIBLE})
           OR EXISTS (SELECT 1 FROM characters c WHERE c.series_id = s.id AND ${CHAR_VISIBLE}))
       ORDER BY s.title LIMIT 12`,
@@ -74,12 +75,12 @@ router.get("/search", flagsLib.requireFlag("search", { adminAlways: true }), sea
     `SELECT c.slug, c.name, c.role, c.tagline,
        (SELECT m.url FROM character_media m WHERE m.character_id = c.id ORDER BY (m.role = 'portrait') DESC, m.position LIMIT 1) AS portrait_url
        FROM characters c
-      WHERE ${CHAR_VISIBLE}${ownerScope("c")} AND (c.name ILIKE $1 OR c.role ILIKE $1 OR c.tagline ILIKE $1 OR c.profile ILIKE $1)
-      ORDER BY (c.name ILIKE $1) DESC, c.name LIMIT 12`,
+      WHERE ${CHAR_VISIBLE}${ownerScope("c")} AND (ch_match(c.name, $1) OR ch_match(c.role, $1) OR ch_match(c.tagline, $1) OR ch_match(c.profile, $1))
+      ORDER BY ch_score(c.name, $1) DESC, c.name LIMIT 12`,
     [like]
   );
   const products = !want("products") || hub ? none : await db.query(
-    `SELECT * FROM products WHERE published AND (name ILIKE $1 OR tagline ILIKE $1 OR description ILIKE $1)
+    `SELECT * FROM products WHERE published AND (ch_match(name, $1) OR ch_match(tagline, $1) OR ch_match(description, $1))
       ORDER BY sort_order NULLS LAST, name LIMIT 12`,
     [like]
   );
@@ -91,24 +92,24 @@ router.get("/search", flagsLib.requireFlag("search", { adminAlways: true }), sea
     if (want("accounts")) {
       creators = await db.query(
         `SELECT cp.handle, cp.name, cp.tagline, u.avatar_url FROM creator_profiles cp JOIN users u ON u.id = cp.user_id
-          WHERE cp.status = 'approved' AND (cp.name ILIKE $1 OR cp.handle ILIKE $1 OR cp.tagline ILIKE $1 OR cp.bio ILIKE $1)
-          ORDER BY (cp.name ILIKE $1) DESC, cp.name LIMIT 12`,
+          WHERE cp.status = 'approved' AND (ch_match(cp.name, $1) OR ch_match(cp.handle, $1) OR ch_match(cp.tagline, $1) OR ch_match(cp.bio, $1))
+          ORDER BY ch_score(cp.name, $1) DESC, cp.name LIMIT 12`,
         [like]
       );
       // Member accounts are only listed for signed-in people.
       if (req.session && req.session.user) {
         accounts = await db.query(
           `SELECT u.username, u.display_name, u.avatar_url FROM users u
-            WHERE u.status = 'active' AND (u.username ILIKE $1 OR u.display_name ILIKE $1)
+            WHERE u.status = 'active' AND (ch_match(u.username, $1) OR ch_match(u.display_name, $1))
               AND NOT EXISTS (SELECT 1 FROM creator_profiles cp WHERE cp.user_id = u.id AND cp.status = 'approved')
-            ORDER BY (u.username ILIKE $1) DESC, u.username LIMIT 12`,
+            ORDER BY ch_score(u.username, $1) DESC, u.username LIMIT 12`,
           [like]
         );
       }
     }
     if (want("news") && await flagsLib.isOn("updates", req)) {
       news = await db.query(
-        `${SELECT_POST} WHERE ${VISIBLE} AND p.category = 'news' AND (p.title ILIKE $1 OR p.summary ILIKE $1 OR p.body ILIKE $1)
+        `${SELECT_POST} WHERE ${VISIBLE} AND p.category = 'news' AND (ch_match(p.title, $1) OR ch_match(p.summary, $1) OR ch_match(p.body, $1))
           ORDER BY p.created_at DESC LIMIT 12`,
         [like]
       );

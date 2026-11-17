@@ -6,7 +6,7 @@
 const db = require("./db");
 const flags = require("./flags");
 
-const ALWAYS_ALLOWED = [/^\/account\//, /^\/notifications/, /^\/reserve/, /^\/beta/, /^\/contact/, /^\/help/,
+const ALWAYS_ALLOWED = [/^\/account\//, /^\/notifications/, /^\/reserve/, /^\/beta/, /^\/contact/, /^\/help/, /^\/app\//,
   // Following creators works before launch too, so people can line up their favourite artists for day one.
   // (Following other members is checked in routes/users.js: creators only until launch, unless you're a beta tester.)
   /^\/hub\/creators\/[^/]+\/follow$/, /^\/users\/[^/]+\/follow$/];

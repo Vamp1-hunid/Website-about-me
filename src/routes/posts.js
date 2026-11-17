@@ -352,9 +352,9 @@ router.get("/", async function (req, res) {
   }
   if (search) {
     // Escape % and _ so they are searched for literally.
-    values.push("%" + search.replace(/[\\%_]/g, "\\$&") + "%");
+    values.push(search.replace(/[\\%_]/g, " ").replace(/\s+/g, " ").trim());
     const n = "$" + values.length;
-    where.push(`(p.title ILIKE ${n} OR p.summary ILIKE ${n} OR p.logline ILIKE ${n} OR array_to_string(p.tags, ' ') ILIKE ${n} OR s.title ILIKE ${n})`);
+    where.push(`(ch_match(p.title, ${n}) OR ch_match(p.summary, ${n}) OR ch_match(p.logline, ${n}) OR ch_match(array_to_string(p.tags, ' '), ${n}) OR ch_match(s.title, ${n}))`);
   }
   // ?feed=1: the scrolling home feed also needs a picture/video to show and whether I liked or saved each post.
   // The scrolling feed is for members; visitors get the plain new-releases list.

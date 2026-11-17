@@ -687,3 +687,46 @@ ALTER TABLE users DROP CONSTRAINT IF EXISTS users_chat_privacy_check;
 ALTER TABLE users ADD CONSTRAINT users_chat_privacy_check CHECK (chat_privacy IN ('everyone', 'followers', 'buddies', 'following', 'nobody'));
 -- Admins can't be blocked (clears any blocks made before this rule).
 DELETE FROM chat_blocks WHERE blocked_id IN (SELECT id FROM users WHERE role = 'admin');
+-- App installs: one row per phone/computer that installed Chapterhive (counted for the milestone pop-up).
+CREATE TABLE IF NOT EXISTS app_installs (
+  device_id  VARCHAR(40) PRIMARY KEY,
+  platform   VARCHAR(20) NOT NULL DEFAULT '',
+  user_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+-- Forgiving search: ch_match(text, query) finds the query ignoring case, hyphens, underscores, spaces
+-- and punctuation ("spider man" finds "Spider-Man"), and, when the pg_trgm extension is available,
+-- small spelling mistakes too ("drgaon" finds "dragon"). ch_score ranks how close a match is.
+CREATE OR REPLACE FUNCTION ch_norm(t text) RETURNS text LANGUAGE sql IMMUTABLE AS
+$$ SELECT regexp_replace(lower(coalesce(t, '')), '[^a-z0-9]+', '', 'g') $$;
+DO $$
+DECLARE have_trgm boolean := false;
+BEGIN
+  BEGIN
+    CREATE EXTENSION IF NOT EXISTS pg_trgm;
+  EXCEPTION WHEN OTHERS THEN NULL;
+  END;
+  SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm') INTO have_trgm;
+  IF have_trgm THEN
+    EXECUTE $f$
+      CREATE OR REPLACE FUNCTION ch_score(t text, q text) RETURNS real LANGUAGE sql STABLE AS $b$
+        SELECT CASE
+          WHEN coalesce(t, '') = '' OR coalesce(q, '') = '' THEN 0
+          WHEN lower(t) LIKE '%' || lower(q) || '%' THEN 1
+          WHEN length(ch_norm(q)) >= 3 AND ch_norm(t) LIKE '%' || ch_norm(q) || '%' THEN 0.9
+          WHEN length(q) >= 4 THEN word_similarity(lower(q), lower(t)) * 0.8
+          ELSE 0 END::real
+      $b$ $f$;
+  ELSE
+    EXECUTE $f$
+      CREATE OR REPLACE FUNCTION ch_score(t text, q text) RETURNS real LANGUAGE sql STABLE AS $b$
+        SELECT CASE
+          WHEN coalesce(t, '') = '' OR coalesce(q, '') = '' THEN 0
+          WHEN lower(t) LIKE '%' || lower(q) || '%' THEN 1
+          WHEN length(ch_norm(q)) >= 3 AND ch_norm(t) LIKE '%' || ch_norm(q) || '%' THEN 0.9
+          ELSE 0 END::real
+      $b$ $f$;
+  END IF;
+END $$;
+CREATE OR REPLACE FUNCTION ch_match(t text, q text) RETURNS boolean LANGUAGE sql STABLE AS
+$$ SELECT ch_score(t, q) >= 0.45 $$;
