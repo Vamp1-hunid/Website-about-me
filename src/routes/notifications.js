@@ -11,16 +11,14 @@ const { requireLogin } = require("../auth");
 const { VISIBLE, SELECT_POST, toPost } = require("./posts");
 
 const router = express.Router();
+const { audienceSql } = require("../announcements");
 
 async function announcementsFor(userId, sinceOnly) {
   const { rows } = await db.query(
     `SELECT a.*, (a.created_at > COALESCE(u.announcements_seen_at, '-infinity')) AS unread
        FROM announcements a, users u
       WHERE u.id = $1 AND a.created_at > u.created_at - INTERVAL '30 days'
-        AND (a.audience = 'all' OR u.role = 'admin'
-             OR (a.audience = 'creators' AND EXISTS (SELECT 1 FROM creator_profiles cp WHERE cp.user_id = u.id AND cp.status = 'approved'))
-             OR (a.audience = 'beta' AND u.is_beta)
-             OR (a.audience = 'staff' AND cardinality(u.staff_perms) > 0))
+        AND ${audienceSql("a.audience")} AND a.created_at <= NOW() AND NOT a.is_draft
         ${sinceOnly ? "AND a.created_at > COALESCE(u.announcements_seen_at, '-infinity')" : ""}
       ORDER BY a.created_at DESC LIMIT 20`,
     [userId]
@@ -33,16 +31,14 @@ async function announcementsFor(userId, sinceOnly) {
 router.get("/announcements", async function (req, res) {
   const me = req.session && req.session.user ? req.session.user.id : null;
   const { rows } = await db.query(
-    `SELECT a.id, a.title, a.body, a.link, a.audience, a.created_at FROM announcements a
+    `SELECT a.id, a.title, a.body, a.link, a.audience, a.created_at, a.edited_at FROM announcements a
        LEFT JOIN users u ON u.id = $1
       WHERE a.created_at > NOW() - INTERVAL '90 days'
-        AND (a.audience = 'all' OR u.role = 'admin'
-             OR (a.audience = 'creators' AND EXISTS (SELECT 1 FROM creator_profiles cp WHERE cp.user_id = u.id AND cp.status = 'approved'))
-             OR (a.audience = 'beta' AND u.is_beta)
-             OR (a.audience = 'staff' AND cardinality(u.staff_perms) > 0))
+        AND ${audienceSql("a.audience")} AND a.created_at <= NOW() AND NOT a.is_draft
       ORDER BY a.created_at DESC LIMIT 20`, [me]);
   res.json({ announcements: rows.map(function (a) {
-    return { id: a.id, title: a.title, body: a.body, link: a.link, audience: a.audience, createdAt: a.created_at };
+    return { id: a.id, title: a.title, body: a.body, link: a.link, audience: a.audience, createdAt: a.created_at,
+      editedAt: req.session && req.session.user && req.session.user.role === "admin" ? a.edited_at : null }; // only admins see "edited"
   }) });
 });
 
@@ -89,6 +85,12 @@ router.post("/push-unsubscribe", requireLogin, async function (req, res) {
   const endpoint = req.body && typeof req.body.endpoint === "string" ? req.body.endpoint : "";
   await db.query("DELETE FROM push_subscriptions WHERE endpoint = $1 AND user_id = $2", [endpoint, req.session.user.id]);
   res.json({ ok: true });
+});
+// How many devices this account has registered for phone notifications (for the Settings check).
+router.get("/push-status", requireLogin, async function (req, res) {
+  const { rows } = await db.query("SELECT endpoint FROM push_subscriptions WHERE user_id = $1", [req.session.user.id]);
+  const mine = typeof req.query.endpoint === "string" ? req.query.endpoint : "";
+  res.json({ devices: rows.length, thisDevice: Boolean(mine && rows.some(function (r) { return r.endpoint === mine; })) });
 });
 router.post("/push-test", requireLogin, async function (req, res) {
   await require("../notify").notify(req.session.user.id, { type: "info", title: "🐝 Notifications are on", body: "This is how Chapterhive will tell you about new followers, buddy requests, chats and updates.", link: "/hub" });

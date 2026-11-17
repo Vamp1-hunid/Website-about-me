@@ -244,11 +244,15 @@ function contentFilterSql(n) {
 
 // Creators choose who can see their posts: everyone, members (signed in) or only their followers.
 // SQL for "can the viewer whose id is in $n see this post?" ($n may be NULL for visitors).
+// Each post can also narrow its own audience (public | members | followers); the stricter of the page
+// setting and the post's own setting wins. Creators can change a post's audience any time after posting.
 function audienceSql(n) {
-  return `(((cp.post_visibility IS NULL OR cp.post_visibility = 'everyone') AND p.visibility = 'public') OR p.user_id = $${n}::int
-    OR $${n}::int IN (SELECT id FROM users WHERE role = 'admin')
-    OR ($${n}::int IS NOT NULL AND ((cp.post_visibility = 'members' AND p.visibility = 'public')
-        OR EXISTS (SELECT 1 FROM follows fv WHERE fv.follower_id = $${n}::int AND fv.creator_id = p.user_id))))`;
+  return `(p.user_id = $${n}::int OR $${n}::int IN (SELECT id FROM users WHERE role = 'admin')
+    OR CASE GREATEST(CASE cp.post_visibility WHEN 'members' THEN 1 WHEN 'followers' THEN 2 ELSE 0 END,
+                     CASE p.visibility WHEN 'members' THEN 1 WHEN 'followers' THEN 2 ELSE 0 END)
+         WHEN 0 THEN TRUE
+         WHEN 1 THEN $${n}::int IS NOT NULL
+         ELSE EXISTS (SELECT 1 FROM follows fv WHERE fv.follower_id = $${n}::int AND fv.creator_id = p.user_id) END)`;
 }
 
 // For the home feed: the first picture of each post, its first video (members only: streaming
@@ -494,7 +498,8 @@ router.get("/:slug", async function (req, res) {
   }
   // Followers-only or members-only posts (set for the whole creator page, or for this one post).
   // The admin can always open them.
-  const effective = row && row.visibility === "followers" ? "followers" : row && row.creator_post_visibility;
+  const LEVEL = { everyone: 0, public: 0, members: 1, followers: 2 };
+  const effective = row && ((LEVEL[row.visibility] || 0) > (LEVEL[row.creator_post_visibility] || 0) ? row.visibility : row.creator_post_visibility);
   if (row && row.user_id !== userId && !isAdmin && effective && effective !== "everyone") {
     row.creator_post_visibility = effective;
     let allowed = false;
@@ -534,6 +539,8 @@ router.get("/:slug", async function (req, res) {
   const post = toPost(row, true);
   if (row.user_id !== userId && !isAdmin) delete post.invitedUsernames;
   post.isMine = Boolean(userId && row.user_id === userId);
+  // Only admins see that a work was edited after posting.
+  post.showEdited = Boolean(isAdmin);
   post.media = await mediaFor(row.id);
   post.nav = await neighbours(row);
   // Visitors without an account get a preview: the opening of the text and the first few images.
@@ -618,7 +625,7 @@ async function validatePost(body, req) {
     genres: (Array.isArray(body.genres) ? body.genres : []).filter(function (g, i, all) { return GENRES.includes(g) && all.indexOf(g) === i; }).slice(0, 3),
     contentRating: ["all", "teen", "mature"].includes(body.contentRating) ? body.contentRating : "all",
     strongLanguage: body.strongLanguage === true,
-    visibility: body.visibility === "followers" ? "followers" : "public",
+    visibility: ["members", "followers"].includes(body.visibility) ? body.visibility : "public",
     collaborators: (Array.isArray(body.collaborators) ? body.collaborators : []).map(function (u) { return String(u || "").trim().toLowerCase().replace(/^@/, ""); })
       .filter(function (u, i, all) { return /^[a-z0-9_-]{3,30}$/.test(u) && all.indexOf(u) === i; }).slice(0, 10),
     seriesId: optionalInt(body.seriesId, 1, 999999999),
@@ -891,7 +898,8 @@ function toComment(row, viewer, postOwnerId) {
     parentId: row.parent_id,
     body: row.body,
     createdAt: row.created_at,
-    editedAt: row.edited_at,
+    // Only admins see that a comment was edited (and when).
+    editedAt: viewer && viewer.role === "admin" ? row.edited_at : null,
     author: {
       username: row.username,
       displayName: row.display_name,

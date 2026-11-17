@@ -15,6 +15,37 @@
   MW.brand = (document.body && document.body.getAttribute("data-brand")) || "banditos";
   MW.isHub = MW.brand === "chapterhive";
   // The staff dashboard: Chapterhive pages use Chapterhive's copy (/hub/admin), God's Banditos uses /admin.
+  // "beta,creators" -> "beta testers and creators" (announcement audiences can be several groups).
+  MW.audienceLabel = function (audience, withIcons) {
+    var names = { creators: "creators", beta: (withIcons ? "🧪 " : "") + "beta testers", staff: (withIcons ? "🛡️ " : "") + "staff" };
+    var parts = String(audience || "all").split(",").filter(function (a) { return names[a]; }).map(function (a) { return names[a]; });
+    if (!parts.length) return "";
+    return parts.length === 1 ? parts[0] : parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1];
+  };
+  // Drafts for anything you type (comments, replies, chat messages): what you've written is kept on this
+  // device until you send it, so leaving the page or closing the app doesn't lose it.
+  // Returns { clear() } to call after sending.
+  MW.draftKey = function (key) { return "ch-draft:" + key; };
+  MW.getDraft = function (key) { try { return localStorage.getItem(MW.draftKey(key)) || ""; } catch (e) { return ""; } };
+  MW.keepDraft = function (area, key, onChange) {
+    var k = MW.draftKey(key), timer = null;
+    var saved = MW.getDraft(key);
+    if (saved && !area.value.trim()) {
+      area.value = saved;
+      area.dispatchEvent(new Event("input"));
+      var note = MW.el("p", { class: "draft-note muted" }, "📝 Your draft is back. Keep writing or send it.");
+      area.insertAdjacentElement("afterend", note);
+      setTimeout(function () { note.remove(); }, 6000);
+    }
+    area.addEventListener("input", function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        try { if (area.value.trim()) localStorage.setItem(k, area.value); else localStorage.removeItem(k); } catch (e) { /* ignore */ }
+        if (onChange) onChange();
+      }, 400);
+    });
+    return { clear: function () { clearTimeout(timer); try { localStorage.removeItem(k); } catch (e) { /* ignore */ } if (onChange) onChange(); } };
+  };
   MW.adminUrl = function (rest) { return (MW.isHub ? "/hub/admin" : "/admin") + (rest || ""); };
 
   // Where a work, story or character lives. On Chapterhive everything opens in Chapterhive's look;
@@ -1185,7 +1216,7 @@
       if (document.querySelector(".welcome-dialog[open], .onboard")) { setTimeout(announcementPopup, 4000); return; }
       var a = fresh[0];
       var dialog = el("dialog", { class: "heist-dialog announce-dialog", "aria-labelledby": "announce-title" });
-      dialog.appendChild(el("p", { class: "node-label" }, "📣 " + ({ beta: "For beta testers", creators: "For creators", staff: "For staff" }[a.audience] || "From the team")));
+      dialog.appendChild(el("p", { class: "node-label" }, "📣 " + (MW.audienceLabel(a.audience) ? "For " + MW.audienceLabel(a.audience) : "From the team")));
       dialog.appendChild(el("h2", { id: "announce-title" }, a.title));
       if (a.body) a.body.split(/\n+/).forEach(function (para) { dialog.appendChild(el("p", {}, para)); });
       var actions = el("div", { class: "form-actions" });

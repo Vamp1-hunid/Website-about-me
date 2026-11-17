@@ -180,7 +180,7 @@ app.get(["/hub/admin", "/hub/admin/"], function (req, res) {
     const gbHeader = html.slice(html.indexOf("<header"), html.indexOf("</nav>") + 6);
     html = html.replace(gbHeader, header)
       .replace('<body data-page="admin">', '<body data-page="admin" data-brand="chapterhive">')
-      .replace(/<link rel="stylesheet" href="\/css\/styles\.css\?v=\d+">/, function (m) { return m + '\n  <link rel="stylesheet" href="/css/chapterhive.css?v=35">'; })
+      .replace(/<link rel="stylesheet" href="\/css\/styles\.css\?v=\d+">/, function (m) { return m + '\n  <link rel="stylesheet" href="/css/chapterhive.css?v=36">'; })
       .replace(/\| God's Banditos/g, "| Chapterhive")
       .replace(/<link rel="icon"[^>]*>/g, '<link rel="icon" href="/images/chapterhive-mark.svg" type="image/svg+xml">');
     hubAdminHtml = html;

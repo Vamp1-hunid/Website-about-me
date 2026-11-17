@@ -1619,3 +1619,12 @@ body[data-brand="chapterhive"] .help-fab, body[data-brand="chapterhive"] .help-g
   .chat-back { display: block; }
   .chat-msg { max-width: 86%; }
 }
+
+/* v31: announcement audience, pick one or more groups */
+.audience-picks { border: 0; padding: 0; margin: 0 0 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
+.audience-picks legend { width: 100%; margin-bottom: 0.4rem; font-weight: 600; }
+.audience-picks .check-row { display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; }
+/* v31: drafts kept on the device */
+.draft-note { font-size: 0.8rem; margin: 0.25rem 0 0; }
+.chat-compose .draft-note { display: none; }
+.chat-thread-text .chat-draft { color: var(--pink); font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

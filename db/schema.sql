@@ -579,9 +579,9 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS max_rating VARCHAR(8) NOT NULL DEFAUL
 ALTER TABLE users ADD COLUMN IF NOT EXISTS hide_strong_language BOOLEAN NOT NULL DEFAULT FALSE;
 -- Per-post privacy: 'followers' makes one post followers-only even if the creator's page is public.
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS visibility VARCHAR(10) NOT NULL DEFAULT 'public';
-DO $$ BEGIN
-  ALTER TABLE posts ADD CONSTRAINT posts_visibility_check CHECK (visibility IN ('public', 'followers'));
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- v31: also 'members' (signed-in people only). Dropped and re-added so existing databases get the new value.
+ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_visibility_check;
+ALTER TABLE posts ADD CONSTRAINT posts_visibility_check CHECK (visibility IN ('public', 'members', 'followers'));
 -- Student verification with a school email.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS school_email VARCHAR(254);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS school_token VARCHAR(64);
@@ -670,8 +670,16 @@ CREATE TABLE IF NOT EXISTS stored_files (
 -- Announcements can also go to beta testers only (or to staff only).
 DO $$ BEGIN
   ALTER TABLE announcements DROP CONSTRAINT IF EXISTS announcements_audience_check;
-  ALTER TABLE announcements ADD CONSTRAINT announcements_audience_check CHECK (audience IN ('all', 'creators', 'beta', 'staff'));
+  -- v31: several groups at once, stored as a list like 'beta,creators'.
+  ALTER TABLE announcements ALTER COLUMN audience TYPE VARCHAR(40);
+  ALTER TABLE announcements ADD CONSTRAINT announcements_audience_check CHECK (audience ~ '^(all|creators|beta|staff)(,(creators|beta|staff))*$');
 END $$;
+-- v31: scheduled and edited announcements. created_at is when it goes live (can be in the future).
+-- pushed_at: when its phone notification was sent (older announcements count as already sent).
+ALTER TABLE announcements ADD COLUMN IF NOT EXISTS pushed_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE announcements ALTER COLUMN pushed_at DROP DEFAULT;
+ALTER TABLE announcements ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
+ALTER TABLE announcements ADD COLUMN IF NOT EXISTS is_draft BOOLEAN NOT NULL DEFAULT FALSE;
 -- Buddies: two-way friendships. One person sends a request; the other accepts or declines.
 CREATE TABLE IF NOT EXISTS buddies (
   id           SERIAL PRIMARY KEY,

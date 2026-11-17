@@ -271,7 +271,7 @@ router.get("/:username", requireLogin, async function (req, res) {
         id: row.id,
         body: row.body,
         createdAt: row.created_at,
-        editedAt: row.edited_at,
+        editedAt: req.session.user && req.session.user.role === "admin" ? row.edited_at : null,
         isReply: Boolean(row.parent_id),
         work: { slug: row.slug, title: row.title }
       };

@@ -250,40 +250,145 @@
 
   /* ---------- Announcements ---------- */
 
+  var editingAnnouncement = null; // the announcement being edited, or null when writing a new one
+
+  // datetime-local wants "2026-11-18T09:00" in local time.
+  function localInput(d) {
+    var t = new Date(d);
+    t.setMinutes(t.getMinutes() - t.getTimezoneOffset());
+    return t.toISOString().slice(0, 16);
+  }
+
   function loadAnnouncements() {
     var list = $("announce-list");
     MW.api("/admin/announcements").then(function (d) {
       list.textContent = "";
       if (!d.announcements.length) ADMIN.emptyRow(list, "No announcements yet.");
       d.announcements.forEach(function (a) {
+        var later = !a.is_draft && new Date(a.created_at) > new Date();
+        var meta = (a.is_draft ? "📝 Draft, saved " : later ? "⏰ Scheduled for " : "") + MW.formatDateTime(a.created_at) + " · " + (MW.audienceLabel(a.audience, true) || "everyone") +
+          (a.edited_at ? " · edited" : "") + (a.body ? " · " + a.body.slice(0, 80) : "");
         list.appendChild(ADMIN.listItem({
           title: a.title,
-          meta: MW.formatDateTime(a.created_at) + " · " + ({ creators: "creators", beta: "🧪 beta testers", staff: "🛡️ staff" }[a.audience] || "everyone") + (a.body ? " · " + a.body.slice(0, 80) : ""),
-          actions: [ADMIN.confirmButton("Delete", function () {
-            return MW.api("/admin/announcements/" + a.id, { method: "DELETE" }).then(loadAnnouncements);
-          })]
+          meta: meta,
+          flag: a.is_draft ? "DRAFT" : later ? "SCHEDULED" : null,
+          actions: [
+            ADMIN.button("Edit", function () { startEditing(a); }),
+            ADMIN.confirmButton("Delete", function () {
+              return MW.api("/admin/announcements/" + a.id, { method: "DELETE" }).then(function () {
+                if (editingAnnouncement && editingAnnouncement.id === a.id) stopEditing();
+                loadAnnouncements();
+              });
+            })
+          ]
         }));
       });
     }).catch(function (e) { ADMIN.emptyRow(list, e.message); });
   }
+
+  // Who: tick one or more groups. "Everyone" clears the others; ticking a group clears "Everyone".
+  function pickedAudience() {
+    var on = Array.prototype.filter.call(document.querySelectorAll("#an-audience input:checked"), function (b) { return b.value !== "all"; })
+      .map(function (b) { return b.value; });
+    return on.length ? on : ["all"];
+  }
+  function setAudience(list) {
+    document.querySelectorAll("#an-audience input").forEach(function (b) { b.checked = list.indexOf(b.value) !== -1; });
+    paintAudience();
+  }
+  function paintAudience() {
+    var all = document.querySelector("#an-audience input[value='all']");
+    var others = document.querySelectorAll("#an-audience input:not([value='all'])");
+    if (!Array.prototype.some.call(others, function (b) { return b.checked; })) all.checked = true;
+  }
+  document.querySelectorAll("#an-audience input").forEach(function (box) {
+    box.addEventListener("change", function () {
+      if (box.value === "all" && box.checked) document.querySelectorAll("#an-audience input:not([value='all'])").forEach(function (b) { b.checked = false; });
+      if (box.value !== "all" && box.checked) document.querySelector("#an-audience input[value='all']").checked = false;
+      paintAudience();
+    });
+  });
+
+  // Schedule: "Send now" or "Schedule for later" with a date and time.
+  function paintSchedule() {
+    var later = $("an-when-later").checked;
+    $("an-at-row").hidden = !later;
+    if (later && !$("an-at").value) $("an-at").value = localInput(Date.now() + 3600000);
+    var e = editingAnnouncement;
+    var alreadyOut = e && !e.is_draft && new Date(e.created_at) <= new Date();
+    $("an-submit").textContent = alreadyOut ? "Save changes" : later ? "Schedule announcement" : e ? "Send it now" : "Send announcement";
+  }
+  ["an-when-now", "an-when-later"].forEach(function (id) { $(id).addEventListener("change", paintSchedule); });
+
+  function startEditing(a) {
+    editingAnnouncement = a;
+    $("an-title").value = a.title;
+    $("an-body").value = a.body || "";
+    $("an-link").value = a.link || "";
+    setAudience(String(a.audience || "all").split(","));
+    var later = !a.is_draft && new Date(a.created_at) > new Date();
+    // Drafts and scheduled announcements can be sent now or (re)scheduled; one that's already out keeps its date.
+    $("an-when").hidden = !later && !a.is_draft;
+    $("an-draft").hidden = !later && !a.is_draft;
+    $("an-when-later").checked = later; $("an-when-now").checked = !later;
+    $("an-at").value = later ? localInput(a.created_at) : "";
+    $("an-heading").textContent = "Edit announcement";
+    $("an-cancel").hidden = false;
+    $("an-feedback").textContent = later || a.is_draft ? "" : "It's already out: your changes show straight away (no second notification). Only admins can see it was edited.";
+    $("an-feedback").className = "feedback";
+    paintSchedule();
+    $("an-title").focus();
+    $("announce-form").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  function stopEditing() {
+    editingAnnouncement = null;
+    $("announce-form").reset();
+    setAudience(["all"]);
+    $("an-when").hidden = false;
+    $("an-draft").hidden = false;
+    $("an-heading").textContent = "Send an announcement";
+    $("an-cancel").hidden = true;
+    paintSchedule();
+  }
+  $("an-cancel").addEventListener("click", function () { stopEditing(); $("an-feedback").textContent = ""; });
+
+  $("an-draft").addEventListener("click", function () { sendAnnouncement(true); });
   $("announce-form").addEventListener("submit", function (event) {
     event.preventDefault();
+    sendAnnouncement(false);
+  });
+  function sendAnnouncement(asDraft) {
     var fb = $("an-feedback");
-    var payload = { title: $("an-title").value.trim(), body: $("an-body").value.trim(), link: $("an-link").value.trim(), audience: $("an-audience").value };
+    var later = $("an-when-later").checked && !$("an-when").hidden;
+    var payload = { title: $("an-title").value.trim(), body: $("an-body").value.trim(), link: $("an-link").value.trim(), audience: pickedAudience() };
     if (!payload.title) { fb.className = "feedback feedback-error"; fb.textContent = "Give it a title."; return; }
-    MW.api("/admin/announcements", { method: "POST", json: payload }).then(function () {
-      event.target.reset();
+    if (asDraft) { payload.draft = true; later = false; }
+    if (later) {
+      var at = new Date($("an-at").value);
+      if (!$("an-at").value || isNaN(at)) { fb.className = "feedback feedback-error"; fb.textContent = "Pick the date and time to send it."; return; }
+      if (at <= new Date()) { fb.className = "feedback feedback-error"; fb.textContent = "Pick a time in the future (or choose Send now)."; return; }
+      payload.publishAt = at.toISOString();
+    }
+    var editing = editingAnnouncement;
+    var req = editing
+      ? MW.api("/admin/announcements/" + editing.id, { method: "PUT", json: payload })
+      : MW.api("/admin/announcements", { method: "POST", json: payload });
+    req.then(function () {
+      stopEditing();
       fb.className = "feedback feedback-success";
-      fb.textContent = "Sent. It's in everyone's bell now (if the bell feature is on for them).";
+      fb.textContent = asDraft ? "Draft saved. Open it from the list below with Edit when you're ready to send it."
+        : editing ? "Saved." + (later ? " It goes out " + MW.formatDateTime(new Date(payload.publishAt)) + "." : "")
+        : later ? "Scheduled for " + MW.formatDateTime(new Date(payload.publishAt)) + ". It'll appear in bells and phones then."
+        : "Sent. It's in the bell and on phones with notifications on.";
       loadAnnouncements();
     }).catch(function (e) { fb.className = "feedback feedback-error"; fb.textContent = e.message; });
-  });
-  ADMIN.onShow("announce", function () {
-    // "📣 Post an update" from the menu opens here with Beta testers already chosen.
-    var to = new URLSearchParams(window.location.search).get("to");
-    if (to && $("an-audience").querySelector("option[value='" + to + "']")) $("an-audience").value = to;
-    loadAnnouncements();
-  });
+  }
+
+  // "📣 Post an update" from the menu opens here with Beta testers already ticked (?to=beta).
+  var announceTo = new URLSearchParams(window.location.search).get("to");
+  if (announceTo) setAudience(announceTo.split(","));
+  paintSchedule();
+  ADMIN.onShow("announce", loadAnnouncements);
 
   /* ---------- Features (feature flags) ---------- */
 
