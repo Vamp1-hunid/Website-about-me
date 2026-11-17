@@ -10,6 +10,7 @@ async function notify(userId, n) {
     "INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1, $2, $3, $4, $5)",
     [userId, String(n.type || "info").slice(0, 20), String(n.title || "").slice(0, 160), String(n.body || "").slice(0, 1500), String(n.link || "").slice(0, 300)]
   );
+  require("./push").sendTo([userId], n); // phone notification too (never blocks or fails the bell)
 }
 
 // The same notification for many people at once (e.g. a creator's followers).
@@ -21,6 +22,7 @@ async function notifyMany(userIds, n) {
      SELECT u, $2, $3, $4, $5 FROM unnest($1::int[]) AS u`,
     [ids, String(n.type || "info").slice(0, 20), String(n.title || "").slice(0, 160), String(n.body || "").slice(0, 1500), String(n.link || "").slice(0, 300)]
   );
+  require("./push").sendTo(ids, n);
 }
 
 // Tell every admin (new applications and reservations land in their bell).

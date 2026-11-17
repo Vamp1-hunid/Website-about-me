@@ -2,7 +2,7 @@
    Keeps the app shell (styles, scripts, icons, an offline page) so the installed app opens quickly
    and shows a friendly page with no signal. Pages and API answers always come fresh from the server
    (never cached), so nobody sees someone else's data or an old version of a page. */
-const VERSION = "ch-v3";
+const VERSION = "ch-v4";
 const SHELL = [
   "/offline.html",
   "/css/styles.css",
@@ -47,4 +47,29 @@ self.addEventListener("fetch", function (event) {
       return caches.match(req, { ignoreSearch: true });
     }));
   }
+});
+
+// Phone notifications: show them, and open (or focus) the app at the right page when tapped.
+self.addEventListener("push", function (event) {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (e) { data = { body: event.data ? event.data.text() : "" }; }
+  event.waitUntil(self.registration.showNotification(data.title || "Chapterhive", {
+    body: data.body || "",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-maskable-192.png",
+    tag: data.tag || undefined,
+    renotify: Boolean(data.tag),
+    data: { url: data.url || "/hub" }
+  }));
+});
+
+self.addEventListener("notificationclick", function (event) {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || "/hub", self.location.origin).href;
+  event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (wins) {
+    for (const w of wins) {
+      if (new URL(w.url).origin === self.location.origin) { w.navigate(url); return w.focus(); }
+    }
+    return self.clients.openWindow(url);
+  }));
 });

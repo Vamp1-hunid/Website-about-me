@@ -73,10 +73,41 @@
       text.appendChild(el("span", { class: "bell-time" }, timeAgo(n.createdAt)));
       a.appendChild(text);
       li.appendChild(a);
+      // Tapping a notification marks it as read straight away (the request survives moving to the link).
+      if (n.unread && n.id) {
+        a.addEventListener("click", function () {
+          if (!li.classList.contains("is-unread")) return;
+          li.classList.remove("is-unread");
+          try {
+            fetch("/api/notifications/read", { method: "POST", credentials: "same-origin", keepalive: true,
+              headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: [n.id] }) }).catch(function () {});
+          } catch (e) { /* ignore */ }
+          var left = Math.max(0, (Number(badge.textContent) || 1) - 1);
+          setCount(left);
+        });
+      }
       return li;
     }
 
+    // A one-tap "turn on phone notifications" strip at the top of the bell, until it's on (or blocked).
+    function pushStrip() {
+      if (!MW.pushState || panel.querySelector(".bell-push")) return;
+      MW.pushState().then(function (state) {
+        if (state === "on" || panel.querySelector(".bell-push")) return;
+        if (state === "unsupported" && !/iphone|ipad|ipod/i.test(navigator.userAgent)) return;
+        var strip = el("div", { class: "bell-push" });
+        strip.appendChild(el("span", {}, state === "blocked" ? "Notifications are blocked for this site in your browser settings." : "📲 Get pop-ups on this device, like WhatsApp."));
+        if (state !== "blocked") {
+          var on = el("button", { type: "button", class: "btn btn-small" }, "Turn on");
+          on.addEventListener("click", function () { MW.enablePush().then(function (ok) { if (ok) strip.remove(); }); });
+          strip.appendChild(on);
+        }
+        list.parentNode.insertBefore(strip, list);
+      });
+    }
+
     function showMine() {
+      pushStrip();
       list.textContent = "";
       list.appendChild(el("li", { class: "bell-empty" }, "Loading…"));
       MW.api("/notifications").then(function (d) {

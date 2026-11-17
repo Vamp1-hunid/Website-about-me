@@ -4614,3 +4614,4 @@ body[data-brand="chapterhive"] .help-glitter { width: 2.9rem; height: 3.2rem; }
 .wb-steps { display: grid; gap: 0.6rem; padding-left: 1.2rem; margin: 0.6rem 0 1rem; }
 .wb-steps li { display: grid; gap: 0.15rem; }
 .wb-steps span { color: var(--ink-dim); font-size: 0.93rem; }
+.bell-push { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.6rem 0.8rem; margin: 0.3rem 0.4rem; border: 1px solid var(--pink); border-radius: 12px; font-size: 0.9rem; }

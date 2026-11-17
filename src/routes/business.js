@@ -102,7 +102,8 @@ router.post("/suggestions", requireFlag("suggestion_box"), requireLogin, limiter
     "INSERT INTO contact_messages (name, email, subject, message, kind, user_id) VALUES ($1, $2, $3, $4, 'suggestion', $5)",
     [u.display_name + " (@" + u.username + ")", u.email || "", topic, message, req.session.user.id]
   );
-  await tellAdmins("💡 Suggestion: " + topic, message);
+  await notifyMany((await db.query("SELECT id FROM users WHERE role = 'admin'")).rows.map(function (a) { return a.id; }),
+    { type: "suggestion", title: "💡 Suggestion from @" + u.username + ": " + topic, body: message.slice(0, 300), link: "/admin#inbox" });
   res.status(201).json({ ok: true });
 });
 

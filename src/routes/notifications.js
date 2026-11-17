@@ -68,6 +68,33 @@ router.get("/count", requireLogin, async function (req, res) {
   res.json({ count: a.rows[0].n + b.length });
 });
 
+// Phone notifications: the key the browser needs, and saving / removing this device.
+router.get("/push-key", async function (req, res) {
+  res.json({ publicKey: await require("../push").publicKey() });
+});
+router.post("/push-subscribe", requireLogin, async function (req, res) {
+  const sub = req.body && req.body.subscription;
+  const endpoint = sub && typeof sub.endpoint === "string" ? sub.endpoint : "";
+  const k = (sub && sub.keys) || {};
+  if (!/^https:\/\//.test(endpoint) || endpoint.length > 1000 || typeof k.p256dh !== "string" || typeof k.auth !== "string") {
+    return res.status(400).json({ error: "That notification subscription doesn't look right." });
+  }
+  await db.query(
+    `INSERT INTO push_subscriptions (endpoint, user_id, p256dh, auth) VALUES ($1, $2, $3, $4)
+     ON CONFLICT (endpoint) DO UPDATE SET user_id = EXCLUDED.user_id, p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth`,
+    [endpoint, req.session.user.id, k.p256dh.slice(0, 200), k.auth.slice(0, 100)]);
+  res.status(201).json({ ok: true });
+});
+router.post("/push-unsubscribe", requireLogin, async function (req, res) {
+  const endpoint = req.body && typeof req.body.endpoint === "string" ? req.body.endpoint : "";
+  await db.query("DELETE FROM push_subscriptions WHERE endpoint = $1 AND user_id = $2", [endpoint, req.session.user.id]);
+  res.json({ ok: true });
+});
+router.post("/push-test", requireLogin, async function (req, res) {
+  await require("../notify").notify(req.session.user.id, { type: "info", title: "🐝 Notifications are on", body: "This is how Chapterhive will tell you about new followers, buddy requests, chats and updates.", link: "/hub" });
+  res.json({ ok: true });
+});
+
 router.post("/read", requireLogin, async function (req, res) {
   const me = req.session.user.id;
   const ids = req.body && Array.isArray(req.body.ids) ? req.body.ids : null;

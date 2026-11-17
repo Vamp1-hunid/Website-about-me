@@ -42,7 +42,7 @@ const DEFAULTS = [
   // Help & discovery
   ["search", "Search", "The search box and search results pages.", "everyone", "Help & discovery"],
   ["help_assistant", "Help assistant", "The ? chat that answers questions from the FAQ (uses AI if an AI key is set).", "everyone", "Help & discovery"],
-  ["suggestion_box", "Suggestion box", "Members can send suggestions to your inbox from the collab board and help page.", "admin", "Help & discovery"],
+  ["suggestion_box", "Suggestion box", "Members can send suggestions to your inbox from the collab board and help page.", "everyone", "Help & discovery"],
   ["quick_tips", "Quick tips", "Small dismissible tips that help people find their way around.", "everyone", "Help & discovery"]
 ];
 
