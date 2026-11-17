@@ -280,8 +280,9 @@
     }
 
     if (!user && MW.isHub && MW.feature("reservations") && !MW.feature("signups")) {
-      // Before launch the header stays small: just Log in. "Reserve your name" lives on the home page and in the menu.
-      area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub/login", title: "Reserved a name with a password? Log in to follow the list and team updates" }, "Log in"));
+      // Before launch: Log in for people who already reserved, and Sign up, which starts a username reservation.
+      area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub/login", title: "Reserved a name with a password? Log in to follow creators, like posts and see team updates" }, "Log in"));
+      area.appendChild(el("a", { class: "btn btn-small", href: "/hub/reserve", title: "Reserve your username for launch day" }, "Sign up"));
       reservationBanner();
       return;
     }
