@@ -1234,4 +1234,51 @@
       });
     }).catch(function (e) { box.textContent = e.message; });
   };
+
+  // Phone notifications (like WhatsApp): ask once, then the server can send pop-ups to this device.
+  function urlB64ToUint8Array(base64) {
+    var padding = "=".repeat((4 - base64.length % 4) % 4);
+    var raw = atob((base64 + padding).replace(/-/g, "+").replace(/_/g, "/"));
+    var out = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+  MW.pushSupported = function () {
+    return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && window.isSecureContext;
+  };
+  MW.pushState = function () {
+    if (!MW.pushSupported()) return Promise.resolve("unsupported");
+    if (Notification.permission === "denied") return Promise.resolve("blocked");
+    return navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); })
+      .then(function (sub) { return sub ? "on" : "off"; }).catch(function () { return "off"; });
+  };
+  MW.enablePush = function () {
+    if (!MW.pushSupported()) {
+      MW.toast(/iphone|ipad|ipod/i.test(navigator.userAgent) ? "On iPhone, first add Chapterhive to your Home Screen (Share → Add to Home Screen), then turn notifications on from the app." : "This browser can't show notifications. Try Chrome or the installed app.", true, 8000);
+      return Promise.resolve(false);
+    }
+    return Notification.requestPermission().then(function (perm) {
+      if (perm !== "granted") { MW.toast("Notifications weren't allowed. You can allow them in your browser or phone settings.", true, 7000); return false; }
+      return Promise.all([navigator.serviceWorker.ready, MW.api("/notifications/push-key")]).then(function (both) {
+        var reg = both[0];
+        return reg.pushManager.getSubscription().then(function (old) {
+          return old || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(both[1].publicKey) });
+        });
+      }).then(function (sub) {
+        return MW.api("/notifications/push-subscribe", { method: "POST", json: { subscription: sub.toJSON() } });
+      }).then(function () {
+        MW.toast("Phone notifications are on. 🐝");
+        MW.api("/notifications/push-test", { method: "POST" }).catch(function () {});
+        return true;
+      });
+    }).catch(function (e) { MW.toast("Couldn't turn notifications on: " + e.message, true); return false; });
+  };
+  MW.disablePush = function () {
+    if (!MW.pushSupported()) return Promise.resolve();
+    return navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+      if (!sub) return;
+      var endpoint = sub.endpoint;
+      return sub.unsubscribe().then(function () { return MW.api("/notifications/push-unsubscribe", { method: "POST", json: { endpoint: endpoint } }); });
+    }).then(function () { MW.toast("Phone notifications are off on this device."); });
+  };
 })();

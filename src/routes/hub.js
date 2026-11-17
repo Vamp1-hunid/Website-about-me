@@ -450,6 +450,9 @@ router.post("/reports", requireLogin, reportLimiter, async function (req, res) {
       [req.session.user.id, type, id, reason, text(req.body.details, 1000)]
     );
   }
+  if (!dup.rows.length) {
+    require("../notify").notifyStaff("handle_reports", { type: "report", title: "🚩 New report: " + type, body: "@" + req.session.user.username + " reported a " + type + (reason ? " (" + reason + ")" : "") + ".", link: "/admin#chapterhive" }).catch(function () {});
+  }
   res.status(201).json({ ok: true });
 });
 

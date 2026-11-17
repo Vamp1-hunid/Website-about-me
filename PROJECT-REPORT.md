@@ -1949,3 +1949,23 @@ banners, the menu, the admin lists, the public list and the username preview.
   - This uses database functions `ch_norm`, `ch_score` and `ch_match` in `db/schema.sql`, with the
     `pg_trgm` extension for typos. Render's PostgreSQL includes it. If it were ever missing, search
     still ignores hyphens and capitals; only the typo matching switches off.
+
+### Version 28 (17 November 2026): reports and suggestions in the bell, tap-to-read, phone notifications
+
+- **Reports in the bell:** every new report (posts, comments, creators, collabs, chat and group
+  messages) sends "🚩 New report…" to admins and staff with the Handle reports power. It links to
+  the reports list.
+- **Suggestions in the bell:** "💡 Suggestion from @name: …" goes to admins. The suggestion box was
+  still admin-only, so a one-time start-up step switched it on for everyone.
+- **Tap to read:** tapping a notification marks it as read straight away and lowers the unread
+  count, even when the tap opens another page.
+- **Phone notifications, like WhatsApp** (`src/push.js`, table `push_subscriptions`):
+  - Anything that lands in someone's bell also pops up on every device where they turned
+    notifications on, even with Chapterhive closed. Tapping the pop-up opens the right page.
+  - **Turning them on:** a "📲 Get pop-ups on this device" strip at the top of the bell, or
+    Settings → Phone notifications (which can also turn them off).
+  - **Where it works:** the installed app on Android, the Play Store app once it's made, Chrome
+    and Edge on PCs, and iPhones once Chapterhive is added to the Home Screen.
+  - **Behind the scenes:** this uses standard Web Push. The keys are made automatically once and
+    kept in the database; you can set your own `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` on Render
+    instead. A test notification is sent as soon as someone turns them on.

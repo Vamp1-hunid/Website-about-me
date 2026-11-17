@@ -69,6 +69,20 @@
         save({ showOnline: on }, on ? "People can see when you're online." : "You now appear offline to everyone.");
       }));
 
+      // Phone notifications on this device.
+      var sPush = section("Phone notifications", "Pop-ups on this phone or computer for new followers, buddy requests, chats and team updates, even when Chapterhive is closed.");
+      var pushRow = el("div");
+      sPush.appendChild(pushRow);
+      MW.pushState().then(function (state) {
+        if (state === "unsupported") {
+          pushRow.appendChild(el("p", { class: "muted" }, /iphone|ipad|ipod/i.test(navigator.userAgent) ? "On iPhone, add Chapterhive to your Home Screen first (Share → Add to Home Screen), then open it from there to turn notifications on." : "This browser can't show notifications. Try Chrome, Edge or the installed app."));
+          return;
+        }
+        if (state === "blocked") { pushRow.appendChild(el("p", { class: "muted" }, "Notifications are blocked for Chapterhive in your browser or phone settings. Allow them there, then come back.")); return; }
+        pushRow.appendChild(switchRow("🔔 Notifications on this device", "You can turn them off again any time.", state === "on", function (on) {
+          (on ? MW.enablePush() : MW.disablePush());
+        }));
+      });
       // Tips: turn the quick tips and welcome-back tour back on (or off) on this device.
       var sTips = section("Tips", "Quick tips on each page and a short tour when you come back after a few days.");
       var tipsOn = true;
