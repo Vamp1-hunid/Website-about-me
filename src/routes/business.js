@@ -40,7 +40,7 @@ async function readSponsor() {
 
 async function tellAdmins(title, body) {
   const admins = await db.query("SELECT id FROM users WHERE role = 'admin'");
-  await notifyMany(admins.rows.map(function (a) { return a.id; }), { type: "inbox", title: title, body: body.slice(0, 300), link: "/admin#inbox" });
+  await notifyMany(admins.rows.map(function (a) { return a.id; }), { type: "inbox", title: title, body: body.slice(0, 300), link: "/hub/admin#inbox" });
 }
 
 function emailOwner(subject, textBody, replyTo) {
@@ -103,7 +103,7 @@ router.post("/suggestions", requireFlag("suggestion_box"), requireLogin, limiter
     [u.display_name + " (@" + u.username + ")", u.email || "", topic, message, req.session.user.id]
   );
   await notifyMany((await db.query("SELECT id FROM users WHERE role = 'admin'")).rows.map(function (a) { return a.id; }),
-    { type: "suggestion", title: "💡 Suggestion from @" + u.username + ": " + topic, body: message.slice(0, 300), link: "/admin#inbox" });
+    { type: "suggestion", title: "💡 Suggestion from @" + u.username + ": " + topic, body: message.slice(0, 300), link: "/hub/admin#inbox" });
   res.status(201).json({ ok: true });
 });
 

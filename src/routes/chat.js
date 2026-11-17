@@ -246,7 +246,7 @@ router.post("/messages/:id/report", async function (req, res) {
   const details = typeof req.body.details === "string" ? req.body.details.trim().slice(0, 1000) : "";
   const dup = await db.query("SELECT 1 FROM reports WHERE reporter_id = $1 AND target_type = 'message' AND target_id = $2 AND status = 'open'", [userId, id]);
   if (!dup.rows.length) {
-    require("../notify").notifyStaff("handle_reports", { type: "report", title: "🚩 New report: chat message", body: "@" + req.session.user.username + " reported a chat message.", link: "/admin#chapterhive" }).catch(function () {});
+    require("../notify").notifyStaff("handle_reports", { type: "report", title: "🚩 New report: chat message", body: "@" + req.session.user.username + " reported a chat message.", link: "/hub/admin#chapterhive" }).catch(function () {});
     await db.query("INSERT INTO reports (reporter_id, target_type, target_id, reason, details) VALUES ($1, 'message', $2, $3, $4)",
       [userId, id, reason.slice(0, 30), details]);
   }
@@ -417,7 +417,7 @@ router.post("/groups/messages/:id/report", requireFlag("group_chats"), async fun
   if (!rows.length) return res.status(404).json({ error: "That message could not be found." });
   const reason = REASONS.includes(req.body.reason) ? req.body.reason : "other";
   await db.query("INSERT INTO reports (reporter_id, target_type, target_id, reason, details) VALUES ($1, 'group_message', $2, $3, '')", [userId, id, reason]);
-  require("../notify").notifyStaff("handle_reports", { type: "report", title: "🚩 New report: group message", body: "A group chat message was reported.", link: "/admin#chapterhive" }).catch(function () {});
+  require("../notify").notifyStaff("handle_reports", { type: "report", title: "🚩 New report: group message", body: "A group chat message was reported.", link: "/hub/admin#chapterhive" }).catch(function () {});
   res.status(201).json({ ok: true });
 });
 

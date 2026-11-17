@@ -956,7 +956,7 @@ router.put("/staff/:username", async function (req, res) {
   await db.query("UPDATE users SET staff_perms = $1 WHERE id = $2", [unique, target.id]);
   if (unique.length) {
     const labels = staff.PERMS.filter(function (p) { return unique.includes(p[0]); }).map(function (p) { return p[1].toLowerCase(); });
-    await notify(target.id, { type: "info", title: "🛡️ You've been given staff powers", body: "You can now: " + labels.join(", ") + ". Find your tools under Staff tools in the menu.", link: "/admin" });
+    await notify(target.id, { type: "info", title: "🛡️ You've been given staff powers", body: "You can now: " + labels.join(", ") + ". Find your tools under Staff tools in the menu.", link: "/hub/admin" });
   }
   res.json({ username: target.username, powers: unique });
 });
