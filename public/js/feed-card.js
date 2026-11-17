@@ -118,6 +118,7 @@
     if (post.contentRating === "teen") metaLine += " · Teen";
     if (post.contentRating === "mature") metaLine += " · 18+";
     if (post.visibility === "followers") metaLine += " · 🔒 Followers";
+    else if (post.visibility === "members") metaLine += " · 👥 Members";
     names.appendChild(el("span", { class: "muted" }, metaLine));
     who.appendChild(names);
     head.appendChild(who);

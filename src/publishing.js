@@ -39,6 +39,8 @@ async function announceReady() {
 
 function start() {
   setInterval(announceReady, 60 * 1000).unref();
+  // Scheduled team announcements: send their phone notification when they go live.
+  setInterval(function () { require("./announcements").pushDue(); }, 60 * 1000).unref();
   setTimeout(announceReady, 5000).unref();
 }
 

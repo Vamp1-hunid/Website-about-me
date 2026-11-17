@@ -80,8 +80,29 @@
         }
         if (state === "blocked") { pushRow.appendChild(el("p", { class: "muted" }, "Notifications are blocked for Chapterhive in your browser or phone settings. Allow them there, then come back.")); return; }
         pushRow.appendChild(switchRow("🔔 Notifications on this device", "You can turn them off again any time.", state === "on", function (on) {
-          (on ? MW.enablePush() : MW.disablePush());
+          (on ? MW.enablePush() : MW.disablePush()).then(checkPush);
         }));
+        // A quick check: is this device registered, and does a test arrive?
+        var status = el("p", { class: "muted push-status" });
+        var test = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "Send me a test notification");
+        test.addEventListener("click", function () {
+          test.disabled = true;
+          MW.api("/notifications/push-test", { method: "POST" }).then(function () {
+            MW.toast("Test sent. Close or leave Chapterhive: it should pop up within a few seconds.", false, 7000);
+          }).catch(function (e) { MW.toast(e.message, true); }).then(function () { test.disabled = false; });
+        });
+        pushRow.append(status, test);
+        function checkPush() {
+          navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+            return MW.api("/notifications/push-status" + (sub ? "?endpoint=" + encodeURIComponent(sub.endpoint) : "")).then(function (d) {
+              status.textContent = sub && d.thisDevice
+                ? "✅ This device is registered (" + d.devices + " device" + (d.devices === 1 ? "" : "s") + " on your account)."
+                : sub ? "⚠️ This device isn't registered on the server yet. Turn the switch off and on again."
+                : "This device isn't set up for notifications. Turn the switch on.";
+            });
+          }).catch(function () { status.textContent = ""; });
+        }
+        checkPush();
       });
       // Tips: turn the quick tips and welcome-back tour back on (or off) on this device.
       var sTips = section("Tips", "Quick tips on each page and a short tour when you come back after a few days.");

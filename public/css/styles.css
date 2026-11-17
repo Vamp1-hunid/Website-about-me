@@ -4615,3 +4615,8 @@ body[data-brand="chapterhive"] .help-glitter { width: 2.9rem; height: 3.2rem; }
 .wb-steps li { display: grid; gap: 0.15rem; }
 .wb-steps span { color: var(--ink-dim); font-size: 0.93rem; }
 .bell-push { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.6rem 0.8rem; margin: 0.3rem 0.4rem; border: 1px solid var(--pink); border-radius: 12px; font-size: 0.9rem; }
+
+/* v31: announcement audience, pick one or more groups */
+.audience-picks { border: 0; padding: 0; margin: 0 0 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
+.audience-picks legend { width: 100%; margin-bottom: 0.4rem; font-weight: 600; }
+.audience-picks .check-row { display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; }

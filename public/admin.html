@@ -243,9 +243,10 @@
                     <option value="mature">Mature (18+): strong violence, adult themes</option>
                   </select>
                 </label>
-                <label>Who can see this post
+                <label>Who can see this post <span class="muted">(you can change this any time, even after posting)</span>
                   <select id="visibility" name="visibility">
                     <option value="public">Everyone allowed by my page settings</option>
+                    <option value="members">Members only (signed-in people)</option>
                     <option value="followers">Followers only (private post)</option>
                   </select>
                 </label>
@@ -635,14 +636,26 @@
       <section class="dash-panel dash-two" role="tabpanel" data-panel="announce" aria-label="Announcements" hidden>
         <div class="panel">
           <p class="node-label">Broadcast // news</p>
-          <h2>Send an announcement</h2>
-          <p class="muted">Appears in the notification bell of every member (or only creators).</p>
+          <h2 id="an-heading">Send an announcement</h2>
+          <p class="muted">Appears in the notification bell of everyone, or only the groups you tick.</p>
           <form id="announce-form" novalidate>
             <div class="form-row"><label for="an-title">Title</label><input type="text" id="an-title" maxlength="120" required></div>
             <div class="form-row"><label for="an-body">Message</label><textarea id="an-body" rows="4" maxlength="1000"></textarea></div>
             <div class="form-row"><label for="an-link">Link (optional)</label><input type="text" id="an-link" maxlength="300" placeholder="/hub/news or https://…"></div>
-            <div class="form-row"><label for="an-audience">Who</label><select id="an-audience"><option value="all">Everyone</option><option value="beta">🧪 Beta testers only</option><option value="creators">Creators only</option><option value="staff">🛡️ Staff only</option></select></div>
-            <button type="submit">Send announcement</button>
+            <fieldset class="form-row audience-picks" id="an-audience"><legend>Who (pick one or more)</legend>
+              <label class="check-row"><input type="checkbox" value="all" checked> Everyone</label>
+              <label class="check-row"><input type="checkbox" value="beta"> 🧪 Beta testers</label>
+              <label class="check-row"><input type="checkbox" value="creators"> 🎨 Creators</label>
+              <label class="check-row"><input type="checkbox" value="staff"> 🛡️ Staff</label>
+            </fieldset>
+            <fieldset class="form-row audience-picks" id="an-when"><legend>When</legend>
+              <label class="check-row"><input type="radio" name="an-when" id="an-when-now" value="now" checked> Send now</label>
+              <label class="check-row"><input type="radio" name="an-when" id="an-when-later" value="later"> ⏰ Schedule for later</label>
+            </fieldset>
+            <div class="form-row" id="an-at-row" hidden><label for="an-at">Send it on</label><input type="datetime-local" id="an-at"></div>
+            <button type="submit" id="an-submit">Send announcement</button>
+            <button type="button" class="btn btn-ghost" id="an-draft">Save as draft</button>
+            <button type="button" class="btn btn-ghost" id="an-cancel" hidden>Cancel editing</button>
             <p class="feedback" id="an-feedback" aria-live="polite"></p>
           </form>
         </div>

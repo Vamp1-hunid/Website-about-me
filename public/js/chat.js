@@ -90,7 +90,9 @@
         top.appendChild(el("strong", {}, t.with.displayName || t.with.username));
         if (t.lastAt) top.appendChild(el("span", { class: "chat-thread-time" }, shortTime(t.lastAt)));
         text.appendChild(top);
-        text.appendChild(el("span", { class: "muted" }, t.preview || ""));
+        var d = MW.getDraft("chat:t" + t.id);
+        if (d) text.appendChild(el("span", { class: "chat-draft" }, "📝 Draft: " + d.slice(0, 60)));
+        else text.appendChild(el("span", { class: "muted" }, t.preview || ""));
         b.appendChild(text);
         if (t.unread) { b.classList.add("is-unread"); b.appendChild(el("span", { class: "chat-unread", "aria-label": t.unread + " unread" }, String(t.unread))); }
         b.addEventListener("click", function () { openThread(t.id); });
@@ -382,6 +384,7 @@
     var area = el("textarea", { rows: "1", maxlength: "2000", placeholder: "Message", "aria-label": "Message" });
     var send = el("button", { type: "submit", class: "chat-send", "aria-label": "Send a like" }, "👍");
     form.append(area, send);
+    var draftKey = "chat:" + (current.group ? "g" : "t") + current.id;
     function paint() {
       area.style.height = "auto";
       area.style.height = Math.min(area.scrollHeight, 140) + "px";
@@ -391,6 +394,7 @@
       send.setAttribute("aria-label", typed ? "Send" : "Send a like");
     }
     area.addEventListener("input", paint);
+    var draft = MW.keepDraft(area, draftKey);
     area.addEventListener("keydown", function (event) {
       // Enter sends on computers; on phones Enter makes a new line and you tap the send button.
       if (event.key === "Enter" && !event.shiftKey && !("ontouchstart" in window)) { event.preventDefault(); form.requestSubmit(); }
@@ -400,7 +404,7 @@
       var body = area.value.trim() || "👍";
       send.disabled = true;
       MW.api(convBase() + current.id + "/messages", { method: "POST", json: { body: body } }).then(function (d) {
-        area.value = ""; paint();
+        area.value = ""; paint(); draft.clear();
         addMessages([d.message]);
         loadThreads();
         if (current.group) loadGroups();

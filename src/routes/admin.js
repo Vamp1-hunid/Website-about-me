@@ -956,7 +956,7 @@ router.put("/staff/:username", async function (req, res) {
   await db.query("UPDATE users SET staff_perms = $1 WHERE id = $2", [unique, target.id]);
   if (unique.length) {
     const labels = staff.PERMS.filter(function (p) { return unique.includes(p[0]); }).map(function (p) { return p[1].toLowerCase(); });
-    await notify(target.id, { type: "info", title: "🛡️ You've been given staff powers", body: "You can now: " + labels.join(", ") + ". Find your tools under Staff tools in the menu.", link: "/admin" });
+    await notify(target.id, { type: "info", title: "🛡️ You've been given staff powers", body: "You can now: " + labels.join(", ") + ". Find your tools under Staff tools in the menu.", link: "/hub/admin" });
   }
   res.json({ username: target.username, powers: unique });
 });
@@ -978,18 +978,57 @@ router.get("/announcements", async function (req, res) {
   res.json({ announcements: rows });
 });
 
+// Reads and checks an announcement from the form. publishAt (optional, ISO time) schedules it for later.
+function announcementInput(body) {
+  const title = typeof body.title === "string" ? body.title.trim().slice(0, 160) : "";
+  const text = typeof body.body === "string" ? body.body.trim().slice(0, 2000) : "";
+  const link = typeof body.link === "string" ? body.link.trim().slice(0, 300) : "";
+  if (!title) return { error: "Give the announcement a title." };
+  if (link && !/^(\/[^\s]*|https:\/\/[^\s<>"]+)$/.test(link)) return { error: "Links must start with / or https://" };
+  // One group or several (["beta", "creators"]); "all" or nothing picked means everyone.
+  const picked = (Array.isArray(body.audience) ? body.audience : String(body.audience || "").split(","))
+    .filter(function (a, i, all) { return ["creators", "beta", "staff"].includes(a) && all.indexOf(a) === i; });
+  const audience = picked.length ? picked.sort().join(",") : "all";
+  let publishAt = null;
+  if (body.publishAt) {
+    const t = new Date(body.publishAt);
+    if (isNaN(t)) return { error: "That schedule time doesn't look right." };
+    if (t > new Date(Date.now() + 366 * 86400000)) return { error: "Schedule it within the next year." };
+    if (t > new Date(Date.now() + 60000)) publishAt = t;
+  }
+  return { title: title, body: text, link: link, audience: audience, publishAt: publishAt, draft: body.draft === true };
+}
+
 router.post("/announcements", async function (req, res) {
-  const title = typeof req.body.title === "string" ? req.body.title.trim().slice(0, 160) : "";
-  const body = typeof req.body.body === "string" ? req.body.body.trim().slice(0, 2000) : "";
-  let link = typeof req.body.link === "string" ? req.body.link.trim().slice(0, 300) : "";
-  if (!title) return res.status(400).json({ error: "Give the announcement a title." });
-  if (link && !/^(\/[^\s]*|https:\/\/[^\s<>"]+)$/.test(link)) return res.status(400).json({ error: "Links must start with / or https://" });
-  const audience = ["creators", "beta", "staff"].includes(req.body.audience) ? req.body.audience : "all";
+  const v = announcementInput(req.body || {});
+  if (v.error) return res.status(400).json({ error: v.error });
   const { rows } = await db.query(
-    "INSERT INTO announcements (title, body, link, audience) VALUES ($1, $2, $3, $4) RETURNING *",
-    [title, body, link, audience]
+    "INSERT INTO announcements (title, body, link, audience, created_at, is_draft) VALUES ($1, $2, $3, $4, COALESCE($5, NOW()), $6) RETURNING *",
+    [v.title, v.body, v.link, v.audience, v.publishAt, v.draft]
   );
   res.status(201).json({ announcement: rows[0] });
+  if (!v.publishAt && !v.draft) require("../announcements").pushDue(); // scheduled ones go out when their time comes
+});
+
+// Edit an announcement after posting. A scheduled one can also be moved to another time (or sent now).
+// One that's already out keeps its date and no second notification is sent; only admins see it was edited.
+router.put("/announcements/:id", async function (req, res) {
+  const v = announcementInput(req.body || {});
+  if (v.error) return res.status(400).json({ error: v.error });
+  const old = (await db.query("SELECT created_at, is_draft FROM announcements WHERE id = $1", [Number(req.params.id)])).rows[0];
+  if (!old) return res.status(404).json({ error: "That announcement could not be found." });
+  // Drafts and scheduled ones haven't gone out yet, so they can be sent now, rescheduled or kept as a draft.
+  const scheduled = old.is_draft || new Date(old.created_at) > new Date();
+  const { rows } = await db.query(
+    `UPDATE announcements SET title = $2, body = $3, link = $4, audience = $5,
+            created_at = CASE WHEN $6 THEN COALESCE($7, NOW()) ELSE created_at END,
+            edited_at = CASE WHEN $6 THEN NULL ELSE NOW() END,
+            is_draft = CASE WHEN $6 THEN $8 ELSE FALSE END,
+            pushed_at = CASE WHEN $6 THEN NULL ELSE pushed_at END
+      WHERE id = $1 RETURNING *`,
+    [Number(req.params.id), v.title, v.body, v.link, v.audience, scheduled, v.publishAt, v.draft]);
+  res.json({ announcement: rows[0] });
+  require("../announcements").pushDue();
 });
 
 router.delete("/announcements/:id", async function (req, res) {

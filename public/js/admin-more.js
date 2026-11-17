@@ -73,7 +73,7 @@
       o.upcoming.forEach(function (u) {
         var li = el("li");
         li.appendChild(el("span", { class: "mono" }, MW.formatDateTime(u.publishAt) + " · "));
-        li.appendChild(el("a", { href: "/work/" + encodeURIComponent(u.slug) }, u.title));
+        li.appendChild(el("a", { href: MW.workUrl(u) }, u.title));
         upcoming.appendChild(li);
       });
       setInboxBadge(o.unreadMessages);
@@ -346,10 +346,10 @@
         header.appendChild(MW.avatar(c.author));
         header.appendChild(el("a", { class: "who", href: "/u/" + encodeURIComponent(c.author.username) }, c.author.displayName));
         header.appendChild(el("span", {}, (c.parentId ? "replied on " : "on ")));
-        header.appendChild(el("a", { href: "/work/" + encodeURIComponent(c.work.slug) + "#comment-" + c.id }, c.work.title));
+        header.appendChild(el("a", { href: MW.workUrl(c.work) + "#comment-" + c.id }, c.work.title));
         header.appendChild(el("time", { datetime: c.createdAt }, MW.formatDateTime(c.createdAt)));
         var tools = el("span", { class: "comment-tools" });
-        tools.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/work/" + encodeURIComponent(c.work.slug) + "#comment-" + c.id }, "Reply"));
+        tools.appendChild(el("a", { class: "btn btn-ghost btn-small", href: MW.workUrl(c.work) + "#comment-" + c.id }, "Reply"));
         tools.appendChild(ADMIN.confirmButton("Delete", async function () {
           await MW.api("/comments/" + c.id, { method: "DELETE" });
           li.remove();

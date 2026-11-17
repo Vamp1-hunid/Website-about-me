@@ -11,7 +11,7 @@
     document.getElementById("team-news").hidden = false;
     d.announcements.forEach(function (a) {
       var item = MW.el("article", { class: "team-news-item", id: "announcement-" + a.id });
-      var meta = MW.formatDateTime(a.createdAt) + ({ beta: " · 🧪 for beta testers", creators: " · for creators", staff: " · 🛡️ for staff" }[a.audience] || "");
+      var meta = MW.formatDateTime(a.createdAt) + (MW.audienceLabel(a.audience, true) ? " · for " + MW.audienceLabel(a.audience, true) : "") + (a.editedAt ? " · edited" : "");
       item.appendChild(MW.el("p", { class: "mono muted" }, meta));
       item.appendChild(MW.el("h3", {}, a.title));
       if (a.body) a.body.split(/\n+/).forEach(function (para) { item.appendChild(MW.el("p", {}, para)); });

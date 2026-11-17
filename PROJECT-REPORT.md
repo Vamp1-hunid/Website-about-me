@@ -2003,3 +2003,22 @@ banners, the menu, the admin lists, the public list and the username preview.
   signed up with an older key are forgotten instead of failing silently, and every visit re-registers the device
   with the current key, so phones that had stopped receiving start again after one visit.
 - **Before launch:** waiting members can now like creators' posts as well as follow creators. Following other members and downloading attached files stay locked until launch (the file list shows a 🔒 note instead).
+
+### Version 31 (17 November 2026): Chapterhive dashboard, announcements you can schedule and edit, drafts
+
+- **Chapterhive's own dashboard** at `/hub/admin` (same tools as `/admin`, in Chapterhive's look). Every staff link on
+  Chapterhive and in the bell goes there, so posting an update no longer drops you into God's Banditos.
+- **Signed-in name refreshes on every page**, so renaming your account on one device updates it on all of them.
+- **Announcements:** tick one or more groups (Everyone, Beta testers, Creators, Staff); send now, **schedule** for a
+  date and time, or **save as a draft**; **edit** any announcement after posting (drafts and scheduled ones can be
+  sent now or moved; ones already out keep their date and don't notify again). Announcements now also send a
+  **phone notification** when they go live (`src/announcements.js`, checked every minute for scheduled ones).
+- **"Edited" is only shown to admins**: on comments, works and announcements, members no longer see that something
+  was edited.
+- **Drafts for everything you type:** comments, replies and chat messages are kept on the device until sent, and
+  come back when you return (the chat list shows "📝 Draft: …"). Works already had drafts in the studio.
+- **Post audience:** each post can be for Everyone, Members only (signed in) or Followers only, and creators (and
+  you) can change it any time after posting from the edit form. The stricter of the page setting and the post's
+  setting wins.
+- **Phone notification check in Settings:** shows whether this device is registered and has a "Send me a test
+  notification" button.

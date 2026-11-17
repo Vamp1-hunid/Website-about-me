@@ -134,7 +134,7 @@
     info.appendChild(title);
 
     var dateLine = "Posted " + MW.formatDate(post.createdAt);
-    if (post.updatedAt && Math.abs(new Date(post.updatedAt) - new Date(post.createdAt)) > 60000) {
+    if (post.showEdited && post.updatedAt && Math.abs(new Date(post.updatedAt) - new Date(post.createdAt)) > 60000) {
       dateLine += " · edited " + MW.formatDate(post.updatedAt);
     }
     var pages = post.media.filter(function (m) { return m.kind === "image"; }).length;
@@ -493,10 +493,11 @@
     row.append(send, cancel);
     form.append(label, area, error, row);
     topItem.appendChild(form);
+    var replyDraft = MW.keepDraft(area, "reply:" + target.id);
     area.focus();
     area.setSelectionRange(area.value.length, area.value.length);
 
-    cancel.addEventListener("click", function () { form.remove(); });
+    cancel.addEventListener("click", function () { form.remove(); }); // the draft stays for next time
     form.addEventListener("submit", async function (event) {
       event.preventDefault();
       var value = area.value.trim();
@@ -508,6 +509,7 @@
           json: { body: value, parentId: target.id }
         });
         topItem.querySelector(".replies").appendChild(renderComment(data.comment));
+        replyDraft.clear();
         commentCount++;
         updateCount();
         form.remove();
@@ -572,6 +574,7 @@
       list.appendChild(el("li", { class: "muted" }, "Comments are paused for now."));
     } else if (user) {
       form.hidden = false;
+      var commentDraft = MW.keepDraft(document.getElementById("comment-body"), "comment:" + post.id);
       form.addEventListener("submit", async function (event) {
         event.preventDefault();
         var textarea = document.getElementById("comment-body");
@@ -591,6 +594,7 @@
           commentCount++;
           updateCount();
           textarea.value = "";
+          commentDraft.clear();
           MW.toast("Comment posted.");
         } catch (error) {
           MW.showProblems(form, [{ field: "body", message: error.message }]);

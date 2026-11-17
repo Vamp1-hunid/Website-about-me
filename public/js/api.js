@@ -14,6 +14,39 @@
   // Which site this page belongs to: God's Banditos ("banditos") or Chapterhive ("chapterhive").
   MW.brand = (document.body && document.body.getAttribute("data-brand")) || "banditos";
   MW.isHub = MW.brand === "chapterhive";
+  // The staff dashboard: Chapterhive pages use Chapterhive's copy (/hub/admin), God's Banditos uses /admin.
+  // "beta,creators" -> "beta testers and creators" (announcement audiences can be several groups).
+  MW.audienceLabel = function (audience, withIcons) {
+    var names = { creators: "creators", beta: (withIcons ? "🧪 " : "") + "beta testers", staff: (withIcons ? "🛡️ " : "") + "staff" };
+    var parts = String(audience || "all").split(",").filter(function (a) { return names[a]; }).map(function (a) { return names[a]; });
+    if (!parts.length) return "";
+    return parts.length === 1 ? parts[0] : parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1];
+  };
+  // Drafts for anything you type (comments, replies, chat messages): what you've written is kept on this
+  // device until you send it, so leaving the page or closing the app doesn't lose it.
+  // Returns { clear() } to call after sending.
+  MW.draftKey = function (key) { return "ch-draft:" + key; };
+  MW.getDraft = function (key) { try { return localStorage.getItem(MW.draftKey(key)) || ""; } catch (e) { return ""; } };
+  MW.keepDraft = function (area, key, onChange) {
+    var k = MW.draftKey(key), timer = null;
+    var saved = MW.getDraft(key);
+    if (saved && !area.value.trim()) {
+      area.value = saved;
+      area.dispatchEvent(new Event("input"));
+      var note = MW.el("p", { class: "draft-note muted" }, "📝 Your draft is back. Keep writing or send it.");
+      area.insertAdjacentElement("afterend", note);
+      setTimeout(function () { note.remove(); }, 6000);
+    }
+    area.addEventListener("input", function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        try { if (area.value.trim()) localStorage.setItem(k, area.value); else localStorage.removeItem(k); } catch (e) { /* ignore */ }
+        if (onChange) onChange();
+      }, 400);
+    });
+    return { clear: function () { clearTimeout(timer); try { localStorage.removeItem(k); } catch (e) { /* ignore */ } if (onChange) onChange(); } };
+  };
+  MW.adminUrl = function (rest) { return (MW.isHub ? "/hub/admin" : "/admin") + (rest || ""); };
 
   // Where a work, story or character lives. On Chapterhive everything opens in Chapterhive's look;
   // on God's Banditos, other creators' things open on Chapterhive.
@@ -318,7 +351,7 @@
     me.appendChild(document.createTextNode(" @" + user.username));
     area.appendChild(me);
     if (user.role === "admin" && !MW.isHub) {
-      area.appendChild(el("a", { class: "btn btn-small", href: "/admin" }, "Admin"));
+      area.appendChild(el("a", { class: "btn btn-small", href: MW.adminUrl("") }, "Admin"));
     } else if (MW.isHub && (user.role === "admin" || (MW.creator && MW.creator.status === "approved"))) {
       area.appendChild(el("a", { class: "btn btn-small", href: "/hub/studio" }, "Studio"));
     }
@@ -704,20 +737,20 @@
       var perms = (MW.account && MW.account.staffPerms) || [];
       if (user && user.role !== "admin" && perms.length) {
         // Staff: only the tools their powers open.
-        if (perms.indexOf("approve_creators") >= 0) items.unshift(["/admin#chapterhive", "🎨 Creator applications", null, "creators"]);
+        if (perms.indexOf("approve_creators") >= 0) items.unshift([MW.adminUrl("#chapterhive"), "🎨 Creator applications", null, "creators"]);
         if (perms.indexOf("approve_beta") >= 0) items.unshift(["/hub/beta#beta-admin", "🧪 Beta tester applications", null, "beta"]);
         if (perms.indexOf("manage_reservations") >= 0) items.unshift(["/hub/reserve#reserve-admin", "🐝 Name reservations", null, "reservations"]);
-        if (perms.indexOf("post_updates") >= 0) items.unshift(["/admin?to=beta#announce", "📣 Post an update"]);
-        items.unshift(["/admin", "🛡️ Staff tools"]);
+        if (perms.indexOf("post_updates") >= 0) items.unshift([MW.adminUrl("?to=beta#announce"), "📣 Post an update"]);
+        items.unshift([MW.adminUrl(""), "🛡️ Staff tools"]);
       }
       if (user && user.role === "admin") {
-        if (MW.account && MW.account.isOwner) items.unshift(["/admin#team", "🛡️ Team & powers"]);
-        items.unshift(["/admin?to=beta#announce", "📣 Post an update"]);
-        items.unshift(["/admin#chapterhive", "🎨 Creator applications", null, "creators"]);
+        if (MW.account && MW.account.isOwner) items.unshift([MW.adminUrl("#team"), "🛡️ Team & powers"]);
+        items.unshift([MW.adminUrl("?to=beta#announce"), "📣 Post an update"]);
+        items.unshift([MW.adminUrl("#chapterhive"), "🎨 Creator applications", null, "creators"]);
         items.unshift(["/hub/beta#beta-admin", "🧪 Beta tester applications", null, "beta"]);
         items.unshift(["/hub/reserve#reserve-admin", "🐝 Name reservations", null, "reservations"]);
-        items.unshift(["/admin#settings", "Site settings"]);
-        items.unshift(["/admin", "Dashboard"]);
+        items.unshift([MW.adminUrl("#settings"), "Site settings"]);
+        items.unshift([MW.adminUrl(""), "Dashboard"]);
       }
       // Your own account links (profile, edit profile, settings) always come first, above the admin and staff tools.
       if (user) {
@@ -827,7 +860,7 @@
     if (!support.enabled) {
       MW.me().then(function (user) {
         if (!user || user.role !== "admin" || document.querySelector(".heist-setup")) return;
-        var b = el("a", { class: "heist-button heist-setup", href: "/admin#settings", title: "Only you can see this" }, "Fund the heist: set it up");
+        var b = el("a", { class: "heist-button heist-setup", href: MW.adminUrl("#settings"), title: "Only you can see this" }, "Fund the heist: set it up");
         document.body.appendChild(b);
       });
       return;
@@ -1183,7 +1216,7 @@
       if (document.querySelector(".welcome-dialog[open], .onboard")) { setTimeout(announcementPopup, 4000); return; }
       var a = fresh[0];
       var dialog = el("dialog", { class: "heist-dialog announce-dialog", "aria-labelledby": "announce-title" });
-      dialog.appendChild(el("p", { class: "node-label" }, "📣 " + ({ beta: "For beta testers", creators: "For creators", staff: "For staff" }[a.audience] || "From the team")));
+      dialog.appendChild(el("p", { class: "node-label" }, "📣 " + (MW.audienceLabel(a.audience) ? "For " + MW.audienceLabel(a.audience) : "From the team")));
       dialog.appendChild(el("h2", { id: "announce-title" }, a.title));
       if (a.body) a.body.split(/\n+/).forEach(function (para) { dialog.appendChild(el("p", {}, para)); });
       var actions = el("div", { class: "form-actions" });

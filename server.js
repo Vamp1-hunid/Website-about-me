@@ -168,6 +168,26 @@ app.get("/profile", function (req, res) {
 
 // ----- Chapterhive (/hub): the creator platform -----
 
+// Chapterhive's staff dashboard: the same tools as /admin, but in Chapterhive's look, header and menu,
+// so posting an update or approving creators from Chapterhive never drops you into God's Banditos.
+let hubAdminHtml = null;
+app.get(["/hub/admin", "/hub/admin/"], function (req, res) {
+  if (!hubAdminHtml || process.env.NODE_ENV !== "production") {
+    const fs = require("fs");
+    const hubHead = fs.readFileSync(path.join(__dirname, "public", "hub", "studio.html"), "utf8");
+    const header = hubHead.slice(hubHead.indexOf("<header"), hubHead.indexOf("</nav>") + 6);
+    let html = fs.readFileSync(path.join(__dirname, "public", "admin.html"), "utf8");
+    const gbHeader = html.slice(html.indexOf("<header"), html.indexOf("</nav>") + 6);
+    html = html.replace(gbHeader, header)
+      .replace('<body data-page="admin">', '<body data-page="admin" data-brand="chapterhive">')
+      .replace(/<link rel="stylesheet" href="\/css\/styles\.css\?v=\d+">/, function (m) { return m + '\n  <link rel="stylesheet" href="/css/chapterhive.css?v=36">'; })
+      .replace(/\| God's Banditos/g, "| Chapterhive")
+      .replace(/<link rel="icon"[^>]*>/g, '<link rel="icon" href="/images/chapterhive-mark.svg" type="image/svg+xml">');
+    hubAdminHtml = html;
+  }
+  res.set("Cache-Control", "no-store").type("html").send(hubAdminHtml);
+});
+
 app.get(["/hub", "/hub/"], function (req, res) {
   pages.sendPage(req, res, "hub/index.html", null);
 });
