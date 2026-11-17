@@ -468,7 +468,7 @@
     card.appendChild(el("span", { class: "reserve-banner-emoji", "aria-hidden": "true" }, "🐝"));
     var t = el("span", { class: "reserve-banner-text" });
     t.appendChild(el("strong", {}, "You're in early! Chapterhive opens soon"));
-    t.appendChild(el("span", {}, "You can already follow creators and like their posts. Posting, comments and chat open at launch."));
+    t.appendChild(el("span", {}, "You can already follow creators and like their posts. Posting, comments, chat and downloads open at launch."));
     card.appendChild(t);
     var acts = el("span", { class: "waiting-actions" });
     acts.appendChild(el("a", { class: "btn btn-small", href: "/hub/reserve#reserve-public" }, "My place"));

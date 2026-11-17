@@ -541,6 +541,14 @@ router.get("/:slug", async function (req, res) {
   // On God's Banditos the owner's own works are shown in full to everyone (view only).
   const banditosPage = req.query.site === "gb" && row.owner_role === "admin";
   if (!userId && !banditosPage) guestPreview(post);
+  // Before launch, members waiting for launch can read and like, but attached files open at launch.
+  else if (userId && !isAdmin && row.user_id !== userId && await require("../prelaunch").waitingMember(req)) {
+    const docs = (post.media || []).filter(function (m) { return m.kind === "document"; }).length;
+    if (docs) {
+      post.media = post.media.filter(function (m) { return m.kind !== "document"; });
+      post.downloadsAtLaunch = docs;
+    }
+  }
   if (row.form && userId) {
     const mine = await db.query("SELECT answers FROM form_responses WHERE post_id = $1 AND user_id = $2", [row.id, userId]);
     post.myResponse = mine.rows[0] ? mine.rows[0].answers : null;

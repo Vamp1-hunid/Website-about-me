@@ -202,6 +202,13 @@
   function renderDocuments(parent) {
     var docs = MW.renderDocuments(post.media || []);
     if (docs) parent.appendChild(docs);
+    if (post.downloadsAtLaunch) {
+      var n = post.downloadsAtLaunch;
+      var box = MW.el("section", { class: "attachments", "aria-label": "Downloads" });
+      box.appendChild(MW.el("p", { class: "node-label" }, "Downloads // attached files"));
+      box.appendChild(MW.el("p", { class: "muted" }, "🔒 " + n + " attached file" + (n === 1 ? "" : "s") + ". Downloads open when Chapterhive launches."));
+      parent.appendChild(box);
+    }
   }
 
   function renderPost() {

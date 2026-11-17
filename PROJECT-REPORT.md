@@ -2002,4 +2002,4 @@ banners, the menu, the admin lists, the public list and the username preview.
 - **Phone notifications:** new chat messages now send a phone notification (they never did before). Devices that
   signed up with an older key are forgotten instead of failing silently, and every visit re-registers the device
   with the current key, so phones that had stopped receiving start again after one visit.
-- **Before launch:** waiting members can now like creators' posts as well as follow creators.
+- **Before launch:** waiting members can now like creators' posts as well as follow creators. Following other members and downloading attached files stay locked until launch (the file list shows a 🔒 note instead).
