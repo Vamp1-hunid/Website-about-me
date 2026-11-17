@@ -1913,3 +1913,13 @@ banners, the menu, the admin lists, the public list and the username preview.
   and **Never show this**.
 - **Tips for everyone:** quick tips were still admin-only. A one-time start-up step
   (`tips_everyone_v24`) switched them on for everyone.
+
+### Version 26 (17 November 2026): fixes
+
+- **Reservation list highlight:** the page used to remember the last name reserved *on that phone*,
+  so the owner's phone showed "You're #3 (@bandito_1)" even when signed in as @vamp1_hunid. When
+  you're signed in, it now highlights your own account's name; the remembered name is only used for
+  visitors.
+- **Tips for visitors:** people who aren't logged in now get their own tips: what Chapterhive is,
+  how to reserve (or Continue with Google), typing birthdays as numbers, beta testing and logging
+  in. Tips about tools they can't use yet (profile, buddies, chat, settings) only show after login.

@@ -129,7 +129,12 @@
   // Public list: number + username only.
   var allNames = [];
   var SHOW = 120;
-  function mine() { try { return localStorage.getItem("ch-reserved") || ""; } catch (e) { return ""; } }
+  // Whose place to highlight: the signed-in account's own name; for visitors, the name reserved on this device.
+  var signedInName = null;
+  function mine() {
+    if (signedInName !== null) return signedInName;
+    try { return localStorage.getItem("ch-reserved") || ""; } catch (e) { return ""; }
+  }
   function drawList() {
     var q = ($("reserve-find").value || "").toLowerCase().replace(/^@/, "").trim();
     var list = $("reserve-public-list");
@@ -153,7 +158,13 @@
     MW.api("/reserve/list").then(function (d) { allNames = d.names; drawList(); }).catch(function () {});
   }
   $("reserve-find").addEventListener("input", drawList);
-  loadNames();
+  MW.me().then(function (user) {
+    if (user) {
+      signedInName = user.username;
+      try { localStorage.setItem("ch-reserved", user.username); } catch (e) { /* ignore */ }
+    }
+    loadNames();
+  }, loadNames);
 
   // Admin: the list, and sending claim links at launch
   MW.me().then(function (user) {

@@ -248,6 +248,18 @@
     "/hub/calendar": ["Holidays and site events show here; on the day, the site dresses up for them."],
     "/hub/help": ["Ask the help bee a question, or browse the FAQs below."]
   };
+  // Before logging in, people see these instead: about joining and looking around, not tools they can't use yet.
+  var GUEST_TIPS = {
+    "/hub": ["Chapterhive is for readers, watchers and creators. Everyone starts with a free member account.", "Reserve your username now: tap Reserve on the card above, or use Continue with Google.",
+      "Want to help shape Chapterhive? Apply to be a beta tester from the card above.", "Already reserved a name? Tap Log in at the top to follow creators and read team updates.", "Questions? The glittering ? in the corner answers them."],
+    "/hub/creators": ["Browse the top creators first, then everyone else.", "Make a free account to follow creators and get their new work in your bell."],
+    "/hub/buddies": ["Log in to add buddies, chat and find people you may know."],
+    "/hub/news": ["Team announcements sit at the top; news posts are below."],
+    "/hub/reserve": ["Continue with Google gives you one-tap log in at launch, with no password to remember.", "Type your birthday as numbers: day/month/year, like 16/11/2004.", "After reserving, find your place on the list below the form."],
+    "/hub/beta": ["Already reserved a name? Log in first and you'll only need to write one line."],
+    "/hub/login": ["Reserved with Google? Use Continue with Google to log in."],
+    "/hub/help": ["Ask the help bee a question, or browse the FAQs below."]
+  };
   MW.TIPS = TIPS;
   function tipsOff() { try { return localStorage.getItem("ch-tips-off") === "1"; } catch (e) { return false; } }
 
@@ -255,7 +267,7 @@
     if (tipsOff()) return;
     var path = window.location.pathname.replace(/\/+$/, "") || "/";
     if (/^\/hub\/u\//.test(path)) path = "/hub/u";
-    var tips = TIPS[path];
+    var tips = (MW.isHub && !MW.currentUser) ? GUEST_TIPS[path] : TIPS[path];
     var header = document.querySelector(".site-header");
     if (!tips || !header) return;
     var key = "mw-tips-hidden-" + path;          // "never" for this page
@@ -441,7 +453,9 @@
       s.onload = function () { if (MW.runOnboarding) MW.runOnboarding(user, function () { showWelcome(user); }); };
       document.head.appendChild(s);
     } else if (user) showWelcome(user);
-    if (MW.feature("quick_tips")) { showTips(); MW.me().then(function (user) { if (user) welcomeBack(); }); }
+    if (MW.feature("quick_tips")) {
+      MW.me().then(function (user) { MW.currentUser = user || null; showTips(); if (user) welcomeBack(); }, function () { showTips(); });
+    }
     if (MW.feature("help_assistant")) buildHelpButton();
   });
 })();
