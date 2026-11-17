@@ -1969,3 +1969,16 @@ banners, the menu, the admin lists, the public list and the username preview.
   - **Behind the scenes:** this uses standard Web Push. The keys are made automatically once and
     kept in the database; you can set your own `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` on Render
     instead. A test notification is sent as soon as someone turns them on.
+
+### Version 29 (17 November 2026): fix for the failed deploy of PR #32
+
+- **What went wrong:** PR #32 added phone notifications using the `web-push` library, version 4.
+  Version 4 is written in the newer "ES module" style, which the older Node.js version Render runs
+  can't load with `require`. The first time the site sent a notification while starting up (for
+  example, refreshing the top-creator ranks), the server crashed, so Render reported "Exited with
+  status 1". It worked locally because the build machine has a newer Node.js.
+- **The fix:**
+  - Use `web-push` version 3.6.7, the same features in the older style that every Node.js version
+    can load (checked on Node 20.11, 22.11 and 22.23).
+  - Phone notifications are now loaded only when needed and can never crash the site. If anything
+    goes wrong with them, it's logged and the bell keeps working.
