@@ -1,7 +1,8 @@
 // js/hub-browse.js  -  "Browse the hive" on the Chapterhive home page.
 // Pick a shelf (Books, Comics, Film & video...), narrow it by type and genre, and everything that
 // matches is listed underneath, newest first, with "Show more". No typing needed.
-// The choice is kept in the address (#browse?shelf=books&genre=horror) so it can be shared or bookmarked.
+// The choice is kept in the address (#browse?shelf=books,art&genre=horror,fantasy) so it can be shared or bookmarked.
+// Several shelves, types and genres can be picked at once: within a row any of them matches.
 (function () {
   "use strict";
   var MW = window.MW;
@@ -11,16 +12,16 @@
 
   var SHELVES = [
     ["", "For you", "✦"],
-    ["trailers", "Trailers", "🎞️", null],
-    ["tutorials", "Tutorials", "✏️", null],
-    ["series", "Series", "📺", [["", "All series"], ["series", "Live action series"], ["anime", "Animation"]]],
     ["books", "Books", "📚", [["", "All books"], ["novel", "Novels"], ["storybook", "Storybooks"], ["educational", "Educational"]]],
     ["comics", "Comics & manga", "💥", null],
-    ["art", "Art", "🎨", [["", "All art"], ["art", "Art & illustration"], ["meme", "Memes"]]],
+    ["series", "Series", "📺", [["", "All series"], ["series", "Live action series"], ["anime", "Animation"]]],
     ["video", "Film & video", "🎬", [["", "All video"], ["anime", "Animation"], ["film", "Live action films"], ["series", "Series episodes"]]],
     ["music", "Music & poetry", "🎵", [["", "All"], ["song", "Songs & music"], ["poetry", "Poetry"]]],
+    ["art", "Art", "🎨", [["", "All art"], ["art", "Art & illustration"], ["meme", "Memes"]]],
     ["writing", "Writing", "✍️", [["", "All writing"], ["writing", "Stories"], ["novel", "Novels"], ["poetry", "Poetry"], ["thoughts", "Thoughts & feelings"]]],
-    ["comedy", "Comedy", "😂", [["", "All comedy"], ["comedy", "Comedy"], ["meme", "Memes"]]]
+    ["comedy", "Comedy", "😂", [["", "All comedy"], ["comedy", "Comedy"], ["meme", "Memes"]]],
+    ["tutorials", "Tutorials", "✏️", null],
+    ["trailers", "Trailers", "🎞️", null]
   ];
   var GENRES = [["", "All genres"], ["fantasy", "Fantasy"], ["scifi", "Sci-fi"], ["horror", "Horror"], ["mystery", "Mystery"],
     ["romance", "Romance"], ["comedy", "Comedy"], ["drama", "Drama"], ["action", "Action"], ["adventure", "Adventure"],
@@ -28,7 +29,7 @@
     ["young-adult", "Young adult"], ["education", "Education"], ["science", "Science"], ["self-help", "Self-help"],
     ["faith", "Faith"], ["poetry", "Poetry"], ["music", "Music"]];
 
-  var state = { shelf: "", category: "", genre: "", sort: "new", page: 1, view: "feed" };
+  var state = { shelf: [], category: [], genre: [], sort: "new", page: 1, view: "feed" };
   try { state.view = localStorage.getItem("ch-home-view") === "grid" ? "grid" : "feed"; } catch (e) { /* ignore */ }
   var user = null;
   var loading = false;
@@ -44,7 +45,8 @@
   var hash = window.location.hash.split("?")[1];
   if (hash) {
     var hp = new URLSearchParams(hash);
-    ["shelf", "category", "genre", "sort"].forEach(function (k) { if (hp.get(k)) state[k] = hp.get(k); });
+    ["shelf", "category", "genre"].forEach(function (k) { if (hp.get(k)) state[k] = hp.get(k).split(",").filter(Boolean); });
+    if (hp.get("sort")) state.sort = hp.get("sort");
   }
 
   function chip(label, active, onClick, role) {
@@ -56,46 +58,78 @@
     return b;
   }
 
-  function shelfInfo() { return SHELVES.filter(function (s) { return s[0] === state.shelf; })[0] || SHELVES[0]; }
+  function has(k, v) { return state[k].indexOf(v) !== -1; }
+  function toggle(k, v) {
+    if (has(k, v)) state[k] = state[k].filter(function (x) { return x !== v; });
+    else state[k] = state[k].concat([v]);
+  }
+  function shelfOf(key) { return SHELVES.filter(function (s) { return s[0] === key; })[0]; }
+  // The type choices for the picked shelves (without the "All …" option), with no repeats.
+  function typeOptions() {
+    var seen = {}, out = [];
+    state.shelf.forEach(function (key) {
+      var sh = shelfOf(key);
+      ((sh && sh[3]) || []).forEach(function (c) { if (c[0] && !seen[c[0]]) { seen[c[0]] = true; out.push([c[0], c[1], key]); } });
+    });
+    return out;
+  }
 
   function drawControls() {
     shelvesBox.textContent = "";
     SHELVES.forEach(function (s) {
-      shelvesBox.appendChild(chip(s[2] + " " + s[1], s[0] === state.shelf, function () {
-        state.shelf = s[0]; state.category = ""; state.page = 1; refresh();
-      }, "tab"));
+      var on = s[0] ? has("shelf", s[0]) : !state.shelf.length;
+      shelvesBox.appendChild(chip(s[2] + " " + s[1], on, function () {
+        if (!s[0]) state.shelf = [];
+        else toggle("shelf", s[0]);
+        // Drop type choices that no longer belong to a picked shelf.
+        var still = typeOptions().map(function (c) { return c[0]; });
+        state.category = state.category.filter(function (c) { return still.indexOf(c) !== -1; });
+        state.page = 1; refresh();
+      }));
     });
     catsBox.textContent = "";
-    var cats = shelfInfo()[3];
-    catsBox.hidden = !cats;
-    (cats || []).forEach(function (c) {
-      catsBox.appendChild(chip(c[1], c[0] === state.category, function () { state.category = c[0]; state.page = 1; refresh(); }));
-    });
+    var cats = typeOptions();
+    catsBox.hidden = !cats.length;
+    if (cats.length) {
+      catsBox.appendChild(chip("All types", !state.category.length, function () { state.category = []; state.page = 1; refresh(); }));
+      cats.forEach(function (c) {
+        catsBox.appendChild(chip(c[1], has("category", c[0]), function () { toggle("category", c[0]); state.page = 1; refresh(); }));
+      });
+    }
     genresBox.textContent = "";
     GENRES.forEach(function (g) {
-      genresBox.appendChild(chip(g[1], g[0] === state.genre, function () { state.genre = g[0]; state.page = 1; refresh(); }));
+      var on = g[0] ? has("genre", g[0]) : !state.genre.length;
+      genresBox.appendChild(chip(g[1], on, function () {
+        if (!g[0]) state.genre = []; else toggle("genre", g[0]);
+        state.page = 1; refresh();
+      }));
     });
     sortSel.value = state.sort;
-    var active = (state.category ? 1 : 0) + (state.genre ? 1 : 0);
+    var active = state.category.length + state.genre.length;
     var ftb = document.getElementById("feed-filters-toggle");
     if (ftb) ftb.textContent = "⚙ Filters" + (active ? " (" + active + ")" : "");
   }
 
   function query() {
     var q = new URLSearchParams({ site: "hub", sort: state.sort, page: String(state.page), feed: "1" });
-    if (state.category) q.set("category", state.category);
-    else if (state.shelf) q.set("shelf", state.shelf);
-    if (state.genre) q.set("genre", state.genre);
+    // A shelf where specific types were picked is narrowed to those types; other shelves count whole.
+    var picked = state.category;
+    var wholeShelves = state.shelf.filter(function (key) {
+      var sh = shelfOf(key);
+      return !((sh && sh[3]) || []).some(function (c) { return c[0] && picked.indexOf(c[0]) !== -1; });
+    });
+    if (wholeShelves.length) q.set("shelf", wholeShelves.join(","));
+    if (picked.length) q.set("category", picked.join(","));
+    if (state.genre.length) q.set("genre", state.genre.join(","));
     return q;
   }
 
   function describe(total) {
     var parts = [];
-    var cats = shelfInfo()[3] || [];
-    var cat = cats.filter(function (c) { return c[0] === state.category && c[0]; })[0];
-    parts.push(cat ? cat[1] : shelfInfo()[1]);
-    var g = GENRES.filter(function (x) { return x[0] === state.genre && x[0]; })[0];
-    if (g) parts.push(g[1]);
+    var types = typeOptions().filter(function (c) { return has("category", c[0]); }).map(function (c) { return c[1]; });
+    parts.push(types.length ? types.join(", ") : state.shelf.length ? state.shelf.map(function (k) { return shelfOf(k)[1]; }).join(", ") : "For you");
+    var gs = GENRES.filter(function (x) { return x[0] && has("genre", x[0]); }).map(function (x) { return x[1]; });
+    if (gs.length) parts.push(gs.join(", "));
     return total + (total === 1 ? " work" : " works") + " · " + parts.join(" · ");
   }
 
@@ -107,7 +141,7 @@
     more.disabled = true;
     MW.api("/posts?" + query().toString()).then(function (d) {
       if (!append) results.textContent = "";
-      var filtered = state.shelf || state.category || state.genre;
+      var filtered = state.shelf.length || state.category.length || state.genre.length;
       summary.textContent = filtered ? describe(d.total || 0) : "";
       // Daily Bible verse at the top of the feed, for members who switched it on in Settings.
       var acc = MW.account && MW.account.account;
@@ -123,6 +157,30 @@
           ref.appendChild(document.createTextNode(" · "));
           ref.appendChild(el("a", { href: v.verse.link, target: "_blank", rel: "noopener" }, "Read it in the " + v.verse.translation + " ↗"));
           vc.appendChild(ref);
+          // Tap the verse for something to carry into the day: a short devotion, encouragement and a prayer.
+          if (v.verse.devotion || v.verse.encouragement || v.verse.prayer) {
+            var more = el("div", { class: "verse-more", id: "verse-more" });
+            more.hidden = true;
+            [["devotion", "🌅 Today's devotion"], ["encouragement", "💛 A word for you"], ["prayer", "🙏 A prayer"]].forEach(function (part) {
+              if (!v.verse[part[0]]) return;
+              var sec = el("section", { class: "verse-part verse-" + part[0] });
+              sec.appendChild(el("h3", {}, part[1]));
+              sec.appendChild(el("p", {}, v.verse[part[0]]));
+              more.appendChild(sec);
+            });
+            var hint = el("button", { type: "button", class: "verse-toggle", "aria-expanded": "false", "aria-controls": "verse-more" }, "Tap for today's devotion and prayer ▾");
+            function flip() {
+              more.hidden = !more.hidden;
+              hint.setAttribute("aria-expanded", String(!more.hidden));
+              hint.textContent = more.hidden ? "Tap for today's devotion and prayer ▾" : "Close ▴";
+              vc.classList.toggle("is-open", !more.hidden);
+            }
+            hint.addEventListener("click", function (e) { e.stopPropagation(); flip(); });
+            vc.addEventListener("click", function (e) { if (!e.target.closest("a, button, .verse-more")) flip(); });
+            vc.classList.add("is-tappable");
+            vc.appendChild(hint);
+            vc.appendChild(more);
+          }
         }).catch(function () { vc.remove(); });
       }
       if (!d.posts.length && !append) {
@@ -173,7 +231,7 @@
   function refresh() {
     drawControls();
     var q = new URLSearchParams();
-    ["shelf", "category", "genre"].forEach(function (k) { if (state[k]) q.set(k, state[k]); });
+    ["shelf", "category", "genre"].forEach(function (k) { if (state[k].length) q.set(k, state[k].join(",")); });
     if (state.sort !== "new") q.set("sort", state.sort);
     history.replaceState(null, "", "#browse" + (q.toString() ? "?" + q.toString() : ""));
     load(false);
@@ -183,7 +241,8 @@
   more.addEventListener("click", function () { state.page += 1; load(true); });
 
   drawControls();
-  if (state.genre || state.category) { fbox.hidden = false; ft.setAttribute("aria-expanded", "true"); }
+  // The filters start open so people can pick a genre straight away; they can fold them away after.
+  fbox.hidden = false; ft.setAttribute("aria-expanded", "true");
   MW.me().then(function (u) {
     user = u;
     if (user) { load(false); return; }

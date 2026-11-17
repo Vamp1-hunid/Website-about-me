@@ -282,7 +282,16 @@ async function addFeedExtras(rows, me) {
 
 // GET /api/posts?category=anime&q=fire&tag=sketch&series=a-year-to-burn&sort=popular&page=1
 router.get("/", async function (req, res) {
-  const category = CATEGORIES.includes(req.query.category) ? req.query.category : null;
+  // Filters can be combined: ?shelf=books,art&category=novel&genre=horror,fantasy (comma lists).
+  // Inside one group any choice matches; across groups everything must match.
+  function list(v, allowed) {
+    return Array.from(new Set(String(v || "").split(",").map(function (x) { return x.trim(); }).filter(function (x) { return allowed(x); }))).slice(0, 20);
+  }
+  const catList = list(req.query.category, function (c) { return CATEGORIES.includes(c); });
+  const shelfList = list(req.query.shelf, function (sh) { return Object.prototype.hasOwnProperty.call(SHELVES, sh); });
+  const genreList = list(req.query.genre, function (g) { return GENRES.includes(g); });
+  const category = catList.length === 1 && !shelfList.length ? catList[0] : null;
+  const kindList = category ? [] : Array.from(new Set(shelfList.reduce(function (all, sh) { return all.concat(SHELVES[sh]); }, []).concat(catList)));
   const page = Math.min(10000, Math.max(1, parseInt(req.query.page, 10) || 1));
   const me = req.session.user;
   // ?drafts=1 (or ?mine=1): your own works, drafts and scheduled ones included (dashboard / studio).
@@ -338,13 +347,13 @@ router.get("/", async function (req, res) {
     where.push("$" + values.length + " = ANY (p.tags)");
   }
   // ?shelf=books  (a group of categories)   ?genre=horror  (chosen genre, or a matching tag)
-  if (!category && SHELVES[req.query.shelf]) {
-    values.push(SHELVES[req.query.shelf]);
+  if (kindList.length) {
+    values.push(kindList);
     where.push("p.category = ANY ($" + values.length + "::text[])");
   }
-  if (GENRES.includes(req.query.genre)) {
-    values.push(req.query.genre);
-    where.push("($" + values.length + "::varchar = ANY (p.genres) OR $" + values.length + "::varchar = ANY (p.tags))");
+  if (genreList.length) {
+    values.push(genreList);
+    where.push("(p.genres::text[] && $" + values.length + "::text[] OR p.tags::text[] && $" + values.length + "::text[])");
   }
   if (seriesSlug) {
     values.push(seriesSlug);
@@ -365,7 +374,7 @@ router.get("/", async function (req, res) {
   // "For you" (no filters chosen): personalised from the member's interests. Kinds they said "less" to
   // drift down, and kinds they strongly dislike are left out entirely.
   let interestBonus = null;
-  if (feedExtras && me && !category && !SHELVES[req.query.shelf] && !GENRES.includes(req.query.genre) && !creatorHandle && !search) {
+  if (feedExtras && me && !category && !kindList.length && !genreList.length && !creatorHandle && !search) {
     values.push(me.id);
     const pieces = interests.feedSql(values.length);
     where.push(pieces.hide);
@@ -532,6 +541,14 @@ router.get("/:slug", async function (req, res) {
   // On God's Banditos the owner's own works are shown in full to everyone (view only).
   const banditosPage = req.query.site === "gb" && row.owner_role === "admin";
   if (!userId && !banditosPage) guestPreview(post);
+  // Before launch, members waiting for launch can read and like, but attached files open at launch.
+  else if (userId && !isAdmin && row.user_id !== userId && await require("../prelaunch").waitingMember(req)) {
+    const docs = (post.media || []).filter(function (m) { return m.kind === "document"; }).length;
+    if (docs) {
+      post.media = post.media.filter(function (m) { return m.kind !== "document"; });
+      post.downloadsAtLaunch = docs;
+    }
+  }
   if (row.form && userId) {
     const mine = await db.query("SELECT answers FROM form_responses WHERE post_id = $1 AND user_id = $2", [row.id, userId]);
     post.myResponse = mine.rows[0] ? mine.rows[0].answers : null;

@@ -567,6 +567,8 @@ CREATE TABLE IF NOT EXISTS username_reservations (
 -- ===== v14 =====
 -- Daily Bible verse in the feed (members opt in).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_verse BOOLEAN NOT NULL DEFAULT FALSE;
+-- v30: the daily verse is on by default for new accounts (members can still switch it off in Settings).
+ALTER TABLE users ALTER COLUMN daily_verse SET DEFAULT TRUE;
 -- Content filters: each post has an age rating and a strong-language flag; members choose what they see.
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS content_rating VARCHAR(8) NOT NULL DEFAULT 'all';
 DO $$ BEGIN

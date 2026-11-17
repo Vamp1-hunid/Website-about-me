@@ -1,7 +1,7 @@
 // src/prelaunch.js
 // Before launch (reservations on, new accounts off), people who reserved a name can sign in to check
 // their place on the list and read team updates, but only the team (admin and beta testers) can
-// post, comment, follow, chat and so on. Account and notification settings still work for everyone.
+// post, comment, chat and so on. Following creators and liking their posts are open to everyone. Account and notification settings still work for everyone.
 
 const db = require("./db");
 const flags = require("./flags");
@@ -9,7 +9,9 @@ const flags = require("./flags");
 const ALWAYS_ALLOWED = [/^\/account\//, /^\/notifications/, /^\/reserve/, /^\/beta/, /^\/contact/, /^\/help/, /^\/app\//,
   // Following creators works before launch too, so people can line up their favourite artists for day one.
   // (Following other members is checked in routes/users.js: creators only until launch, unless you're a beta tester.)
-  /^\/hub\/creators\/[^/]+\/follow$/, /^\/users\/[^/]+\/follow$/];
+  /^\/hub\/creators\/[^/]+\/follow$/, /^\/users\/[^/]+\/follow$/,
+  // v30: liking creators' posts works before launch too (saving, comments, chat and posting still wait).
+  /^\/posts\/\d+\/like$/];
 
 async function isPrelaunch(req) {
   return (await flags.isOn("reservations", req)) && !(await flags.isOn("signups", req));

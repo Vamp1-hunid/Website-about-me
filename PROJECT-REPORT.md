@@ -1982,3 +1982,24 @@ banners, the menu, the admin lists, the public list and the username preview.
     can load (checked on Node 20.11, 22.11 and 22.23).
   - Phone notifications are now loaded only when needed and can never crash the site. If anything
     goes wrong with them, it's logged and the bell keeps working.
+
+### Version 30 (17 November 2026): Messenger-style chat, combined filters, daily devotions, phone notification fixes
+
+- **Menu order:** News & updates now sits between Home and Creators on every Chapterhive page and in the ☰ menu.
+- **News & updates intro** now speaks to movies, books, series and music, "and from Chapterhive creators".
+- **Home filters:** shelves are ordered by what people look for first (Books, Comics & manga, Series, Film & video,
+  Music & poetry, Art, Writing, Comedy), with Tutorials and Trailers last. Several shelves, types and genres can be
+  picked at once (`/api/posts?shelf=books,series&genre=fantasy,horror`: any choice within a row, every row must
+  match). The filters start open; while open the bar scrolls with the page so it never covers the feed.
+- **Daily verse:** on for everyone (new accounts default to on; a one-time step switched it on for existing
+  accounts, and anyone can still turn it off in Settings). Tap the verse for a short devotion, a word of
+  encouragement and a prayer (`src/devotions.js`, original text for all 61 verses; the admin's verse override
+  can carry its own `devotion`, `encouragement` and `prayer`).
+- **Chat** looks and feels like Messenger: round bubbles (yours in honey on the right), messages from the same
+  person grouped with one avatar, day and time separators, big emoji, tap a message for its time and
+  Delete / Report, a ⋯ menu for Block / profile / group options, a pill-shaped box with a round send button that
+  becomes 👍 when empty, and on phones the list and the conversation take turns filling the screen.
+- **Phone notifications:** new chat messages now send a phone notification (they never did before). Devices that
+  signed up with an older key are forgotten instead of failing silently, and every visit re-registers the device
+  with the current key, so phones that had stopped receiving start again after one visit.
+- **Before launch:** waiting members can now like creators' posts as well as follow creators. Following other members and downloading attached files stay locked until launch (the file list shows a 🔒 note instead).

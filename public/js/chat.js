@@ -31,6 +31,48 @@
     return a;
   }
 
+  // "14:05" today, "Mon" this week, "12 Nov" before that (like Messenger's list).
+  function shortTime(iso) {
+    var d = new Date(iso), now = new Date();
+    if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    if (now - d < 6 * 86400000) return d.toLocaleDateString([], { weekday: "short" });
+    return d.toLocaleDateString([], { day: "numeric", month: "short" });
+  }
+  function dayLabel(d) {
+    var now = new Date(), y = new Date(now); y.setDate(now.getDate() - 1);
+    if (d.toDateString() === now.toDateString()) return "Today";
+    if (d.toDateString() === y.toDateString()) return "Yesterday";
+    return d.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
+  }
+  // On phones the list and the conversation take turns filling the screen.
+  function showThreadPane(on) { layout.classList.toggle("in-thread", on); }
+  function backButton() {
+    var b = el("button", { type: "button", class: "chat-back", "aria-label": "Back to chats" }, "‹");
+    b.addEventListener("click", function () {
+      stopPolling(); current = null; showThreadPane(false);
+      history.replaceState(null, "", "/hub/chat");
+      loadThreads().catch(function () {});
+    });
+    return b;
+  }
+  function menuButton(items) {
+    var wrap = el("div", { class: "chat-menu" });
+    var b = el("button", { type: "button", class: "chat-icon-btn", "aria-label": "Conversation options", "aria-expanded": "false" }, "⋯");
+    var list = el("div", { class: "chat-menu-list", role: "menu" });
+    list.hidden = true;
+    items.forEach(function (it) {
+      var mi = el("button", { type: "button", role: "menuitem" }, it[0]);
+      mi.addEventListener("click", function () { list.hidden = true; b.setAttribute("aria-expanded", "false"); it[1](); });
+      list.appendChild(mi);
+    });
+    b.addEventListener("click", function (e) {
+      e.stopPropagation(); list.hidden = !list.hidden; b.setAttribute("aria-expanded", String(!list.hidden));
+    });
+    document.addEventListener("click", function () { list.hidden = true; b.setAttribute("aria-expanded", "false"); });
+    wrap.append(b, list);
+    return wrap;
+  }
+
   /* ---------- Conversation list ---------- */
 
   function loadThreads() {
@@ -44,10 +86,13 @@
         var b = el("button", { type: "button", class: "chat-thread-btn" + (current && current.id === t.id ? " is-active" : "") });
         b.appendChild(avatar(t.with));
         var text = el("span", { class: "chat-thread-text" });
-        text.appendChild(el("strong", {}, t.with.displayName || t.with.username));
+        var top = el("span", { class: "chat-thread-top" });
+        top.appendChild(el("strong", {}, t.with.displayName || t.with.username));
+        if (t.lastAt) top.appendChild(el("span", { class: "chat-thread-time" }, shortTime(t.lastAt)));
+        text.appendChild(top);
         text.appendChild(el("span", { class: "muted" }, t.preview || ""));
         b.appendChild(text);
-        if (t.unread) b.appendChild(el("span", { class: "chat-unread", "aria-label": t.unread + " unread" }, String(t.unread)));
+        if (t.unread) { b.classList.add("is-unread"); b.appendChild(el("span", { class: "chat-unread", "aria-label": t.unread + " unread" }, String(t.unread))); }
         b.addEventListener("click", function () { openThread(t.id); });
         li.appendChild(b);
         threadsList.appendChild(li);
@@ -85,26 +130,39 @@
     return a;
   }
 
+  // Only emoji (up to 3)? Show it big, without a bubble, like Messenger.
+  function bigEmoji(text) {
+    return /^(\p{Extended_Pictographic}|\p{Emoji_Component}|\u200d|\ufe0f|\s){1,12}$/u.test(text) && !/[0-9#*]/.test(text) && text.trim().length <= 12;
+  }
+
   function messageItem(m) {
-    var li = el("li", { class: "chat-msg" + (m.mine ? " is-mine" : ""), "data-id": String(m.id) });
-    var bubble = el("div", { class: "chat-bubble" });
-    if (current && current.group && !m.mine && m.sender) bubble.appendChild(el("span", { class: "chat-sender" }, m.sender.displayName || m.sender.username));
-    if (m.deleted) bubble.appendChild(el("em", { class: "muted" }, "Message removed"));
+    var li = el("li", { class: "chat-msg" + (m.mine ? " is-mine" : ""), "data-id": String(m.id),
+      "data-sender": String(m.mine ? "me" : (m.sender && m.sender.username) || "?"), "data-at": m.createdAt });
+    if (!m.mine) { var av = avatar(m.sender); av.classList.add("chat-msg-avatar"); li.appendChild(av); }
+    var col = el("div", { class: "chat-msg-col" });
+    var bubble = el("div", { class: "chat-bubble", tabindex: "0" });
+    if (current && current.group && !m.mine && m.sender) col.appendChild(el("span", { class: "chat-sender" }, m.sender.displayName || m.sender.username));
+    if (m.deleted) { bubble.classList.add("is-removed"); bubble.appendChild(el("em", {}, m.mine ? "You removed a message" : "Message removed")); }
     else {
-      if (m.body) bubble.appendChild(el("p", {}, m.body));
-      if (m.shared) bubble.appendChild(sharedCard(m.shared));
+      if (m.body) {
+        if (!m.shared && bigEmoji(m.body)) bubble.classList.add("is-emoji");
+        bubble.appendChild(el("p", {}, m.body));
+      }
+      if (m.shared) { bubble.classList.add("has-share"); bubble.appendChild(sharedCard(m.shared)); }
     }
-    li.appendChild(bubble);
-    var meta = el("p", { class: "chat-meta mono muted" }, MW.formatDateTime(m.createdAt));
+    col.appendChild(bubble);
+    // Time and Delete / Report appear when you tap a message, so the conversation stays clean.
+    var meta = el("p", { class: "chat-meta" }, new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
     if (!m.deleted) {
       var action = el("button", { type: "button", class: "chat-link" }, m.mine ? "Delete" : "Report");
-      action.addEventListener("click", function () {
+      action.addEventListener("click", function (e) {
+        e.stopPropagation();
         if (m.mine) {
           MW.api(msgBase() + m.id, { method: "DELETE" }).then(function () {
-            bubble.textContent = "";
-            bubble.appendChild(el("em", { class: "muted" }, "Message removed"));
+            bubble.textContent = ""; bubble.className = "chat-bubble is-removed";
+            bubble.appendChild(el("em", {}, "You removed a message"));
             action.remove();
-          }).catch(function (e) { MW.toast(e.message, true); });
+          }).catch(function (err) { MW.toast(err.message, true); });
         } else {
           reportMessage(m, action);
         }
@@ -112,7 +170,14 @@
       meta.appendChild(document.createTextNode(" · "));
       meta.appendChild(action);
     }
-    li.appendChild(meta);
+    col.appendChild(meta);
+    li.appendChild(col);
+    bubble.addEventListener("click", function (e) {
+      if (e.target.closest("a")) return;
+      var open = li.classList.toggle("show-meta");
+      document.querySelectorAll(".chat-msg.show-meta").forEach(function (o) { if (o !== li) o.classList.remove("show-meta"); });
+      if (!open) { var r = li.querySelector(".chat-report"); if (r) r.remove(); }
+    });
     return li;
   }
 
@@ -125,7 +190,7 @@
     var send = el("button", { type: "submit", class: "btn-small" }, "Send report");
     var cancel = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "Cancel");
     form.append(select, send, cancel);
-    button.parentNode.after(form);
+    button.closest(".chat-msg-col").appendChild(form);
     cancel.addEventListener("click", function () { form.remove(); });
     form.addEventListener("submit", function (event) {
       event.preventDefault();
@@ -176,6 +241,8 @@
     stopPolling();
     current = null;
     pane.textContent = "";
+    showThreadPane(true);
+    pane.appendChild(backButton());
     var f = el("form", { class: "chat-group-form", novalidate: "" });
     f.appendChild(el("h2", {}, "New group chat"));
     var name = el("input", { type: "text", placeholder: "Group name, e.g. Book club", maxlength: "60", "aria-label": "Group name" });
@@ -202,32 +269,30 @@
       current = { id: data.id, group: true, lastId: 0 };
       history.replaceState(null, "", "/hub/chat?g=" + data.id);
       pane.textContent = "";
+      showThreadPane(true);
       var head = el("div", { class: "chat-head" });
+      head.appendChild(backButton());
       head.appendChild(el("span", { class: "chat-avatar", "aria-hidden": "true" }, "👥"));
       var title = el("div", { class: "chat-group-title" });
       title.appendChild(el("strong", {}, data.name));
       title.appendChild(el("span", { class: "muted" }, data.members.map(function (m) { return "@" + m.username; }).join(", ")));
       head.appendChild(title);
-      if (data.isOwner) {
-        var addBtn = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "＋ Add");
-        addBtn.addEventListener("click", function () {
-          var u = window.prompt("Username to add:");
-          if (!u) return;
-          MW.api("/chat/groups/" + data.id + "/members", { method: "POST", json: { username: u.replace(/^@/, "") } })
-            .then(function () { openGroup(data.id); }).catch(function (e) { MW.toast(e.message, true); });
-        });
-        head.appendChild(addBtn);
-      }
-      var leave = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "Leave");
-      leave.addEventListener("click", function () {
+      var opts = [];
+      if (data.isOwner) opts.push(["＋ Add someone", function () {
+        var u = window.prompt("Username to add:");
+        if (!u) return;
+        MW.api("/chat/groups/" + data.id + "/members", { method: "POST", json: { username: u.replace(/^@/, "") } })
+          .then(function () { openGroup(data.id); }).catch(function (e) { MW.toast(e.message, true); });
+      }]);
+      opts.push(["Leave group", function () {
         if (!window.confirm("Leave " + data.name + "?")) return;
         MW.me().then(function (u) {
           MW.api("/chat/groups/" + data.id + "/members/" + encodeURIComponent(u.username), { method: "DELETE" }).then(function () {
-            pane.textContent = ""; current = null; loadGroups();
+            pane.textContent = ""; current = null; showThreadPane(false); loadGroups();
           });
         });
-      });
-      head.appendChild(leave);
+      }]);
+      head.appendChild(menuButton(opts));
       pane.appendChild(head);
       pane.appendChild(el("ol", { class: "chat-messages", id: "chat-messages" }));
       addMessages(data.messages);
@@ -244,20 +309,25 @@
       history.replaceState(null, "", "/hub/chat?t=" + data.id);
       pane.textContent = "";
 
+      showThreadPane(true);
       var head = el("div", { class: "chat-head" });
+      head.appendChild(backButton());
       head.appendChild(avatar(data.with));
-      var who = el("a", { href: "/hub/u/" + encodeURIComponent(data.with.username) }, (data.with.displayName || data.with.username) + " · @" + data.with.username);
+      var who = el("a", { class: "chat-head-name", href: "/hub/u/" + encodeURIComponent(data.with.username) });
+      who.appendChild(el("strong", {}, data.with.displayName || data.with.username));
+      who.appendChild(el("span", { class: "muted" }, "@" + data.with.username));
       head.appendChild(who);
-      var block = el("button", { type: "button", class: "btn btn-ghost btn-small" }, data.blockedByMe ? "Unblock" : "Block");
-      block.addEventListener("click", function () {
-        var unblocking = block.textContent === "Unblock";
-        if (!unblocking && !window.confirm("Block @" + data.with.username + "? They won't be able to message you.")) return;
-        var req = unblocking
-          ? MW.api("/chat/blocks/" + encodeURIComponent(data.with.username), { method: "DELETE" })
-          : MW.api("/chat/blocks", { method: "POST", json: { username: data.with.username } });
-        req.then(function () { openThread(data.id); }).catch(function (e) { MW.toast(e.message, true); });
-      });
-      head.appendChild(block);
+      var unblocking = Boolean(data.blockedByMe);
+      head.appendChild(menuButton([
+        ["View profile", function () { window.location.href = "/hub/u/" + encodeURIComponent(data.with.username); }],
+        [unblocking ? "Unblock" : "Block @" + data.with.username, function () {
+          if (!unblocking && !window.confirm("Block @" + data.with.username + "? They won't be able to message you.")) return;
+          var req = unblocking
+            ? MW.api("/chat/blocks/" + encodeURIComponent(data.with.username), { method: "DELETE" })
+            : MW.api("/chat/blocks", { method: "POST", json: { username: data.with.username } });
+          req.then(function () { openThread(data.id); }).catch(function (e) { MW.toast(e.message, true); });
+        }]
+      ]));
       pane.appendChild(head);
 
       var list = el("ol", { class: "chat-messages", id: "chat-messages" });
@@ -265,7 +335,7 @@
       addMessages(data.messages);
 
       if (data.blockedByMe) {
-        pane.appendChild(el("p", { class: "muted" }, "You blocked this member. Unblock them to send messages."));
+        pane.appendChild(el("p", { class: "chat-blocked muted" }, "You blocked this member. Unblock them from the ⋯ menu to send messages."));
       } else {
         pane.appendChild(composer());
       }
@@ -280,34 +350,60 @@
   function addMessages(messages) {
     var list = document.getElementById("chat-messages");
     if (!list) return;
-    var nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+    var nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 120;
     messages.forEach(function (m) {
       if (list.querySelector("[data-id='" + m.id + "']")) return;
-      list.appendChild(messageItem(m));
+      var empty = list.querySelector("[data-empty]"); if (empty) empty.remove();
+      var item = messageItem(m);
+      var prev = list.querySelector(".chat-msg:last-of-type");
+      var at = new Date(m.createdAt);
+      var prevAt = prev ? new Date(prev.getAttribute("data-at")) : null;
+      if (!prevAt || prevAt.toDateString() !== at.toDateString()) {
+        list.appendChild(el("li", { class: "chat-day" }, dayLabel(at)));
+        prev = null;
+      } else if (at - prevAt > 20 * 60000) {
+        list.appendChild(el("li", { class: "chat-day" }, at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })));
+        prev = null;
+      }
+      // Messages from the same person in a row hug together, with one avatar at the bottom.
+      if (prev && prev.getAttribute("data-sender") === item.getAttribute("data-sender")) {
+        prev.classList.add("has-next");
+        item.classList.add("is-cont");
+      }
+      list.appendChild(item);
       current.lastId = Math.max(current.lastId, m.id);
     });
-    if (!list.children.length) list.appendChild(el("li", { class: "muted chat-empty", "data-empty": "1" }, "Say hello! You can also share a work you're enjoying."));
-    else { var empty = list.querySelector("[data-empty]"); if (empty && messages.length) empty.remove(); }
+    if (!list.children.length) list.appendChild(el("li", { class: "chat-empty", "data-empty": "1" }, "Say hello 👋 You can also share a work you're enjoying."));
     if (nearBottom || messages.length) list.scrollTop = list.scrollHeight;
   }
 
   function composer() {
     var form = el("form", { class: "chat-compose", novalidate: "" });
-    var area = el("textarea", { rows: "2", maxlength: "2000", placeholder: "Write a message…", "aria-label": "Message" });
-    var send = el("button", { type: "submit" }, "Send");
+    var area = el("textarea", { rows: "1", maxlength: "2000", placeholder: "Message", "aria-label": "Message" });
+    var send = el("button", { type: "submit", class: "chat-send", "aria-label": "Send a like" }, "👍");
     form.append(area, send);
+    function paint() {
+      area.style.height = "auto";
+      area.style.height = Math.min(area.scrollHeight, 140) + "px";
+      var typed = Boolean(area.value.trim());
+      send.textContent = typed ? "➤" : "👍";
+      send.classList.toggle("is-like", !typed);
+      send.setAttribute("aria-label", typed ? "Send" : "Send a like");
+    }
+    area.addEventListener("input", paint);
     area.addEventListener("keydown", function (event) {
-      if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); }
+      // Enter sends on computers; on phones Enter makes a new line and you tap the send button.
+      if (event.key === "Enter" && !event.shiftKey && !("ontouchstart" in window)) { event.preventDefault(); form.requestSubmit(); }
     });
     form.addEventListener("submit", function (event) {
       event.preventDefault();
-      var body = area.value.trim();
-      if (!body) return;
+      var body = area.value.trim() || "👍";
       send.disabled = true;
       MW.api(convBase() + current.id + "/messages", { method: "POST", json: { body: body } }).then(function (d) {
-        area.value = "";
+        area.value = ""; paint();
         addMessages([d.message]);
         loadThreads();
+        if (current.group) loadGroups();
       }).catch(function (e) { MW.toast(e.message, true); }).then(function () { send.disabled = false; area.focus(); });
     });
     return form;

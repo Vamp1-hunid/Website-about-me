@@ -59,13 +59,17 @@ async function sendTo(userIds, n) {
       title: String(n.title || "Chapterhive").slice(0, 120),
       body: String(n.body || "").slice(0, 240),
       url: n.link || "/hub",
-      tag: n.type || "info"
+      tag: n.type || "info",
+      at: Date.now()
     });
     await Promise.all(rows.map(function (s) {
-      return lib().sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 24 * 3600 })
+      return lib().sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 24 * 3600, urgency: "high" })
         .catch(function (err) {
           // The phone unsubscribed or the app was removed: forget that device.
-          if (err.statusCode === 404 || err.statusCode === 410) return db.query("DELETE FROM push_subscriptions WHERE endpoint = $1", [s.endpoint]);
+          // 401/403: the device signed up with an older key (e.g. after VAPID keys changed), so it can never
+          // receive again. Forget it too; the app signs the device up again with the current key on its next visit.
+          if ([401, 403, 404, 410].includes(err.statusCode)) return db.query("DELETE FROM push_subscriptions WHERE endpoint = $1", [s.endpoint]);
+          console.warn("Push to one device failed:", err.statusCode || "", err.body || err.message);
         });
     }));
   } catch (e) {
