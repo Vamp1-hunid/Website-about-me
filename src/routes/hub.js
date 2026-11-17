@@ -72,13 +72,16 @@ function toCreatorCard(row) {
     works: row.works || 0,
     featured: row.featured,
     isBanditos: row.role === "admin",
+    // Official tags on the card too (not only on the creator's own page), for visitors and members alike.
+    roleTags: [].concat(row.role === "admin" ? [{ key: "founder", icon: "👑", label: "Chapterhive founder" }] : [],
+      row.is_beta ? [{ key: "beta", icon: "🧪", label: "Beta tester" }] : []),
     online: !!row.online,
     badges: rankings.badgesFrom(row.ranks)
   };
 }
 
 const CREATOR_SQL = `
-  SELECT cp.*, u.username AS account_username, u.plan, u.plan_until, u.avatar_url, u.role, u.created_at AS joined, u.streak_count,
+  SELECT cp.*, u.username AS account_username, u.plan, u.plan_until, u.avatar_url, u.role, u.is_beta, u.created_at AS joined, u.streak_count,
     (u.show_online AND u.last_seen_at > NOW() - INTERVAL '5 minutes') AS online,
     (SELECT COUNT(*) FROM follows f WHERE f.creator_id = cp.user_id)::int AS followers,
     (SELECT json_agg(json_build_object('scope', cr.scope, 'rank', cr.rank)) FROM creator_ranks cr WHERE cr.user_id = cp.user_id) AS ranks,

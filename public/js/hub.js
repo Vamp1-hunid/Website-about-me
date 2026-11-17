@@ -26,7 +26,18 @@
     body.appendChild(MW.avatar({ avatarUrl: c.avatarUrl, displayName: c.name }, "big"));
     var h3 = el("h3", {}, c.name);
     h3.appendChild(MW.onlineDot(c.online));
+    if (c.isBanditos) h3.appendChild(el("span", { class: "verified-inline", title: "Verified official account", "aria-label": "Verified official account" }, "✓"));
     body.appendChild(h3);
+    if (c.roleTags && c.roleTags.length) {
+      var tags = el("div", { class: "role-tags role-tags-small" });
+      c.roleTags.forEach(function (t) {
+        var tag = el("span", { class: "role-tag role-" + t.key, title: t.label });
+        tag.appendChild(el("span", { class: "role-tag-icon", "aria-hidden": "true" }, t.icon));
+        tag.appendChild(el("span", {}, t.label));
+        tags.appendChild(tag);
+      });
+      body.appendChild(tags);
+    }
     if (c.badges && c.badges.length) body.appendChild(MW.badges(c.badges.slice(0, 2)));
     body.appendChild(el("p", { class: "mono muted" }, "@" + c.handle + " · " + c.followers + (c.followers === 1 ? " follower" : " followers")));
     if (c.tagline) body.appendChild(el("p", {}, c.tagline));
