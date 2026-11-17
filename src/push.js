@@ -7,8 +7,18 @@
 // Keys: set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY on Render if you like; otherwise a key pair is made
 // once and kept in the database (app_settings), so it survives restarts and deploys.
 
-const webpush = require("web-push");
 const db = require("./db");
+
+// Loaded on first use, and never allowed to crash the site: if the library can't load, phone
+// notifications just stay off and the bell keeps working.
+let webpushLib;
+function lib() {
+  if (webpushLib === undefined) {
+    try { webpushLib = require("web-push"); } catch (e) { console.warn("Phone notifications are off:", e.message); webpushLib = null; }
+  }
+  if (!webpushLib) throw new Error("Phone notifications aren't available on this server.");
+  return webpushLib;
+}
 
 let ready = null;
 
@@ -18,7 +28,7 @@ async function keys() {
   }
   const { rows } = await db.query("SELECT value FROM app_settings WHERE key = 'vapid_keys'");
   if (rows.length) return JSON.parse(rows[0].value);
-  const made = webpush.generateVAPIDKeys();
+  const made = lib().generateVAPIDKeys();
   await db.query("INSERT INTO app_settings (key, value) VALUES ('vapid_keys', $1) ON CONFLICT (key) DO NOTHING", [JSON.stringify(made)]);
   const again = await db.query("SELECT value FROM app_settings WHERE key = 'vapid_keys'");
   return JSON.parse(again.rows[0].value);
@@ -28,7 +38,7 @@ function setup() {
   if (!ready) {
     ready = keys().then(function (k) {
       const contact = (process.env.CONTACT_EMAIL || "").trim();
-      webpush.setVapidDetails(contact ? "mailto:" + contact : (process.env.PUBLIC_URL || "https://mulenga-mwamba-website.onrender.com"), k.publicKey, k.privateKey);
+      lib().setVapidDetails(contact ? "mailto:" + contact : (process.env.PUBLIC_URL || "https://mulenga-mwamba-website.onrender.com"), k.publicKey, k.privateKey);
       return k;
     }).catch(function (e) { ready = null; throw e; });
   }
@@ -52,7 +62,7 @@ async function sendTo(userIds, n) {
       tag: n.type || "info"
     });
     await Promise.all(rows.map(function (s) {
-      return webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 24 * 3600 })
+      return lib().sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 24 * 3600 })
         .catch(function (err) {
           // The phone unsubscribed or the app was removed: forget that device.
           if (err.statusCode === 404 || err.statusCode === 410) return db.query("DELETE FROM push_subscriptions WHERE endpoint = $1", [s.endpoint]);
