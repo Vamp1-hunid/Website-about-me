@@ -368,6 +368,14 @@ router.post("/logout", function (req, res) {
 
 // GET /api/account/me  -> { user } or { user: null }
 router.get("/me", async function (req, res) {
+  // The login saved on each device keeps a copy of the name, picture and role from when it logged in.
+  // Refresh it from the database on every page, so a username changed on another device (or a new role)
+  // shows up everywhere straight away instead of the old name hanging around on that device.
+  if (req.session.user) {
+    const fresh = (await db.query("SELECT * FROM users WHERE id = $1", [req.session.user.id])).rows[0];
+    if (!fresh) delete req.session.user;
+    else req.session.user = publicUser(fresh);
+  }
   let creator = null;
   if (req.session.user) {
     const { rows } = await db.query(
