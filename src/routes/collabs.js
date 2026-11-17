@@ -129,9 +129,9 @@ router.get("/", requireLogin, async function (req, res) {
   }
   const q = text(req.query.q, 60);
   if (q) {
-    values.push("%" + q.replace(/[\\%_]/g, "\\$&") + "%");
+    values.push(q.replace(/[\\%_]/g, " ").replace(/\s+/g, " ").trim());
     const n = "$" + values.length;
-    where.push(`(c.title ILIKE ${n} OR c.description ILIKE ${n} OR c.looking_for_other ILIKE ${n} OR cp.name ILIKE ${n})`);
+    where.push(`(ch_match(c.title, ${n}) OR ch_match(c.description, ${n}) OR ch_match(c.looking_for_other, ${n}) OR ch_match(cp.name, ${n}))`);
   }
   const whereSql = " WHERE " + where.join(" AND ");
   const total = await db.query(

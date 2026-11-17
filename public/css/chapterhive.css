@@ -1508,3 +1508,8 @@ body[data-brand="chapterhive"] .help-fab, body[data-brand="chapterhive"] .help-g
 .people-dialog-head h2 { margin: 0; font-size: 1.15rem; }
 .people-dialog-list { max-height: 60vh; overflow-y: auto; margin-top: 0.6rem; }
 .people-dialog-list .member-card { color: var(--ink); text-decoration: none; }
+.milestone-dialog { text-align: center; width: min(92vw, 420px); }
+.milestone-burst { font-size: 3rem; animation: milestone-pop 0.7s ease-out; }
+.milestone-count { color: var(--ink-dim); }
+@keyframes milestone-pop { 0% { transform: scale(0.2) rotate(-20deg); opacity: 0; } 70% { transform: scale(1.25) rotate(8deg); opacity: 1; } 100% { transform: scale(1) rotate(0); } }
+@media (prefers-reduced-motion: reduce) { .milestone-burst { animation: none; } }

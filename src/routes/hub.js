@@ -119,8 +119,8 @@ router.get("/creators", async function (req, res) {
   const values = [];
   const q = text(req.query.q, 60);
   if (q) {
-    values.push("%" + q.replace(/[\\%_]/g, "\\$&") + "%");
-    where.push(`(cp.name ILIKE $${values.length} OR cp.handle ILIKE $${values.length} OR cp.tagline ILIKE $${values.length})`);
+    values.push(q.replace(/[\\%_]/g, " ").replace(/\s+/g, " ").trim());
+    where.push(`(ch_match(cp.name, $${values.length}) OR ch_match(cp.handle, $${values.length}) OR ch_match(cp.tagline, $${values.length}))`);
   }
   if (KINDS.includes(req.query.kind)) {
     values.push(req.query.kind);

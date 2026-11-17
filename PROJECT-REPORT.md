@@ -1923,3 +1923,29 @@ banners, the menu, the admin lists, the public list and the username preview.
 - **Tips for visitors:** people who aren't logged in now get their own tips: what Chapterhive is,
   how to reserve (or Continue with Google), typing birthdays as numbers, beta testing and logging
   in. Tips about tools they can't use yet (profile, buddies, chat, settings) only show after login.
+
+### Version 27 (17 November 2026): install counter, milestone pop-up, forgiving search, app on PC
+
+- **Install counter** (`src/routes/app.js`, table `app_installs`):
+  - Every device that installs Chapterhive is counted once: when the browser reports the install,
+    or the first time the app opens installed. The Play Store app opens the same site, so it will
+    count too.
+  - `GET /api/app/stats` gives the total.
+- **Milestone pop-up:** at 10, 25, 50, 100, 250, 500, 1,000… installs, a celebration pop-up says
+  "🎉 Chapterhive has been installed 100 times!".
+  - It shows once per milestone, only to people who **haven't installed the app on that device**
+    (with a 📲 Get the app too button).
+  - **Admins always see it.**
+  - You also get a bell note when a milestone is reached.
+- **Install on PC:**
+  - **📲 Install the app** is now in the ☰ menu on computers as well as phones.
+  - Chrome and Edge get a one-tap install. Other browsers show the steps for that browser
+    (Chrome, Edge, Safari on Mac, Android, iPhone).
+- **Forgiving search:**
+  - Search, the creators filter, the work filters, the collab board and member search ignore
+    capitals, hyphens, underscores, spaces and punctuation ("spiderman" finds "Spider-Man").
+  - They also forgive small spelling mistakes ("spidr artist" finds "spider-artist").
+  - Closer matches are listed first.
+  - This uses database functions `ch_norm`, `ch_score` and `ch_match` in `db/schema.sql`, with the
+    `pg_trgm` extension for typos. Render's PostgreSQL includes it. If it were ever missing, search
+    still ignores hyphens and capitals; only the typo matching switches off.

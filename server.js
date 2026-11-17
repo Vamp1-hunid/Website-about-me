@@ -92,6 +92,7 @@ api.use("/chat", require("./src/routes/chat"));
 api.use("/premium", require("./src/routes/premium"));
 api.use("/reserve", require("./src/routes/reserve"));
 api.use("/beta", require("./src/routes/beta"));
+api.use("/app", require("./src/routes/app"));
 api.use("/calendar", require("./src/routes/calendar"));
 api.use("/help", require("./src/routes/help"));
 api.use(require("./src/routes/business"));

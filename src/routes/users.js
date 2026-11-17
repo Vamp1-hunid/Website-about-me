@@ -15,7 +15,7 @@ const router = express.Router();
 // Only names, pictures and tags are listed; private pages are left out.
 router.get("/", requireLogin, async function (req, res) {
   const q = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase().replace(/^@/, "").slice(0, 40) : "";
-  const like = "%" + q.replace(/[%_\\]/g, "\\$&") + "%";
+  const like = q.replace(/[%_\\]/g, " ").replace(/\s+/g, " ").trim();
   const me = req.session.user.id;
   const { rows } = await db.query(
     `SELECT u.id, u.username, u.display_name, u.avatar_url, u.is_beta, u.role, u.bio,
@@ -26,8 +26,8 @@ router.get("/", requireLogin, async function (req, res) {
                FROM buddies b WHERE LEAST(b.requester_id, b.addressee_id) = LEAST(u.id, $2) AND GREATEST(b.requester_id, b.addressee_id) = GREATEST(u.id, $2)) AS buddy_state
        FROM users u LEFT JOIN creator_profiles cp ON cp.user_id = u.id AND cp.status = 'approved'
       WHERE u.status = 'active' AND (u.profile_visible OR $3) AND u.id <> $2
-        AND ($1 = '%%' OR u.username ILIKE $1 OR u.display_name ILIKE $1)
-      ORDER BY u.is_beta DESC, (u.role = 'admin') DESC, u.last_seen_at DESC NULLS LAST, u.created_at DESC
+        AND ($1 = '' OR ch_match(u.username, $1) OR ch_match(u.display_name, $1))
+      ORDER BY ($1 <> '' AND GREATEST(ch_score(u.username, $1), ch_score(u.display_name, $1)) >= 0.9) DESC, u.is_beta DESC, (u.role = 'admin') DESC, u.last_seen_at DESC NULLS LAST, u.created_at DESC
       LIMIT 60`, [like, me, req.session.user.role === "admin"]);
   res.json({ members: rows.map(function (u) {
     return { username: u.username, displayName: u.display_name, avatarUrl: avatarUrl(u.avatar_url), isBeta: u.is_beta,
