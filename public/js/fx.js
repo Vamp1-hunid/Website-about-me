@@ -752,7 +752,8 @@
   safe(initNetMap);
   safe(initProfiler);
   safe(initHack);
-  safe(initConsole);
+  // The console is a God's Banditos toy: not on Chapterhive.
+  if (document.body.getAttribute("data-brand") !== "chapterhive") safe(initConsole);
   safe(initReveal);
   safe(initTyping);
   safe(initEasterEgg);

@@ -519,7 +519,7 @@ router.post("/school/verify", async function (req, res) {
 router.put("/privacy", requireLogin, async function (req, res) {
   const id = req.session.user.id;
   if (typeof req.body.showOnline === "boolean") await db.query("UPDATE users SET show_online = $1 WHERE id = $2", [req.body.showOnline, id]);
-  if (["everyone", "following", "nobody"].includes(req.body.chatPrivacy)) await db.query("UPDATE users SET chat_privacy = $1 WHERE id = $2", [req.body.chatPrivacy, id]);
+  if (["everyone", "followers", "buddies", "following", "nobody"].includes(req.body.chatPrivacy)) await db.query("UPDATE users SET chat_privacy = $1 WHERE id = $2", [req.body.chatPrivacy, id]);
   if (typeof req.body.profileVisible === "boolean") await db.query("UPDATE users SET profile_visible = $1 WHERE id = $2", [req.body.profileVisible, id]);
   if (typeof req.body.betaCanMessage === "boolean") await db.query("UPDATE users SET beta_can_message = $1 WHERE id = $2", [req.body.betaCanMessage, id]);
   if (["all", "teen", "mature"].includes(req.body.maxRating)) {
@@ -572,7 +572,7 @@ router.put("/details", requireLogin, async function (req, res) {
     values.push(signup.checkGender(req.body.gender)); sets.push("gender = $" + values.length);
   }
   if (typeof req.body.marketing === "boolean") { values.push(req.body.marketing); sets.push("marketing_opt_in = $" + values.length); }
-  if (["everyone", "following", "nobody"].includes(req.body.chatPrivacy)) { values.push(req.body.chatPrivacy); sets.push("chat_privacy = $" + values.length); }
+  if (["everyone", "followers", "buddies", "following", "nobody"].includes(req.body.chatPrivacy)) { values.push(req.body.chatPrivacy); sets.push("chat_privacy = $" + values.length); }
   if (problems.length) return res.status(400).json({ error: "Please fix the highlighted fields.", problems: problems });
   if (sets.length) {
     values.push(req.session.user.id);

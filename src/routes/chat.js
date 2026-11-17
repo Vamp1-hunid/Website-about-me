@@ -40,7 +40,7 @@ const openLimiter = rateLimit({
 });
 
 async function me(req) {
-  const { rows } = await db.query("SELECT id, birth_date, status, is_beta FROM users WHERE id = $1", [req.session.user.id]);
+  const { rows } = await db.query("SELECT id, birth_date, status, is_beta, role FROM users WHERE id = $1", [req.session.user.id]);
   return rows[0];
 }
 
@@ -168,12 +168,8 @@ router.post("/threads", openLimiter, async function (req, res) {
   const [a, b] = pair(self.id, other.id);
   const existing = await db.query("SELECT id FROM chat_threads WHERE user_a = $1 AND user_b = $2", [a, b]);
   if (existing.rows.length) return res.json({ id: existing.rows[0].id });
-  const betaWelcome = self.is_beta && other.beta_can_message; // they chose to always hear from beta testers
-  if (!betaWelcome && other.chat_privacy === "nobody") return res.status(403).json({ error: "This member isn't accepting new chats." });
-  if (!betaWelcome && other.chat_privacy === "following") {
-    const f = await db.query("SELECT 1 FROM follows WHERE follower_id = $1 AND creator_id = $2", [other.id, self.id]);
-    if (!f.rows.length) return res.status(403).json({ error: "This member only accepts chats from creators they follow." });
-  }
+  const why = await privacyProblem(self, other);
+  if (why) return res.status(403).json({ error: "This member " + why + "." });
   const made = await db.query("INSERT INTO chat_threads (user_a, user_b) VALUES ($1, $2) ON CONFLICT (user_a, user_b) DO UPDATE SET user_a = EXCLUDED.user_a RETURNING id", [a, b]);
   res.status(201).json({ id: made.rows[0].id });
 });
@@ -265,18 +261,37 @@ async function groupFor(id, userId) {
   return rows[0] || null;
 }
 
+// Does "user"'s "Who can start a chat with me" setting let "from" start a chat?
+//   everyone | followers (people who follow me) | buddies | following (people I follow) | nobody
+// Admins can always reach people (moderation), and beta testers get through if the person chose "Let beta testers message me".
+async function privacyProblem(from, user) {
+  if (from.role === "admin") return null;
+  if (from.is_beta && user.beta_can_message) return null;
+  const p = user.chat_privacy || "everyone";
+  if (p === "everyone") return null;
+  if (p === "nobody") return "isn't accepting new chats";
+  if (p === "following") {
+    const f = await db.query("SELECT 1 FROM follows WHERE follower_id = $1 AND creator_id = $2", [user.id, from.id]);
+    return f.rows.length ? null : "only accepts chats from people they follow";
+  }
+  if (p === "followers") {
+    const f = await db.query("SELECT 1 FROM follows WHERE follower_id = $1 AND creator_id = $2", [from.id, user.id]);
+    return f.rows.length ? null : "only accepts chats from their followers (follow them first)";
+  }
+  if (p === "buddies") {
+    const b = await db.query("SELECT 1 FROM buddies WHERE status = 'accepted' AND LEAST(requester_id, addressee_id) = LEAST($1::int, $2::int) AND GREATEST(requester_id, addressee_id) = GREATEST($1::int, $2::int)", [from.id, user.id]);
+    return b.rows.length ? null : "only accepts chats from their buddies";
+  }
+  return null;
+}
+
 // Can this person be added to a group run by "owner"? Same age band, not blocked, and their chat settings allow it.
 async function canJoin(owner, user) {
   if (!user || user.status !== "active") return "can't join chats right now";
   if (!user.birth_date) return "hasn't set up chat yet";
   if (band(owner) !== band(user)) return band(owner) === "teen" ? "isn't a teen account" : "has a teen account";
   if (await blockedEitherWay(owner.id, user.id)) return "can't be added";
-  if (user.chat_privacy === "nobody") return "isn't accepting new chats";
-  if (user.chat_privacy === "following") {
-    const f = await db.query("SELECT 1 FROM follows WHERE follower_id = $1 AND creator_id = $2", [user.id, owner.id]);
-    if (!f.rows.length) return "only accepts chats from creators they follow";
-  }
-  return null;
+  return privacyProblem(owner, user);
 }
 
 router.get("/groups", requireFlag("group_chats"), async function (req, res) {
@@ -299,7 +314,7 @@ router.post("/groups", requireFlag("group_chats"), openLimiter, async function (
   const usernames = (Array.isArray(req.body.usernames) ? req.body.usernames : []).map(function (u) { return String(u || "").trim().toLowerCase().replace(/^@/, ""); })
     .filter(function (u, i, all) { return u && all.indexOf(u) === i; }).slice(0, MAX_GROUP - 1);
   if (!usernames.length) return res.status(400).json({ error: "Add at least one member." });
-  const found = (await db.query("SELECT id, username, birth_date, status, chat_privacy FROM users WHERE username = ANY ($1::text[]) AND id <> $2", [usernames, self.id])).rows;
+  const found = (await db.query("SELECT id, username, birth_date, status, chat_privacy, beta_can_message, role FROM users WHERE username = ANY ($1::text[]) AND id <> $2", [usernames, self.id])).rows;
   const skipped = [];
   const ok = [];
   for (const u of found) { const why = await canJoin(self, u); if (why) skipped.push("@" + u.username + " " + why); else ok.push(u); }
@@ -359,7 +374,7 @@ router.post("/groups/:id/members", requireFlag("group_chats"), async function (r
   const count = (await db.query("SELECT COUNT(*)::int AS n FROM chat_group_members WHERE group_id = $1", [g.id])).rows[0].n;
   if (count >= MAX_GROUP) return res.status(400).json({ error: "Groups can have up to " + MAX_GROUP + " people." });
   const username = String(req.body.username || "").trim().toLowerCase().replace(/^@/, "");
-  const u = (await db.query("SELECT id, username, birth_date, status, chat_privacy, beta_can_message FROM users WHERE username = $1", [username])).rows[0];
+  const u = (await db.query("SELECT id, username, birth_date, status, chat_privacy, beta_can_message, role FROM users WHERE username = $1", [username])).rows[0];
   if (!u) return res.status(404).json({ error: "There's no member with that username." });
   const why = await canJoin(self, u);
   if (why) return res.status(403).json({ error: "@" + u.username + " " + why + "." });
@@ -412,6 +427,9 @@ router.post("/blocks", async function (req, res) {
   const { rows } = await db.query("SELECT id FROM users WHERE username = $1", [username]);
   if (!rows.length) return res.status(404).json({ error: "There's no member with that username." });
   if (rows[0].id === req.session.user.id) return res.status(400).json({ error: "You can't block yourself." });
+  // Admins can't be blocked: they need to be able to reach anyone for safety and moderation.
+  const target = (await db.query("SELECT role FROM users WHERE id = $1", [rows[0].id])).rows[0];
+  if (target.role === "admin") return res.status(400).json({ error: "Admins can't be blocked. If an admin is bothering you, use Report or the contact page." });
   await db.query("INSERT INTO chat_blocks (blocker_id, blocked_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", [req.session.user.id, rows[0].id]);
   res.status(201).json({ ok: true });
 });

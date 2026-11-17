@@ -682,3 +682,8 @@ CREATE TABLE IF NOT EXISTS buddies (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS buddies_pair_idx ON buddies (LEAST(requester_id, addressee_id), GREATEST(requester_id, addressee_id));
 CREATE INDEX IF NOT EXISTS buddies_addressee_idx ON buddies (addressee_id, status);
+-- Who can start a chat with me: everyone | followers | buddies | following (people I follow) | nobody
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_chat_privacy_check;
+ALTER TABLE users ADD CONSTRAINT users_chat_privacy_check CHECK (chat_privacy IN ('everyone', 'followers', 'buddies', 'following', 'nobody'));
+-- Admins can't be blocked (clears any blocks made before this rule).
+DELETE FROM chat_blocks WHERE blocked_id IN (SELECT id FROM users WHERE role = 'admin');

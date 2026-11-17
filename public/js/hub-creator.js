@@ -96,6 +96,18 @@
 
     var meta = el("p", { class: "profile-meta" });
     var f = el("span"); f.append(followers, document.createTextNode(c.followers === 1 ? " follower" : " followers"));
+    if (c.username) {
+      // Signed-in people can tap to see who follows this creator.
+      f.className = "stat-tappable";
+      f.setAttribute("role", "button");
+      f.setAttribute("tabindex", "0");
+      f.addEventListener("click", function () {
+        MW.me().then(function (user) {
+          if (!user) { MW.toast("Log in to see followers."); return; }
+          MW.showPeopleList("Followers · " + c.name, "/users/" + encodeURIComponent(c.username) + "/list/followers");
+        });
+      });
+    }
     var w = el("span"); w.append(el("strong", {}, String(c.works)), document.createTextNode(c.works === 1 ? " work" : " works"));
     meta.append(f, w, el("span", {}, "Joined " + MW.formatDate(c.joined)));
     body.appendChild(meta);

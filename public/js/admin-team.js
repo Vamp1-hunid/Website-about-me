@@ -101,5 +101,39 @@
     }).catch(function (e) { err.textContent = e.message; });
   });
 
+  // Username helper: type part of a name or username and pick the right person from the list.
+  (function () {
+    var input = document.getElementById("team-username");
+    var list = el("div", { class: "name-suggest", role: "listbox", hidden: "" });
+    input.parentNode.parentNode.insertBefore(list, input.parentNode.nextSibling);
+    input.setAttribute("autocomplete", "off");
+    input.setAttribute("placeholder", "Start typing a name or username…");
+    var timer = null;
+    input.addEventListener("input", function () {
+      clearTimeout(timer);
+      var q = input.value.trim().replace(/^@/, "");
+      if (q.length < 2) { list.hidden = true; return; }
+      timer = setTimeout(function () {
+        MW.api("/users?q=" + encodeURIComponent(q)).then(function (d) {
+          list.textContent = "";
+          var people = d.members.slice(0, 8);
+          if (!people.length) { list.appendChild(el("p", { class: "muted" }, "No one matches \"" + q + "\".")); list.hidden = false; return; }
+          people.forEach(function (m) {
+            var b = el("button", { type: "button", class: "name-suggest-item", role: "option" });
+            b.appendChild(MW.avatar(m));
+            var t = el("span");
+            t.appendChild(el("strong", {}, m.displayName || m.username));
+            t.appendChild(el("span", { class: "muted" }, " @" + m.username + (m.isBeta ? " · 🧪" : "") + (m.creatorHandle ? " · ✍️" : "")));
+            b.appendChild(t);
+            b.addEventListener("click", function () { input.value = m.username; list.hidden = true; });
+            list.appendChild(b);
+          });
+          list.hidden = false;
+        }).catch(function () { list.hidden = true; });
+      }, 200);
+    });
+    document.addEventListener("click", function (e) { if (e.target !== input && !list.contains(e.target)) list.hidden = true; });
+  })();
+
   ADMIN.onShow("team", load);
 })();

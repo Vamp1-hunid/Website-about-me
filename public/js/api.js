@@ -594,7 +594,7 @@
     menu.appendChild(search);
 
     var groups = MW.isHub ? [
-      ["Chapterhive", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following", true], ["/hub/news", "News & updates", false, "updates"], ["/hub/top", "Top creators", false, "rankings"], ["/hub/calendar", "Calendar", false, "calendar"]]],
+      ["Chapterhive", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following", true], ["/hub/news", "News & updates", false, "updates"], ["/hub/buddies", "Buddies", true], ["/hub/creators#top", "Top creators", false, "rankings"], ["/hub/calendar", "Calendar", false, "calendar"]]],
       ["Create", [["/hub/collabs", "Collab board", true, "collabs"], ["/hub/collabs#suggest", "Suggestion box", true, "suggestion_box"], ["/hub/apply", "Become a creator", true, "creator_applications"], ["/legal/content-rules", "Content Rules"]]],
       ["More", [["/hub/help", "Help & FAQ"], ["/hub/premium", "Premium", false, "premium"], ["/hub/sponsor", "Sponsor & business", false, "sponsor_page"], ["/", "God's Banditos"], ["/contact", "Contact"], ["/legal/terms", "Terms"]]]
     ] : [
@@ -1134,4 +1134,33 @@
     }).catch(function () {});
   }
   setTimeout(announcementPopup, 1500);
+
+  // A pop-up list of accounts (followers, following, buddies) with pictures and usernames.
+  MW.showPeopleList = function (title, url) {
+    var dialog = el("dialog", { class: "heist-dialog people-dialog", "aria-label": title });
+    var head = el("div", { class: "people-dialog-head" });
+    head.appendChild(el("h2", {}, title));
+    var x = el("button", { type: "button", class: "btn btn-ghost btn-small", "aria-label": "Close" }, "✕");
+    head.appendChild(x);
+    dialog.appendChild(head);
+    var box = el("div", { class: "members-list people-dialog-list" }, "Loading…");
+    dialog.appendChild(box);
+    document.body.appendChild(dialog);
+    x.addEventListener("click", function () { dialog.close(); });
+    dialog.addEventListener("close", function () { dialog.remove(); });
+    if (dialog.showModal) dialog.showModal(); else dialog.setAttribute("open", "");
+    MW.api(url).then(function (d) {
+      box.textContent = "";
+      if (!d.people.length) { box.appendChild(el("p", { class: "muted" }, "No one here yet.")); return; }
+      d.people.forEach(function (p) {
+        var row = el("a", { class: "member-card", href: "/hub/u/" + encodeURIComponent(p.username) });
+        row.appendChild(MW.avatar(p));
+        var t = el("span", { class: "member-card-text" });
+        t.appendChild(el("strong", {}, p.displayName || p.username));
+        t.appendChild(el("span", { class: "muted" }, "@" + p.username + (p.isBeta ? " · 🧪 Beta tester" : "") + (p.isAdmin ? " · 👑 Founder" : "")));
+        row.appendChild(t);
+        box.appendChild(row);
+      });
+    }).catch(function (e) { box.textContent = e.message; });
+  };
 })();
