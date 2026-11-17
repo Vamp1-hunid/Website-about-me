@@ -338,7 +338,7 @@ router.post("/apply", requireLogin, requireFlag("creator_applications"), applyLi
        agreement_accepted_at = NOW(), created_at = NOW()`,
     [req.session.user.id, values.handle, values.name, values.tagline, values.kinds, values.application, JSON.stringify(links.links)]
   );
-  require("../notify").notifyStaff("approve_creators", { type: "apply", title: "🎨 New creator application", body: "@" + req.session.user.username + " applied to become a creator.", link: "/admin#chapterhive" }).catch(function () {});
+  require("../notify").notifyStaff("approve_creators", { type: "apply", title: "🎨 New creator application", body: "@" + req.session.user.username + " applied to become a creator.", link: "/hub/admin#chapterhive" }).catch(function () {});
   res.status(201).json({ profile: toMyProfile(await myProfile(req.session.user.id)) });
 });
 
@@ -451,7 +451,7 @@ router.post("/reports", requireLogin, reportLimiter, async function (req, res) {
     );
   }
   if (!dup.rows.length) {
-    require("../notify").notifyStaff("handle_reports", { type: "report", title: "🚩 New report: " + type, body: "@" + req.session.user.username + " reported a " + type + (reason ? " (" + reason + ")" : "") + ".", link: "/admin#chapterhive" }).catch(function () {});
+    require("../notify").notifyStaff("handle_reports", { type: "report", title: "🚩 New report: " + type, body: "@" + req.session.user.username + " reported a " + type + (reason ? " (" + reason + ")" : "") + ".", link: "/hub/admin#chapterhive" }).catch(function () {});
   }
   res.status(201).json({ ok: true });
 });

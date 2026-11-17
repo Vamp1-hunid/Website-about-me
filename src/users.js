@@ -84,7 +84,7 @@ const WELCOME = {
   admin: {
     title: "Welcome, site owner",
     body: "Your dashboard has everything: reviews, Manage users, Features (test things before everyone sees them) and announcements.",
-    link: "/admin"
+    link: "/hub/admin"
   }
 };
 

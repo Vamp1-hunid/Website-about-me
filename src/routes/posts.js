@@ -802,7 +802,7 @@ async function savePost(req, res, existingRow) {
       type: "review",
       title: "New post to review: " + saved.title,
       body: "By " + (saved.creator_name || "a creator") + ". Approve it or send feedback.",
-      link: "/admin#reviews"
+      link: "/hub/admin#reviews"
     });
   } else {
     require("../publishing").announceReady().catch(function () {});

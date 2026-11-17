@@ -31,7 +31,7 @@
 
   MW.me().then(function (user) {
     if (!user) {
-      window.location.replace("/login?next=" + encodeURIComponent("/admin"));
+      window.location.replace((MW.isHub ? "/hub/login" : "/login") + "?next=" + encodeURIComponent(MW.adminUrl("")));
       return;
     }
     gate.classList.remove("loading");
