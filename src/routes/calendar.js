@@ -64,7 +64,9 @@ router.put("/verse", requireAdmin, async function (req, res) {
   const reference = typeof req.body.reference === "string" ? req.body.reference.trim().slice(0, 60) : "";
   if (!reference) return res.status(400).json({ error: "Enter a reference like John 3:16." });
   const value = JSON.stringify({ date: zambiaNow().toISOString().slice(0, 10), reference: reference,
-    theme: String(req.body.theme || "").slice(0, 80), text: String(req.body.text || "").slice(0, 600) });
+    theme: String(req.body.theme || "").slice(0, 80), text: String(req.body.text || "").slice(0, 600),
+    devotion: String(req.body.devotion || "").slice(0, 1500), encouragement: String(req.body.encouragement || "").slice(0, 300),
+    prayer: String(req.body.prayer || "").slice(0, 1000) });
   await db.query("INSERT INTO app_settings (key, value) VALUES ('verse_override', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", [value]);
   res.json({ verse: await verses.today() });
 });

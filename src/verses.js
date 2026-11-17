@@ -4,6 +4,7 @@
 // it does not copy the verse text. The admin can override today's verse (and add text they have permission to use).
 
 const db = require("./db");
+const devotions = require("./devotions");
 
 // A year of encouraging passages, picked by day of the year.
 const REFS = [
@@ -41,12 +42,16 @@ async function today() {
     try {
       const v = JSON.parse(override.rows[0].value);
       if (v.date === now.toISOString().slice(0, 10)) {
-        return { reference: v.reference, theme: v.theme || "", text: v.text || "", link: link(v.reference), translation: "Good News Translation" };
+        const extra = devotions.forReference(v.reference) || {};
+        return { reference: v.reference, theme: v.theme || "", text: v.text || "", link: link(v.reference), translation: "Good News Translation",
+          devotion: v.devotion || extra.devotion || "", encouragement: v.encouragement || extra.encouragement || "", prayer: v.prayer || extra.prayer || "" };
       }
     } catch (e) { /* ignore */ }
   }
   const pick = REFS[dayOfYear(now) % REFS.length];
-  return { reference: pick[0], theme: pick[1], text: "", link: link(pick[0]), translation: "Good News Translation" };
+  const extra = devotions.forReference(pick[0]) || {};
+  return { reference: pick[0], theme: pick[1], text: "", link: link(pick[0]), translation: "Good News Translation",
+    devotion: extra.devotion || "", encouragement: extra.encouragement || "", prayer: extra.prayer || "" };
 }
 
 module.exports = { today, REFS };

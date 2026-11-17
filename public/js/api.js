@@ -468,7 +468,7 @@
     card.appendChild(el("span", { class: "reserve-banner-emoji", "aria-hidden": "true" }, "🐝"));
     var t = el("span", { class: "reserve-banner-text" });
     t.appendChild(el("strong", {}, "You're in early! Chapterhive opens soon"));
-    t.appendChild(el("span", {}, "Check how the list is growing and read the team's updates. Posting, comments and chat open at launch."));
+    t.appendChild(el("span", {}, "You can already follow creators and like their posts. Posting, comments and chat open at launch."));
     card.appendChild(t);
     var acts = el("span", { class: "waiting-actions" });
     acts.appendChild(el("a", { class: "btn btn-small", href: "/hub/reserve#reserve-public" }, "My place"));
@@ -594,7 +594,7 @@
     menu.appendChild(search);
 
     var groups = MW.isHub ? [
-      ["Chapterhive", [["/hub", "Home"], ["/hub/creators", "Creators"], ["/hub/feed", "Following", true], ["/hub/news", "News & updates", false, "updates"], ["/hub/buddies", "Buddies", true], ["/hub/creators#top", "Top creators", false, "rankings"], ["/hub/calendar", "Calendar", false, "calendar"]]],
+      ["Chapterhive", [["/hub", "Home"], ["/hub/news", "News & updates", false, "updates"], ["/hub/creators", "Creators"], ["/hub/feed", "Following", true], ["/hub/buddies", "Buddies", true], ["/hub/creators#top", "Top creators", false, "rankings"], ["/hub/calendar", "Calendar", false, "calendar"]]],
       ["Create", [["/hub/collabs", "Collab board", true, "collabs"], ["/hub/collabs#suggest", "Suggestion box", true, "suggestion_box"], ["/hub/apply", "Become a creator", true, "creator_applications"], ["/legal/content-rules", "Content Rules"]]],
       ["More", [["/hub/help", "Help & FAQ"], ["/hub/premium", "Premium", false, "premium"], ["/hub/sponsor", "Sponsor & business", false, "sponsor_page"], ["/", "God's Banditos"], ["/contact", "Contact"], ["/legal/terms", "Terms"]]]
     ] : [
@@ -1281,4 +1281,29 @@
       return sub.unsubscribe().then(function () { return MW.api("/notifications/push-unsubscribe", { method: "POST", json: { endpoint: endpoint } }); });
     }).then(function () { MW.toast("Phone notifications are off on this device."); });
   };
+
+  // Every visit: if this device allowed notifications, make sure the server still has it, and that it
+  // was signed up with the server's current key. (If the key changed, old sign-ups silently stop
+  // getting anything, which is why some phones got nothing once the app was closed.)
+  function resyncPush() {
+    if (!MW.pushSupported() || Notification.permission !== "granted") return;
+    MW.me().then(function (user) {
+      if (!user) return;
+      return Promise.all([navigator.serviceWorker.ready, MW.api("/notifications/push-key")]).then(function (both) {
+        var reg = both[0], key = urlB64ToUint8Array(both[1].publicKey);
+        return reg.pushManager.getSubscription().then(function (sub) {
+          var old = sub && sub.options && sub.options.applicationServerKey ? new Uint8Array(sub.options.applicationServerKey) : null;
+          var same = old && old.length === key.length && old.every(function (b, i) { return b === key[i]; });
+          if (sub && same) return sub;
+          return (sub ? sub.unsubscribe() : Promise.resolve()).then(function () {
+            return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+          });
+        });
+      }).then(function (sub) {
+        return MW.api("/notifications/push-subscribe", { method: "POST", json: { subscription: sub.toJSON() } });
+      });
+    }).catch(function () { /* the bell still works */ });
+  }
+  if (document.readyState === "complete") setTimeout(resyncPush, 3000);
+  else window.addEventListener("load", function () { setTimeout(resyncPush, 3000); });
 })();

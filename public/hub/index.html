@@ -25,7 +25,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=29">
-  <link rel="stylesheet" href="/css/chapterhive.css?v=34">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=35">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -54,10 +54,10 @@
 
   <nav id="site-nav" class="site-nav" aria-label="Main navigation">
     <a href="/hub" data-nav="hub">Home</a>
+    <a href="/hub/news" data-nav="news">News &amp; updates</a>
     <a href="/hub/creators" data-nav="creators">Creators</a>
     <a href="/hub/buddies" data-nav="buddies">Buddies</a>
     <a href="/hub/feed" data-nav="feed">Following</a>
-    <a href="/hub/news" data-nav="news">News &amp; updates</a>
     <a href="/hub/collabs" data-nav="collabs">Collabs</a>
     <a href="/hub/apply" data-nav="apply">Become a creator</a>
     <a href="/hub/sponsor" data-nav="sponsor">Sponsor</a>
@@ -70,9 +70,9 @@
         <div class="story-strip" aria-label="Creators"><div id="home-stories" class="story-row"></div></div>
         <div class="feed-head">
           <h1 id="browse-title" class="sr-only">Chapterhive feed</h1>
-          <div class="browse-shelves" role="tablist" aria-label="What do you feel like?" id="browse-shelves"></div>
+          <div class="browse-shelves" role="group" aria-label="What do you feel like? Pick one or more" id="browse-shelves"></div>
           <div class="feed-tools">
-            <button type="button" class="chip" id="feed-filters-toggle" aria-expanded="false" aria-controls="feed-filters">⚙ Filters</button>
+            <button type="button" class="chip" id="feed-filters-toggle" aria-expanded="true" aria-controls="feed-filters">⚙ Filters</button>
             <label class="browse-sort"><span class="sr-only">Sort by</span>
               <select id="browse-sort"><option value="new">Newest</option><option value="popular">Most liked</option><option value="old">Oldest</option></select>
             </label>
@@ -81,7 +81,7 @@
               <button type="button" class="chip" id="view-grid" aria-pressed="false" title="Grid">▦ Grid</button>
             </div>
           </div>
-          <div id="feed-filters" class="feed-filters" hidden>
+          <div id="feed-filters" class="feed-filters">
             <div class="browse-cats" id="browse-cats" aria-label="Type"></div>
             <div class="browse-genres" id="browse-genres" aria-label="Genre"></div>
           </div>

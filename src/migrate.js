@@ -18,6 +18,7 @@ async function migrate() {
   await openHelpAndTeamWording();
   await openBellForEveryone();
   await openTipsForEveryone();
+  await verseForEveryone();
 }
 
 // One time only: the suggestion box and the Fund the heist button go live for everyone
@@ -27,6 +28,15 @@ async function openCommunityFeatures() {
   if (done.rows.length) return;
   await db.query("UPDATE feature_flags SET audience = 'everyone', updated_at = NOW() WHERE key IN ('suggestion_box', 'hub_support', 'donations')");
   await db.query("INSERT INTO app_settings (key, value) VALUES ('community_features_v1', '1') ON CONFLICT (key) DO NOTHING");
+}
+
+// v30: one time only, the daily Bible verse is switched on for every existing account.
+// After this, anyone who turns it off in Settings keeps it off.
+async function verseForEveryone() {
+  const done = await db.query("SELECT 1 FROM app_settings WHERE key = 'verse_everyone_v30'");
+  if (done.rows.length) return;
+  await db.query("UPDATE users SET daily_verse = TRUE WHERE daily_verse = FALSE");
+  await db.query("INSERT INTO app_settings (key, value) VALUES ('verse_everyone_v30', '1') ON CONFLICT (key) DO NOTHING");
 }
 
 // v23: every account gets the notification bell (it started as admin-only).

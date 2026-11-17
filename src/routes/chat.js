@@ -222,6 +222,7 @@ router.post("/threads/:id/messages", sendLimiter, async function (req, res) {
   await db.query("UPDATE chat_threads SET last_at = NOW(), " + (thread.user_a === self.id ? "a_read_at" : "b_read_at") + " = NOW() WHERE id = $1", [thread.id]);
   const { rows } = await db.query(MESSAGE_SELECT + " WHERE m.id = $1", [ins.rows[0].id]);
   res.status(201).json({ message: messageOut(rows[0], self.id) });
+  pushMessage([otherId], self.id, "💬 {who}", body, "/hub/chat?t=" + thread.id);
 });
 
 router.delete("/messages/:id", async function (req, res) {
@@ -255,6 +256,16 @@ router.post("/messages/:id/report", async function (req, res) {
 /* ---------- Group chats ---------- */
 
 const MAX_GROUP = 30;
+
+// Phone notification for a new chat message (no bell entry: the chat list already shows unread).
+async function pushMessage(toIds, senderId, title, body, link) {
+  try {
+    const u = (await db.query("SELECT username, display_name FROM users WHERE id = $1", [senderId])).rows[0] || {};
+    const who = u.display_name || u.username || "Someone";
+    const text = body ? (body.length > 120 ? body.slice(0, 117) + "…" : body) : "Shared a work with you";
+    require("../push").sendTo(toIds, { type: "chat-" + link.replace(/\W/g, ""), title: title.replace("{who}", who), body: title.indexOf("{who}") === -1 ? who + ": " + text : text, link: link });
+  } catch (e) { console.warn("Chat push failed:", e.message); }
+}
 
 async function groupFor(id, userId) {
   const { rows } = await db.query(
@@ -366,6 +377,8 @@ router.post("/groups/:id/messages", requireFlag("group_chats"), sendLimiter, asy
   await db.query("UPDATE chat_group_members SET read_at = NOW() WHERE group_id = $1 AND user_id = $2", [g.id, self.id]);
   const { rows } = await db.query(MESSAGE_SELECT.replace("FROM chat_messages m", "FROM chat_group_messages m") + " WHERE m.id = $1", [ins.rows[0].id]);
   res.status(201).json({ message: messageOut(rows[0], self.id) });
+  const members = await db.query("SELECT user_id FROM chat_group_members WHERE group_id = $1 AND user_id <> $2", [g.id, self.id]);
+  pushMessage(members.rows.map(function (r) { return r.user_id; }), self.id, "👥 " + g.name, body, "/hub/chat?g=" + g.id);
 });
 
 router.post("/groups/:id/members", requireFlag("group_chats"), async function (req, res) {
