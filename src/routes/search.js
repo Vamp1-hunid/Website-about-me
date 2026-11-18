@@ -178,7 +178,7 @@ const SUPPORT_TYPES = ["card", "mobile-money", "paypal", "bank", "link"];
 const DEFAULT_SUPPORT = {
   enabled: false,
   title: "Feed the hive",
-  message: "Chapterhive is free for creators and readers. If you enjoy it, you can chip in to keep the hive running.",
+  message: "Enjoying Chapterhive? Chip in to help keep the hive growing: every bit helps us build more for creators and readers.",
   methods: []
 };
 
@@ -188,6 +188,8 @@ async function readSupport() {
     const saved = Object.assign({}, DEFAULT_SUPPORT, rows[0] ? JSON.parse(rows[0].value) : {});
     // The old God's Banditos wording becomes Chapterhive's bee-themed one (a custom title is kept).
     if (!saved.title || saved.title.trim().toLowerCase() === "fund the heist") saved.title = DEFAULT_SUPPORT.title;
+    // The old message promised Chapterhive is free; paid plans are coming, so it's replaced (a custom message is kept).
+    if (!saved.message || /is free for creators and readers/i.test(saved.message)) saved.message = DEFAULT_SUPPORT.message;
     return saved;
   } catch (error) {
     return Object.assign({}, DEFAULT_SUPPORT);
