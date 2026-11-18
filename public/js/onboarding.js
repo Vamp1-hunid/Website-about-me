@@ -1,6 +1,6 @@
 // js/onboarding.js  -  the full-screen welcome for brand-new accounts, a bit like setting up a new computer:
 //   "Hi, Bob."  →  "Getting your account ready…"  →  "We're glad to have you here."
-//   →  "Welcome to Chapterhive · brought to you by God's Banditos"
+//   →  "Welcome to Chapterhive"
 //   →  a quick, optional survey (what you love, which genres)  →  "Setting up your feed…"
 //   →  a tribute to the creators  →  "You're all set".
 // Everything can be skipped. The survey answers personalise the "For you" feed.
@@ -67,7 +67,6 @@
       var brand = el("div", { class: "onboard-brand" });
       brand.appendChild(el("img", { src: "/images/chapterhive-mark.svg", alt: "", width: "72", height: "72" }));
       brand.appendChild(line("Welcome to Chapterhive", "big"));
-      brand.appendChild(line("brought to you by God's Banditos", "sub"));
       show([brand]);
       await wait(2800); if (skipped) return;
       survey();
@@ -141,7 +140,7 @@
           reel.appendChild(chip);
         });
       } catch (e) { /* fine without names */ }
-      box.appendChild(line("Chapterhive was founded by Mulenga Mwamba · a God's Banditos production", "founder"));
+      box.appendChild(line("Chapterhive was founded by Mulenga Mwamba", "founder"));
       show([box]);
       await wait(4200);
       var go = el("button", { type: "button", class: "btn onboard-next" }, "Start exploring");

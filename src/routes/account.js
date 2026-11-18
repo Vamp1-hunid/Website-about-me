@@ -337,12 +337,8 @@ router.post("/login", loginLimiter, async function (req, res) {
     });
   }
 
-  // The God's Banditos login is only for the site owner; members sign in on Chapterhive.
   // Before launch everyone with an account can sign in to follow the list and team updates;
   // only the team (admin and beta testers) can post or chat until launch (see src/prelaunch.js).
-  if (req.body.adminOnly === true && user.role !== "admin") {
-    return res.status(403).json({ error: "This login is only for the site owner. Members log in on Chapterhive.", hub: "/hub/login" });
-  }
 
   const blocked = users.standingProblem(user);
   if (blocked) return res.status(403).json({ error: blocked });
@@ -850,10 +846,10 @@ router.post("/forgot", forgotLimiter, async function (req, res) {
       "INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES ($1, $2, NOW() + ($3 || ' minutes')::interval)",
       [hashToken(token), user.id, String(RESET_MINUTES)]
     );
-    const link = siteUrl(req) + "/reset?token=" + encodeURIComponent(token);
+    const link = siteUrl(req) + "/hub/reset?token=" + encodeURIComponent(token);
     const text =
       "Hi " + user.display_name + ",\n\n" +
-      "Someone (hopefully you) asked to reset the password for @" + user.username + " on God's Banditos.\n\n" +
+      "Someone (hopefully you) asked to reset the password for @" + user.username + " on Chapterhive.\n\n" +
       "Choose a new password here (the link works for " + RESET_MINUTES + " minutes, once):\n" + link + "\n\n" +
       "If you didn't ask for this, ignore this email: your password stays the same.\n";
     const safeName = String(user.display_name).replace(/[&<>"']/g, function (c) {
@@ -861,11 +857,11 @@ router.post("/forgot", forgotLimiter, async function (req, res) {
     });
     const html =
       "<p>Hi " + safeName + ",</p>" +
-      "<p>Someone (hopefully you) asked to reset the password for <b>@" + user.username + "</b> on God's Banditos.</p>" +
+      "<p>Someone (hopefully you) asked to reset the password for <b>@" + user.username + "</b> on Chapterhive.</p>" +
       "<p><a href=\"" + link + "\" style=\"background:#ff2e97;color:#0b0a10;padding:10px 18px;text-decoration:none;font-weight:bold\">Choose a new password</a></p>" +
       "<p>The link works for " + RESET_MINUTES + " minutes, once. If you didn't ask for this, ignore this email.</p>";
     try {
-      await sendMail(user.email, "Reset your God's Banditos password", text, html);
+      await sendMail(user.email, "Reset your Chapterhive password", text, html);
     } catch (error) {
       console.error("Password reset email failed:", error.message);
     }

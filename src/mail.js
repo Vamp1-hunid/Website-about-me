@@ -4,7 +4,7 @@
 // Switched on by setting ONE of these on Render -> Environment:
 //   BREVO_API_KEY   (brevo.com, free: 300 emails a day, works with just a verified Gmail sender)
 //   RESEND_API_KEY  (resend.com, free: 100 a day, needs your own domain to email anyone but you)
-// plus MAIL_FROM: the sender address, e.g. "God's Banditos <yourname@gmail.com>",
+// plus MAIL_FROM: the sender address, e.g. "Chapterhive <yourname@gmail.com>",
 // and CONTACT_EMAIL: where contact-form messages are delivered (usually your own inbox).
 // With Brevo, that address must be added under Senders & IP -> Senders and verified.
 
@@ -19,11 +19,11 @@ function mailEnabled() {
   return Boolean(mailProvider());
 }
 
-// "God's Banditos <me@gmail.com>" -> { name: "God's Banditos", email: "me@gmail.com" }
+// "Chapterhive <me@gmail.com>" -> { name: "Chapterhive", email: "me@gmail.com" }
 function parseFrom(value) {
   const match = String(value).match(/^\s*(.*?)\s*<\s*([^>\s]+@[^>\s]+)\s*>\s*$/);
-  if (match) return { name: match[1].replace(/^"|"$/g, "") || "God's Banditos", email: match[2] };
-  return { name: "God's Banditos", email: String(value).trim() };
+  if (match) return { name: match[1].replace(/^"|"$/g, "") || "Chapterhive", email: match[2] };
+  return { name: "Chapterhive", email: String(value).trim() };
 }
 
 // Sends one email. Resolves when the provider accepted it; rejects otherwise.

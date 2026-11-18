@@ -3,8 +3,8 @@
 // so keep them up to date when the site changes.
 
 module.exports = [
-  { id: "what", group: "Getting started", q: "What are God's Banditos and Chapterhive?",
-    a: "God's Banditos is Mulenga Mwamba's own creative brand: his stories, art and characters. Chapterhive (/hub) is the creator platform where anyone approved can post art, comics, stories, comedy, films and series, memes, polls or just how they're feeling." },
+  { id: "what", group: "Getting started", q: "What is Chapterhive?",
+    a: "Chapterhive is a creator platform where anyone approved can post art, comics, stories, comedy, films and series, memes, polls or just how they're feeling, and where readers and watchers follow, like, save, comment and chat." },
   { id: "account", group: "Getting started", q: "How do I create an account?",
     a: "Press Join on Chapterhive (or Continue with Google). First accept the Terms of Service, Privacy Policy and Content Rules. Then choose a username and enter your date of birth, country, email and a password of at least 10 characters. You need to be 13 or older; 13 to 17 year olds get a teen account with extra protection. We email you a link to confirm your address." },
   { id: "age", group: "Getting started", q: "Why do you ask for my date of birth?",
@@ -51,6 +51,6 @@ module.exports = [
     a: "Open the Sponsor page (/hub/sponsor). It has the business contact details and a form for sponsorship, advertising, partnership or investment enquiries." },
   { id: "suggest", group: "Business", q: "I have an idea for the site.",
     a: "Use the suggestion box on the collab board or the Help page. Suggestions go straight to the site owner's inbox." },
-  { id: "contact", group: "Business", q: "How do I contact God's Banditos?",
-    a: "Use the contact form on the Contact page (/contact). Social media links are listed there too." }
+  { id: "contact", group: "Business", q: "How do I contact the Chapterhive team?",
+    a: "Use the contact form on the Contact page (/hub/contact). Social media links are listed there too." }
 ];

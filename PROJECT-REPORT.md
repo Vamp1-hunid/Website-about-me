@@ -2022,3 +2022,20 @@ banners, the menu, the admin lists, the public list and the username preview.
   setting wins.
 - **Phone notification check in Settings:** shows whether this device is registered and has a "Send me a test
   notification" button.
+
+### Version 33 (18 November 2026): God's Banditos moves to its own website
+
+God's Banditos is now a separate site (repo `Vamp1-hunid/God-s-Banditos-`, its own Render service, database and
+login). This repo is Chapterhive only, so it can be run (or sold) on its own.
+
+- **Removed** the God's Banditos pages (home, works, stories, products, creator, its login and help), their scripts,
+  images and videos, the boot screen and console, the "a God's Banditos production" credit, the God's Banditos
+  update category and the products tab.
+- **Chapterhive's own pages** for the dashboard, contact, forgot / reset password and 404 now live in `public/hub/`.
+- **Old addresses redirect:** `/` → `/hub`; `/admin`, `/login`, `/contact`, `/forgot`, `/reset`, `/help`, `/search` →
+  their `/hub/...` pages; the old God's Banditos works, stories and characters (`/work/…`, `/stories/…`,
+  `/characters/…`, `/gallery`, `/products`, `/creator`) go to the God's Banditos site when `GODS_BANDITOS_URL` is
+  set on Render, otherwise to the same work on Chapterhive (the owner's works stay on Chapterhive too).
+- **Wording:** terms, privacy, content rules, creator agreement, emails, FAQ, help assistant and welcome screens now
+  speak only of Chapterhive. (The legal pages still need a lawyer's review.)
+- The API lists every creator's works by default (no more God's Banditos-only scope).

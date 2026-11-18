@@ -1,5 +1,5 @@
 // js/fx.js
-// The God's Banditos effects layer. Everything here is decoration: the site still
+// The visual effects layer. Everything here is decoration: the site still
 // works (and all content stays readable) if this file fails or never loads.
 //
 //  1. Boot screen         (home page, once per visit)
@@ -38,75 +38,6 @@
     window.setTimeout(function () { node.classList.remove("is-glitching"); }, 360);
   }
   MW.glitch = glitch;
-
-  /* =========================================================
-     1. BOOT SCREEN
-     ========================================================= */
-
-  function runBoot() {
-    if (!root.classList.contains("is-booting")) return;
-
-    var boot = el("div", "boot");
-    boot.setAttribute("aria-hidden", "true");
-    boot.innerHTML =
-      '<div class="boot-frame">' +
-      '<img class="boot-mark" src="/images/gods-banditos-mark.svg" alt="" width="96" height="96">' +
-      '<p class="boot-logo">GOD\'S BANDITOS</p>' +
-      '<pre class="boot-log"></pre>' +
-      '<div class="boot-bar"><span></span></div>' +
-      '<p class="boot-hint">TAP OR PRESS ANY KEY TO SKIP</p>' +
-      "</div>";
-    document.body.appendChild(boot);
-
-    var log = boot.querySelector(".boot-log");
-    var bar = boot.querySelector(".boot-bar span");
-    var lines = [
-      "> connecting to the banditos network ...",
-      "> loading creator: MULENGA_MWAMBA",
-      "> unlocking works archive ...",
-      "> ACCESS GRANTED"
-    ];
-    var lineIndex = 0;
-    var charIndex = 0;
-    var done = false;
-
-    function finish() {
-      if (done) return;
-      done = true;
-      try { sessionStorage.setItem("mw-boot-seen", "1"); } catch (error) { /* ignore */ }
-      boot.classList.add("is-done");
-      window.removeEventListener("keydown", finish);
-      boot.removeEventListener("pointerdown", finish);
-      window.setTimeout(function () {
-        root.classList.remove("is-booting");
-        boot.remove();
-        glitch(document.querySelector("h1.glitch"));
-      }, 380);
-    }
-
-    boot.addEventListener("pointerdown", finish);
-    window.addEventListener("keydown", finish);
-
-    (function type() {
-      if (done) return;
-      if (lineIndex >= lines.length) {
-        bar.style.width = "100%";
-        window.setTimeout(finish, 350);
-        return;
-      }
-      var line = lines[lineIndex];
-      charIndex += 2;
-      log.textContent = lines.slice(0, lineIndex).join("\n") + (lineIndex ? "\n" : "") + line.slice(0, charIndex);
-      bar.style.width = Math.round(((lineIndex + Math.min(1, charIndex / line.length)) / lines.length) * 100) + "%";
-      if (charIndex >= line.length) {
-        lineIndex += 1;
-        charIndex = 0;
-        window.setTimeout(type, 160);
-      } else {
-        window.setTimeout(type, 18);
-      }
-    })();
-  }
 
   /* =========================================================
      2. NETWORK MAP (canvas behind the page)
@@ -524,157 +455,6 @@
   }
 
   /* =========================================================
-     5. CONSOLE
-     ========================================================= */
-
-  var consoleEl = null;
-  var consoleLog = null;
-  var consoleToggle = null;
-  var consoleInput = null;
-
-  MW.log = function (message, type) {
-    if (!consoleLog) return;
-    var line = el("li", type || "info", message);
-    consoleLog.appendChild(line);
-    while (consoleLog.children.length > 80) consoleLog.removeChild(consoleLog.firstChild);
-    consoleLog.scrollTop = consoleLog.scrollHeight;
-  };
-
-  function setConsoleOpen(open) {
-    consoleEl.classList.toggle("is-open", open);
-    consoleToggle.setAttribute("aria-expanded", String(open));
-    if (open) window.setTimeout(function () { consoleInput.focus(); }, 60);
-  }
-
-  // Sections on the home page and on the creator page (goto finds the right page).
-  var SECTIONS = ["works", "make", "creator", "about", "hobbies", "plan", "projects", "photos", "media", "contact"];
-  var CREATOR_SECTIONS = ["about", "hobbies", "plan", "projects", "photos", "media", "contact"];
-
-  function runCommand(raw) {
-    var text = String(raw || "").trim();
-    if (!text) return;
-    MW.log("> " + text, "you");
-    var parts = text.toLowerCase().split(/\s+/);
-    var cmd = parts[0];
-    var arg = parts[1] || "";
-
-    switch (cmd) {
-      case "help":
-        MW.log("help | whoami | goto <section> | creator | works [art|anime|writing] | theme [dark|light] | login | hack | clear", "ok");
-        MW.log("sections: " + SECTIONS.join(", "), "info");
-        break;
-      case "whoami":
-        if (MW.me) {
-          MW.me().then(function (user) {
-            MW.log(user ? "LOGGED IN AS @" + user.username + " (" + user.role + ")" : "GUEST // type login to sign in", user ? "ok" : "warn");
-          });
-        }
-        break;
-      case "goto":
-      case "go":
-        if (SECTIONS.indexOf(arg) === -1) {
-          MW.log("UNKNOWN SECTION // try: goto projects", "warn");
-        } else if (arg === "creator") {
-          window.location.href = "/creator";
-        } else if (document.getElementById(arg)) {
-          document.getElementById(arg).scrollIntoView({ behavior: calm() ? "auto" : "smooth" });
-          MW.log("ROUTE // #" + arg.toUpperCase(), "ok");
-        } else {
-          window.location.href = (CREATOR_SECTIONS.indexOf(arg) !== -1 ? "/creator#" : "/#") + arg;
-        }
-        break;
-      case "works": {
-        var map = { art: "story-art", story: "story-art", "story-art": "story-art", anime: "anime", writing: "writing" };
-        window.location.href = "/gallery" + (map[arg] ? "?category=" + map[arg] : "");
-        break;
-      }
-      case "theme": {
-        var toggle = document.getElementById("theme-toggle");
-        var current = root.getAttribute("data-theme") || "dark";
-        var wanted = arg === "light" || arg === "dark" ? arg : current === "dark" ? "light" : "dark";
-        if (wanted !== current && toggle) toggle.click();
-        MW.log("THEME // " + wanted.toUpperCase(), "ok");
-        break;
-      }
-      case "creator":
-        window.location.href = "/creator";
-        break;
-      case "login":
-        window.location.href = "/login?next=" + encodeURIComponent(location.pathname + location.search);
-        break;
-      case "hack":
-        breach();
-        break;
-      case "clear":
-        consoleLog.textContent = "";
-        break;
-      default:
-        MW.log("UNKNOWN COMMAND // type help", "warn");
-    }
-  }
-
-  function initConsole() {
-    consoleToggle = el("button", "console-toggle", ">_ CONSOLE");
-    consoleToggle.type = "button";
-    consoleToggle.setAttribute("aria-expanded", "false");
-    consoleToggle.setAttribute("aria-controls", "mw-console");
-    consoleToggle.setAttribute("aria-label", "Open the site console");
-
-    consoleEl = el("section", "console");
-    consoleEl.id = "mw-console";
-    consoleEl.setAttribute("aria-label", "Site console");
-
-    var header = el("header");
-    header.appendChild(el("span", "", "GOD'S BANDITOS // CONSOLE"));
-    var close = el("button", "", "×");
-    close.type = "button";
-    close.setAttribute("aria-label", "Close console");
-    header.appendChild(close);
-
-    consoleLog = el("ol", "console-log");
-    consoleLog.setAttribute("aria-live", "polite");
-
-    var form = el("form");
-    form.setAttribute("autocomplete", "off");
-    var labelEl = el("label", "sr-only", "Console command");
-    labelEl.setAttribute("for", "mw-console-input");
-    consoleInput = el("input");
-    consoleInput.id = "mw-console-input";
-    consoleInput.type = "text";
-    consoleInput.placeholder = "type help";
-    consoleInput.spellcheck = false;
-    var run = el("button", "", "RUN");
-    run.type = "submit";
-    form.append(labelEl, consoleInput, run);
-
-    consoleEl.append(header, consoleLog, form);
-    document.body.append(consoleEl, consoleToggle);
-
-    consoleToggle.addEventListener("click", function () {
-      setConsoleOpen(!consoleEl.classList.contains("is-open"));
-    });
-    close.addEventListener("click", function () {
-      setConsoleOpen(false);
-      consoleToggle.focus();
-    });
-    form.addEventListener("submit", function (event) {
-      event.preventDefault();
-      var value = consoleInput.value;
-      consoleInput.value = "";
-      runCommand(value);
-    });
-    document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape" && consoleEl.classList.contains("is-open")) {
-        setConsoleOpen(false);
-        consoleToggle.focus();
-      }
-    });
-
-    MW.log("GOD'S BANDITOS ONLINE", "ok");
-    MW.log("type help to see commands", "info");
-  }
-
-  /* =========================================================
      6. REVEAL, TYPING, GLITCH, EASTER EGG
      ========================================================= */
 
@@ -748,12 +528,9 @@
     try { fn(); } catch (error) { console.warn("fx:", error); }
   }
 
-  safe(runBoot);
   safe(initNetMap);
   safe(initProfiler);
   safe(initHack);
-  // The console is a God's Banditos toy: not on Chapterhive.
-  if (document.body.getAttribute("data-brand") !== "chapterhive") safe(initConsole);
   safe(initReveal);
   safe(initTyping);
   safe(initEasterEgg);

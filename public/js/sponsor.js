@@ -57,8 +57,9 @@
     if (c.website) line("Website", c.website, c.website.replace(/^https:\/\/(www\.)?/, ""));
     if (!box2.children.length) box2.appendChild(el("p", { class: "muted" }, "Use the enquiry form below and we'll get back to you by email."));
   }).catch(function () {
-    $("sp-unavailable").hidden = false;
-    $("sp-pitch").textContent = "";
+    // When the page is switched off, the site already replaced it with a notice, so these may be gone.
+    if ($("sp-unavailable")) $("sp-unavailable").hidden = false;
+    if ($("sp-pitch")) $("sp-pitch").textContent = "";
   });
 
   var form = $("enquiry-form");

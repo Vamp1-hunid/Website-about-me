@@ -178,7 +178,7 @@
     var reel = el("div", { class: "tribute-reel" });
     track.appendChild(reel);
     box.appendChild(track);
-    box.appendChild(el("p", { class: "tribute-founder mono" }, "Chapterhive was founded by Mulenga Mwamba · a God's Banditos production"));
+    box.appendChild(el("p", { class: "tribute-founder mono" }, "Chapterhive was founded by Mulenga Mwamba"));
     MW.api("/hub/creators?sort=followers&page=1").then(function (d) {
       var list = (d.creators || []).slice(0, 14);
       if (!list.length) { track.remove(); return; }
@@ -214,7 +214,7 @@
       var w = d.notifications.filter(function (n) { return n.type === "welcome" && n.unread; })[0];
       if (!w) return;
       var dialog = el("dialog", { class: "heist-dialog welcome-dialog", "aria-labelledby": "welcome-title" });
-      dialog.appendChild(el("p", { class: "node-label" }, MW.isHub ? "Chapterhive // welcome" : "God's Banditos // welcome"));
+      dialog.appendChild(el("p", { class: "node-label" }, "Chapterhive // welcome"));
       dialog.appendChild(el("h2", { id: "welcome-title" }, w.title));
       w.body.split(/\n+/).forEach(function (para) { dialog.appendChild(el("p", {}, para)); });
       dialog.appendChild(tribute());
@@ -257,9 +257,6 @@
   // Quick tips for every page. Each page's tips can be skipped for a few days or switched off for good,
   // and "Turn off all tips" stops them everywhere.
   var TIPS = {
-    "/": ["Press ☰ for every section of the site, plus search.", "Tap any work to read it, like it and join the comments.", "Chapterhive is where other creators post: find it in the menu."],
-    "/gallery": ["Filter by category or tag, or sort by newest and most liked.", "Search finds titles, loglines and tags."],
-    "/stories": ["Each story has its chapters, characters and concept art in one place."],
     "/hub": ["Tap your picture next to the search box to open your profile.", "Tap ☰ (top right) for your account, settings and every section.", "The 🔔 bell shows new followers, buddy requests and team announcements.",
       "Tap ⋯ on any post to see more or less like it: your feed learns what you enjoy.", "The Buddies tab is where your friends, chats and \"find buddies\" live.", "Stuck? The glittering ? button in the corner answers questions."],
     "/hub/creators": ["Top creators are at the top of this page; everyone else is below.", "Filter by what people make: art, comics, films, comedy and more.", "Follow a creator to get their new work in your bell and Following feed.", "The green dot means a creator is online right now."],

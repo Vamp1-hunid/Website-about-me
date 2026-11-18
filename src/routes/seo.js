@@ -29,10 +29,11 @@ router.get("/robots.txt", function (req, res) {
       "Disallow: /profile",
       "Disallow: /api/",
       "Disallow: /auth/",
-      "Disallow: /reset",
+      "Disallow: /hub/reset",
       "Disallow: /hub/studio",
       "Disallow: /hub/feed",
-      "Disallow: /forgot",
+      "Disallow: /hub/forgot",
+      "Disallow: /hub/admin",
       "",
       "Sitemap: " + siteUrl(req) + "/sitemap.xml",
       ""
@@ -69,22 +70,21 @@ router.get("/sitemap.xml", async function (req, res) {
   const newest = posts.rows.length ? posts.rows[0].updated_at : now;
 
   const fixed = [
-    ["/", "1.0"], ["/gallery", "0.9"], ["/stories", "0.8"], ["/creator", "0.9"], ["/products", "0.6"], ["/contact", "0.6"], ["/help", "0.5"], ["/hub/sponsor", "0.5"],
-    ["/gallery?category=story-art", "0.6"], ["/gallery?category=anime", "0.6"], ["/gallery?category=writing", "0.6"],
-    ["/gallery?category=updates", "0.5"], ["/hub", "1.0"], ["/hub/creators", "0.8"], ["/hub/news", "0.8"], ["/hub/collabs", "0.7"],
+    ["/hub", "1.0"], ["/hub/creators", "0.8"], ["/hub/news", "0.8"], ["/hub/collabs", "0.7"], ["/hub/help", "0.5"],
+    ["/hub/sponsor", "0.5"], ["/hub/contact", "0.5"],
     ["/legal/terms", "0.2"], ["/legal/privacy", "0.2"], ["/legal/creator-agreement", "0.2"], ["/legal/content-rules", "0.2"]
   ].map(function (u) { return { loc: base + u[0], lastmod: newest, priority: u[1] }; });
 
   const urls = fixed
     .concat(posts.rows.map(function (r) {
-      const path = r.category === "news" ? "/hub/news/" : r.role === "admin" ? "/work/" : "/hub/w/";
+      const path = r.category === "news" ? "/hub/news/" : "/hub/w/";
       return { loc: base + path + encodeURIComponent(r.slug), lastmod: r.updated_at, priority: "0.8" };
     }))
     .concat(series.rows.map(function (r) {
-      return { loc: base + (r.role === "admin" ? "/stories/" : "/hub/s/") + encodeURIComponent(r.slug), lastmod: r.updated_at, priority: "0.7" };
+      return { loc: base + "/hub/s/" + encodeURIComponent(r.slug), lastmod: r.updated_at, priority: "0.7" };
     }))
     .concat(characters.rows.map(function (r) {
-      return { loc: base + (r.role === "admin" ? "/characters/" : "/hub/ch/") + encodeURIComponent(r.slug), lastmod: r.updated_at, priority: "0.5" };
+      return { loc: base + "/hub/ch/" + encodeURIComponent(r.slug), lastmod: r.updated_at, priority: "0.5" };
     }))
     .concat(collabs.rows.map(function (r) {
       return { loc: base + "/hub/collabs/" + r.id, lastmod: r.updated_at, priority: "0.5" };

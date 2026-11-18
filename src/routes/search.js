@@ -40,7 +40,7 @@ const TYPES = {
 
 router.get("/search", flagsLib.requireFlag("search", { adminAlways: true }), searchLimiter, async function (req, res) {
   const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 80) : "";
-  const hub = req.query.site === "hub";
+  const hub = true; // every creator's works (God's Banditos has its own site now)
   const type = Object.prototype.hasOwnProperty.call(TYPES, req.query.type) ? req.query.type : "all";
   const empty = { q: q, type: type, works: [], stories: [], characters: [], products: [], creators: [], accounts: [], news: [] };
   if (q.length < 2) return res.json(empty);
@@ -48,7 +48,6 @@ router.get("/search", flagsLib.requireFlag("search", { adminAlways: true }), sea
   const wantWorks = type === "all" || type === "posts" || Array.isArray(TYPES[type]) && TYPES[type].length > 0;
   // Forgiving match (see ch_match in db/schema.sql): case, hyphens, spaces and small typos don't matter.
   const like = q.replace(/[\\%_]/g, " ").replace(/\s+/g, " ").trim();
-  // God's Banditos searches only its own works; Chapterhive searches every creator's.
   const workScope = hub ? "" : " AND " + BANDITOS_ONLY;
   const ownerScope = function (alias) { return hub ? "" : " AND " + alias + ".user_id IN (SELECT id FROM users WHERE role = 'admin')"; };
   const none = { rows: [] };

@@ -17,16 +17,4 @@
   // (The cover shown between pages was removed.)
   try { sessionStorage.removeItem("mw-wipe"); } catch (error) { /* ignore */ }
 
-  // Show the short boot screen once per visit, on the home page only,
-  // and never for visitors who asked their device for reduced motion.
-  try {
-    var calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    var seen = sessionStorage.getItem("mw-boot-seen") === "1";
-    var forced = /[?&]boot=1/.test(location.search);
-    if (!calm && (location.pathname === "/" || location.pathname === "/index.html") && (!seen || forced)) {
-      root.classList.add("is-booting");
-    }
-  } catch (error) {
-    // Storage blocked: skip the boot screen.
-  }
 })();

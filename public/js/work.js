@@ -23,16 +23,12 @@
     article.appendChild(el("p", { class: "node-label" }, "Error // file missing"));
     article.appendChild(el("h1", { class: "glitch" }, "Signal lost"));
     article.appendChild(el("p", { class: "lead" }, message));
-    article.appendChild(el("a", { class: "btn", href: "/gallery" }, "Back to all works"));
+    article.appendChild(el("a", { class: "btn", href: "/hub" }, "Back to Chapterhive"));
   }
 
   /* ---------- Like and save buttons ---------- */
 
-  // God's Banditos is view-only for everyone but the owner: likes, saves, votes and comments
-  // happen on the same work's Chapterhive page.
-  function viewOnly() {
-    return !MW.isHub && !(user && user.role === "admin");
-  }
+  function viewOnly() { return false; } // everyone can like, save and comment on Chapterhive
   function hubLink() {
     return "/hub/w/" + encodeURIComponent(post.slug);
   }
@@ -212,7 +208,7 @@
   }
 
   function renderPost() {
-    document.title = post.title + (MW.isHub ? " | Chapterhive" : " | God's Banditos");
+    document.title = post.title + " | Chapterhive";
     if (MW.isHub) {
       var back = document.getElementById("back-link");
       if (back && post.category === "news") { back.href = "/hub/news"; back.textContent = "← News & updates"; }
