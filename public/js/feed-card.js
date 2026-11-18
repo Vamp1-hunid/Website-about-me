@@ -155,10 +155,8 @@
     acts.appendChild(comment);
     var share = el("button", { type: "button", class: "feed-act", "aria-label": "Share" }, "↗");
     share.addEventListener("click", function () {
-      var full = window.location.origin + url;
-      if (user && MW.feature("chat")) { window.location.href = url + "#share"; return; }
-      if (navigator.share) navigator.share({ title: post.title, url: full }).catch(function () {});
-      else if (navigator.clipboard) navigator.clipboard.writeText(full).then(function () { MW.toast("Link copied."); });
+      MW.share({ title: post.title, text: post.title + (post.creator ? " by " + post.creator.name : "") + " on Chapterhive",
+        url: url, postSlug: post.slug });
     });
     acts.appendChild(share);
     var save = toggleButton(post, "favourite", user, ["★", "☆"], "Remove from saved", "Save");

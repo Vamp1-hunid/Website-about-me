@@ -890,6 +890,119 @@
     if (!MW.isHub || MW.feature("hub_support")) MW.api("/support").then(buildSupport).catch(function () {});
   });
 
+  /* ---------- Share: to a buddy in chat, to WhatsApp and other apps, or copy the link ----------
+     MW.share({ title, text, url, postSlug }) opens one sheet with every way to share.
+     postSlug (works only) makes the chat message a tappable card of the work. */
+  MW.share = function (opts) {
+    var url = opts.url && opts.url.indexOf("http") === 0 ? opts.url : window.location.origin + (opts.url || window.location.pathname);
+    var title = opts.title || document.title;
+    var text = opts.text || title;
+    var old = document.getElementById("share-sheet");
+    if (old) old.remove();
+    var dialog = el("dialog", { id: "share-sheet", class: "heist-dialog share-sheet", "aria-labelledby": "share-title" });
+    dialog.appendChild(el("p", { class: "node-label" }, "Share"));
+    dialog.appendChild(el("h2", { id: "share-title" }, title));
+    var grid = el("div", { class: "share-grid" });
+    function app(icon, label, href, cls) {
+      var a = el("a", { class: "share-app " + (cls || ""), href: href, target: "_blank", rel: "noopener" });
+      a.appendChild(el("span", { class: "share-icon", "aria-hidden": "true" }, icon));
+      a.appendChild(el("span", {}, label));
+      grid.appendChild(a);
+      return a;
+    }
+    function action(icon, label, fn, cls) {
+      var b = el("button", { type: "button", class: "share-app " + (cls || "") });
+      b.appendChild(el("span", { class: "share-icon", "aria-hidden": "true" }, icon));
+      b.appendChild(el("span", {}, label));
+      b.addEventListener("click", fn);
+      grid.appendChild(b);
+      return b;
+    }
+    var enc = encodeURIComponent;
+    var buddyBox = el("div", { class: "share-buddies", hidden: "" });
+    MW.me().then(function (user) {
+      if (user && MW.feature("chat")) {
+        var buddyBtn = action("🐝", "Send to a buddy", function () { buddyBox.hidden = !buddyBox.hidden; if (!buddyBox.hidden) loadBuddies(); }, "share-buddy");
+        grid.insertBefore(buddyBtn, grid.firstChild);
+      }
+    });
+    app("🟢", "WhatsApp", "https://wa.me/?text=" + enc(text + " " + url), "share-whatsapp");
+    app("✈️", "Telegram", "https://t.me/share/url?url=" + enc(url) + "&text=" + enc(text), "share-telegram");
+    app("📘", "Facebook", "https://www.facebook.com/sharer/sharer.php?u=" + enc(url), "share-facebook");
+    app("𝕏", "X", "https://x.com/intent/post?text=" + enc(text) + "&url=" + enc(url), "share-x");
+    app("✉️", "Email", "mailto:?subject=" + enc(title) + "&body=" + enc(text + "\n\n" + url), "share-email");
+    if (navigator.share) {
+      action("📲", "More apps…", function () {
+        navigator.share({ title: title, text: text, url: url }).catch(function () {});
+      }, "share-more");
+    }
+    action("🔗", "Copy link", function () {
+      var done = function () { MW.toast("Link copied. Paste it anywhere."); };
+      if (navigator.clipboard) navigator.clipboard.writeText(url).then(done).catch(function () { window.prompt("Copy this link:", url); });
+      else window.prompt("Copy this link:", url);
+    }, "share-copy");
+    dialog.appendChild(grid);
+
+    // Send to a buddy (or anyone you've chatted with), with an optional note.
+    function loadBuddies() {
+      if (buddyBox.getAttribute("data-loaded")) return;
+      buddyBox.setAttribute("data-loaded", "1");
+      buddyBox.textContent = "";
+      var list = el("div", { class: "share-people" });
+      var note = el("input", { type: "text", maxlength: "300", placeholder: "Add a message (optional)", "aria-label": "Message" });
+      var to = el("input", { type: "text", placeholder: "or type a @username", "aria-label": "Send to (username)", autocapitalize: "none", spellcheck: "false" });
+      var send = el("button", { type: "button", class: "btn btn-small" }, "Send");
+      var fb = el("p", { class: "feedback", "aria-live": "polite" });
+      buddyBox.append(list, to, note, send, fb);
+      var picked = {};
+      function chip(person) {
+        if (!person || picked[person.username] !== undefined) return;
+        picked[person.username] = false;
+        var c = el("button", { type: "button", class: "share-person", "aria-pressed": "false" });
+        c.appendChild(MW.avatar(person));
+        c.appendChild(el("span", {}, person.displayName || person.username));
+        c.addEventListener("click", function () {
+          picked[person.username] = !picked[person.username];
+          c.setAttribute("aria-pressed", String(picked[person.username]));
+          c.classList.toggle("is-picked", picked[person.username]);
+        });
+        list.appendChild(c);
+      }
+      Promise.all([MW.api("/users/me/people").catch(function () { return {}; }), MW.api("/chat/threads").catch(function () { return {}; })]).then(function (r) {
+        (r[0].buddies || []).forEach(chip);
+        (r[1].threads || []).slice(0, 12).forEach(function (t) { chip(t.with); });
+        if (!list.children.length) list.appendChild(el("p", { class: "muted" }, "No buddies yet. Type a username below."));
+      });
+      send.addEventListener("click", async function () {
+        var names = Object.keys(picked).filter(function (k) { return picked[k]; });
+        var typed = to.value.trim().replace(/^@/, "").toLowerCase();
+        if (typed && names.indexOf(typed) === -1) names.push(typed);
+        if (!names.length) { fb.className = "feedback feedback-error"; fb.textContent = "Pick a buddy or type a username."; return; }
+        send.disabled = true;
+        var sent = 0, problems = [];
+        for (var i = 0; i < names.length; i++) {
+          try {
+            var t = await MW.api("/chat/threads", { method: "POST", json: { username: names[i] } });
+            var body = note.value.trim();
+            var json = opts.postSlug ? { body: body, postSlug: opts.postSlug } : { body: (body ? body + "\n" : "") + title + " " + url };
+            await MW.api("/chat/threads/" + t.id + "/messages", { method: "POST", json: json });
+            sent++;
+          } catch (e) { problems.push("@" + names[i] + ": " + e.message); }
+        }
+        send.disabled = false;
+        fb.className = "feedback " + (problems.length ? "feedback-error" : "feedback-success");
+        fb.textContent = (sent ? "Sent to " + sent + (sent === 1 ? " person." : " people.") : "") + (problems.length ? " " + problems.join(" · ") : "");
+      });
+    }
+    dialog.appendChild(buddyBox);
+    var close = el("form", { method: "dialog" });
+    close.appendChild(el("button", { type: "submit", class: "btn btn-ghost" }, "Close"));
+    dialog.appendChild(close);
+    document.body.appendChild(dialog);
+    dialog.addEventListener("close", function () { dialog.remove(); });
+    dialog.showModal();
+  };
+
   // The bell, welcome card, quick tips and help button live in extras.js.
   var extras = document.createElement("script");
   extras.src = "/js/extras.js";

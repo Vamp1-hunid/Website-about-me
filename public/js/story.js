@@ -49,9 +49,17 @@
     if (data.chapters.length) counts.push(data.chapters.length + (data.chapters.length === 1 ? " chapter" : " chapters"));
     if (data.characters.length) counts.push(data.characters.length + (data.characters.length === 1 ? " character" : " characters"));
     if (counts.length) text.appendChild(el("p", { class: "mono muted" }, counts.join(" · ")));
+    var storyActions = el("p", { class: "work-actions" });
     if (data.chapters.length) {
-      text.appendChild(el("a", { class: "btn", href: MW.workUrl(data.chapters[0]) }, "Start reading"));
+      storyActions.appendChild(el("a", { class: "btn", href: MW.workUrl(data.chapters[0]) }, "Start reading"));
     }
+    var shareStory = el("button", { type: "button", class: "btn btn-ghost" }, "↗ Share");
+    shareStory.addEventListener("click", function () {
+      MW.share({ title: story.title, text: story.title + (story.creator ? " by " + story.creator.name : "") + " on Chapterhive",
+        url: MW.storyUrl(story.slug) });
+    });
+    storyActions.appendChild(shareStory);
+    text.appendChild(storyActions);
     layout.appendChild(text);
     hero.appendChild(layout);
 
