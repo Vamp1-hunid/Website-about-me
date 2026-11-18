@@ -848,7 +848,7 @@ router.post("/reviews/:id", async function (req, res) {
 router.get("/members", async function (req, res) {
   const q = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase().replace(/^@/, "").slice(0, 40) : "";
   const like = q.replace(/[%_\\]/g, " ").replace(/\s+/g, " ").trim();
-  const filter = ["team", "creators", "beta", "new", "suspended"].includes(req.query.filter) ? req.query.filter : "all";
+  const filter = ["team", "creators", "beta", "new", "suspended", "banned", "blocked"].includes(req.query.filter) ? req.query.filter : "all";
   const sort = ["newest", "active", "followers"].includes(req.query.sort) ? req.query.sort : "relevance";
   const page = Math.max(1, Math.min(500, Number(req.query.page) || 1));
   const size = 30;
@@ -857,7 +857,9 @@ router.get("/members", async function (req, res) {
   if (filter === "creators") where.push("cp.status = 'approved'");
   if (filter === "beta") where.push("u.is_beta");
   if (filter === "new") where.push("u.created_at > NOW() - INTERVAL '7 days'");
-  if (filter === "suspended") where.push("u.status <> 'active'");
+  if (filter === "suspended") where.push("u.status = 'suspended'");
+  if (filter === "banned") where.push("u.status = 'banned'");
+  if (filter === "blocked") where.push("EXISTS (SELECT 1 FROM chat_blocks b WHERE b.blocked_id = u.id)");
   const ORDER = {
     relevance: `(CASE WHEN $1 = '' THEN 0 WHEN lower(u.username) = $1 THEN 0 WHEN lower(u.username) LIKE $1 || '%' THEN 1
                       WHEN lower(coalesce(u.display_name, '')) LIKE $1 || '%' THEN 2 ELSE 3 END),
@@ -871,6 +873,8 @@ router.get("/members", async function (req, res) {
     `SELECT * FROM (
        SELECT u.id, u.username, u.display_name, u.avatar_url, u.role, u.is_owner, u.is_beta, u.staff_perms, u.status,
               u.created_at, u.last_seen_at, u.streak_count, cp.handle, cp.status AS creator_status,
+              u.suspended_until, u.status_reason,
+              (SELECT COUNT(*) FROM chat_blocks b WHERE b.blocked_id = u.id)::int AS blocked_by,
               (SELECT COUNT(*) FROM follows f WHERE f.creator_id = u.id)::int AS followers,
               (SELECT COUNT(*) FROM posts p WHERE p.user_id = u.id AND p.published)::int AS posts,
               COUNT(*) OVER ()::int AS total
@@ -881,16 +885,21 @@ router.get("/members", async function (req, res) {
   const counts = (await db.query(
     `SELECT COUNT(*)::int AS everyone,
             COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')::int AS new_this_week,
-            COUNT(*) FILTER (WHERE last_seen_at > NOW() - INTERVAL '1 day')::int AS active_today
+            COUNT(*) FILTER (WHERE last_seen_at > NOW() - INTERVAL '1 day')::int AS active_today,
+            COUNT(*) FILTER (WHERE status = 'suspended')::int AS suspended,
+            COUNT(*) FILTER (WHERE status = 'banned')::int AS banned
        FROM users`)).rows[0];
   res.json({
     total: rows.length ? rows[0].total : 0, page: page, pages: rows.length ? Math.ceil(rows[0].total / size) : 0,
-    counts: { everyone: counts.everyone, newThisWeek: counts.new_this_week, activeToday: counts.active_today },
+    counts: { everyone: counts.everyone, newThisWeek: counts.new_this_week, activeToday: counts.active_today,
+      suspended: counts.suspended, banned: counts.banned },
     people: rows.map(function (u) {
       return { username: u.username, displayName: u.display_name, avatarUrl: storage.avatarUrl(u.avatar_url) || null,
         isOwner: u.is_owner, isAdmin: u.role === "admin", isStaff: (u.staff_perms || []).length > 0, isBeta: u.is_beta,
         creatorHandle: u.creator_status === "approved" ? u.handle : null, status: u.status,
-        joined: u.created_at, lastSeenAt: u.last_seen_at, streak: u.streak_count, followers: u.followers, posts: u.posts };
+        joined: u.created_at, lastSeenAt: u.last_seen_at, streak: u.streak_count, followers: u.followers, posts: u.posts,
+        suspendedUntil: u.status === "suspended" ? u.suspended_until : null,
+        reason: u.status !== "active" ? (u.status_reason || "") : "", blockedBy: u.blocked_by };
     })
   });
 });

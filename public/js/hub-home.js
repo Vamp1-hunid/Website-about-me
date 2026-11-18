@@ -59,6 +59,8 @@
       more.appendChild(moreRing);
       more.appendChild(el("span", { class: "story-name" }, "Discover"));
       stories.appendChild(more);
+      // ⭕ Creators with a live status get a honey ring at the front (and creators get "Your status").
+      if (MW.statuses) MW.statuses.attach(stories);
     }
     var news = document.getElementById("home-news");
     news.textContent = "";

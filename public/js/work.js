@@ -224,6 +224,13 @@
       var head = el("div", { class: "work-head" });
       renderHeader(head);
       article.appendChild(head);
+      // 🎵 The post's music: a button above the pictures (browsers only allow sound after a tap).
+      if (post.sound && MW.musicChip) {
+        var musicBar = el("div", { class: "work-music" });
+        musicBar.appendChild(MW.musicChip(post.sound));
+        musicBar.appendChild(el("span", { class: "muted" }, "Tap to play the music"));
+        article.appendChild(musicBar);
+      }
       if (media.length) article.appendChild(MW.renderMedia(media, post.title, { canDownload: post.canDownload, layout: post.layout }));
       renderBody(article, true);
       renderDocuments(article);

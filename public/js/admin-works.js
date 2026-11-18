@@ -168,7 +168,30 @@
 
   /* ---------- Create / edit ---------- */
 
+  // 🎵 Music on the post (a library track or the creator's own sound).
+  var postSound = null;
+  function showSound() {
+    var slot = document.getElementById("compose-music-chip");
+    var btn = document.getElementById("compose-music-btn");
+    if (!slot) return;
+    slot.textContent = "";
+    if (postSound && MW.musicChip) slot.appendChild(MW.musicChip(postSound, { small: true }));
+    else slot.textContent = "No music";
+    btn.textContent = postSound ? "🎵 Change music" : "🎵 Add music";
+  }
+  var musicBtn = document.getElementById("compose-music-btn");
+  if (musicBtn) musicBtn.addEventListener("click", function () {
+    if (!MW.pickSound) return;
+    MW.pickSound(postSound).then(function (s) {
+      if (s === undefined) return;
+      postSound = s;
+      showSound();
+      if (MW.keepDraft && form) form.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  });
+
   function resetForm() {
+    postSound = null; showSound();
     editing = null;
     form.reset();
     MW.showProblems(form, []);
@@ -208,6 +231,7 @@
       if (field("collaborators")) field("collaborators").value = (post.invitedUsernames || []).map(function (u) { return "@" + u; }).join(", ");
       field("font").value = post.font || "theme";
       document.querySelectorAll("#layout-picks input").forEach(function (r) { r.checked = r.value === (post.layout || "scroll"); });
+      postSound = post.sound || null; showSound();
       body.value = post.body;
       media.load(post.media);
       if (builder) { builder.load(post.form || null); builderWrap.open = Boolean(post.form); }
@@ -318,6 +342,8 @@
       collaborators: field("collaborators") ? field("collaborators").value.split(/[\s,]+/).filter(Boolean) : [],
       font: field("font").value,
       layout: (document.querySelector("#layout-picks input:checked") || {}).value || "scroll",
+      soundId: postSound ? postSound.id : null,
+      soundStart: postSound ? postSound.start || 0 : 0,
       body: body.value,
       published: vis.published,
       publishAt: vis.publishAt,

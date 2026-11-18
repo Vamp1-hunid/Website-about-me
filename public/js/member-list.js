@@ -31,7 +31,8 @@
     else if (p.isStaff) tags.appendChild(el("span", { class: "mini-tag" }, "🛡️ Staff"));
     if (p.creatorHandle) tags.appendChild(el("span", { class: "mini-tag", title: "Creator" }, "✍️ Creator"));
     if (p.isBeta) tags.appendChild(el("span", { class: "mini-tag", title: "Beta tester" }, "🧪 Beta"));
-    if (p.status && p.status !== "active") tags.appendChild(el("span", { class: "mini-tag mini-tag-warn" }, "⛔ " + p.status));
+    if (p.status === "suspended") tags.appendChild(el("span", { class: "mini-tag mini-tag-warn" }, "⏸️ Suspended"));
+    if (p.status === "banned") tags.appendChild(el("span", { class: "mini-tag mini-tag-warn" }, "⛔ Banned"));
     head.appendChild(tags);
     r.appendChild(head);
     var facts = [
@@ -41,6 +42,13 @@
     ];
     if (p.posts) facts.push(p.posts + (p.posts === 1 ? " post" : " posts"));
     if (p.streak > 1) facts.push("🔥 " + p.streak + "-day streak");
+    if (p.blockedBy) facts.push("🚫 blocked by " + p.blockedBy + (p.blockedBy === 1 ? " member" : " members"));
+    if (p.status !== "active") {
+      var why = p.status === "suspended"
+        ? "Suspended" + (p.suspendedUntil ? " until " + MW.formatDate(p.suspendedUntil) : "")
+        : "Banned";
+      r.appendChild(el("p", { class: "member-standing" }, why + (p.reason ? ": " + p.reason : " (no reason given)")));
+    }
     var foot = el("div", { class: "member-row-foot" });
     foot.appendChild(el("p", { class: "mono muted member-facts" }, facts.join(" · ")));
     var acts = el("span", { class: "member-row-acts" });
@@ -61,7 +69,8 @@
       .then(function (d) {
         if (mine !== loadNo) return; // a newer search has started
         if (!append) list.textContent = "";
-        document.getElementById("ml-stats").textContent = d.counts.everyone + " members · " + d.counts.newThisWeek + " new this week · " + d.counts.activeToday + " active today";
+        document.getElementById("ml-stats").textContent = d.counts.everyone + " members · " + d.counts.newThisWeek + " new this week · " + d.counts.activeToday + " active today" +
+          (d.counts.suspended ? " · " + d.counts.suspended + " suspended" : "") + (d.counts.banned ? " · " + d.counts.banned + " banned" : "");
         document.getElementById("ml-count").textContent = "Showing " + d.total + (d.total === 1 ? " member" : " members");
         if (!d.people.length && !append) list.appendChild(el("p", { class: "muted" }, state.q ? "No one matches \"" + state.q + "\"." : "No one here."));
         d.people.forEach(function (p) { list.appendChild(row(p)); });

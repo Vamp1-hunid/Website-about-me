@@ -95,6 +95,8 @@ api.use("/beta", require("./src/routes/beta"));
 api.use("/app", require("./src/routes/app"));
 api.use("/calendar", require("./src/routes/calendar"));
 api.use("/help", require("./src/routes/help"));
+api.use("/sounds", require("./src/routes/sounds"));
+api.use("/statuses", require("./src/routes/statuses"));
 api.use(require("./src/routes/business"));
 api.use(require("./src/routes/search"));
 api.use("/admin", require("./src/routes/admin"));
@@ -295,6 +297,8 @@ migrate()
     });
     require("./src/publishing").start();
     require("./src/rankings").start();
+    // 📣 Announce new features listed in src/releases.js (each only once).
+    setTimeout(function () { require("./src/releases").announceReleases(); }, 5000).unref();
   })
   .catch(function (error) {
     console.error("Could not prepare the database:", error);

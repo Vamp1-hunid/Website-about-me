@@ -10,6 +10,7 @@ const { requireLogin, requireCreator } = require("../auth");
 const storage = require("../storage");
 const { resolveMedia, parsePublishAt, statusOf, deleteAll } = require("../media");
 
+const sounds = require("./sounds");
 const router = express.Router();
 
 // Any route with ":id" in it only accepts a whole number; anything else is "not found".
@@ -120,6 +121,7 @@ function toPost(row, full) {
     section: row.section || "main",
     font: row.font || "theme",
     layout: row.layout || "scroll",
+    sound: sounds.soundForClient(row.sound, row.sound_start),
     publishAt: row.publish_at,
     status: statusOf(row),
     reviewStatus: row.review_status || "approved",
@@ -189,7 +191,8 @@ const SELECT_POST = `
     (SELECT json_agg(json_build_object('handle', ccp.handle, 'name', COALESCE(ccp.name, cu.display_name), 'username', cu.username, 'status', pc.status))
        FROM post_collaborators pc JOIN users cu ON cu.id = pc.user_id LEFT JOIN creator_profiles ccp ON ccp.user_id = pc.user_id
       WHERE pc.post_id = p.id AND pc.status <> 'declined') AS collaborators,
-    (SELECT json_agg(json_build_object('scope', cr.scope, 'rank', cr.rank)) FROM creator_ranks cr WHERE cr.user_id = p.user_id) AS creator_ranks
+    (SELECT json_agg(json_build_object('scope', cr.scope, 'rank', cr.rank)) FROM creator_ranks cr WHERE cr.user_id = p.user_id) AS creator_ranks,
+    ${sounds.SOUND_JSON("p")} AS sound
   FROM posts p LEFT JOIN series s ON s.id = p.series_id
     LEFT JOIN users ou ON ou.id = p.user_id
     LEFT JOIN creator_profiles cp ON cp.user_id = p.user_id`;
@@ -618,6 +621,8 @@ async function validatePost(body, req) {
     section: SECTIONS.includes(body.section) ? body.section : "main",
     font: FONTS.includes(body.font) ? body.font : "theme",
     layout: body.layout === "swipe" ? "swipe" : "scroll",
+    soundId: body.soundId,
+    soundStart: Math.max(0, Math.min(3600, Number(body.soundStart) || 0)),
     form: null,
     publishAt: parsePublishAt(body.publishAt),
     tags: cleanTags(body.tags),
@@ -766,6 +771,12 @@ async function savePost(req, res, existingRow) {
     }
     await client.query("UPDATE posts SET genres = $1, content_rating = $3, strong_language = $4, visibility = $5, layout = $6 WHERE id = $2",
       [values.genres, postId, values.contentRating, values.strongLanguage, values.visibility, values.layout]);
+    // 🎵 Music: a library track, or the creator's own sound. Anything else is quietly dropped.
+    const soundId = await sounds.usableSound(values.soundId, req.session.user.id, req.session.user.role === "admin");
+    const before = await client.query("SELECT sound_id FROM posts WHERE id = $1", [postId]);
+    await client.query("UPDATE posts SET sound_id = $1, sound_start = $2 WHERE id = $3",
+      [Number.isInteger(soundId) ? soundId : null, Number.isInteger(soundId) ? values.soundStart : 0, postId]);
+    if (Number.isInteger(soundId) && before.rows[0].sound_id !== soundId) await client.query("UPDATE sounds SET uses = uses + 1 WHERE id = $1", [soundId]);
     collabInvites = await syncCollaborators(client, postId, req.session.user.id, values.collaborators);
     for (let i = 0; i < media.items.length; i++) {
       const m = media.items[i];
