@@ -26,7 +26,7 @@
     .then(function (data) {
       var c = data.character;
       owner = c.creator;
-      document.title = c.name + (MW.isHub ? " | Chapterhive" : " | God's Banditos");
+      document.title = c.name + " | Chapterhive";
       box.textContent = "";
       if (c.series) {
         var back = document.getElementById("back-link");

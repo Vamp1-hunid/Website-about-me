@@ -74,9 +74,9 @@ async function openHelpAndTeamWording() {
 }
 
 // Version 4 (Chapterhive): every work, story and character has an owner. Anything made
-// before that belongs to the admin, whose creator profile is "God's Banditos".
+// before that belongs to the founder (the admin), who also gets a creator page.
 async function assignOwnership() {
-  const { rows } = await db.query("SELECT id, display_name FROM users WHERE role = 'admin' ORDER BY id LIMIT 1");
+  const { rows } = await db.query("SELECT id, username, display_name FROM users WHERE role = 'admin' ORDER BY id LIMIT 1");
   if (!rows.length) return;
   const admin = rows[0];
   for (const table of ["posts", "series", "characters"]) {
@@ -84,10 +84,10 @@ async function assignOwnership() {
   }
   await db.query(
     `INSERT INTO creator_profiles (user_id, handle, name, tagline, status, featured, can_write_news, kinds, approved_at, agreement_accepted_at)
-     VALUES ($1, 'gods-banditos', 'God''s Banditos', 'Dark fantasy manga, anime works and stories', 'approved', TRUE, TRUE,
-             '{manga,animation,stories}', NOW(), NOW())
+     VALUES ($1, $2, $3, 'Founder of Chapterhive', 'approved', TRUE, TRUE,
+             '{stories}', NOW(), NOW())
      ON CONFLICT (user_id) DO NOTHING`,
-    [admin.id]
+    [admin.id, admin.username.replace(/_/g, "-"), admin.display_name || admin.username]
   );
 }
 

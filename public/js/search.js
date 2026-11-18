@@ -65,7 +65,7 @@
     document.getElementById("search-q").focus();
     return;
   }
-  document.title = "“" + q + "” | Search | " + (MW.isHub ? "Chapterhive" : "God's Banditos");
+  document.title = "“" + q + "” | Search | Chapterhive";
   summary.textContent = "Searching…";
 
   MW.api("/search?q=" + encodeURIComponent(q) + "&type=" + type + (MW.isHub ? "&site=hub" : ""))

@@ -121,38 +121,38 @@ const publicDir = path.join(__dirname, "public");
 const pages = require("./src/pages");
 const storageForPages = require("./src/storage");
 
-// ----- God's Banditos pages (works, stories and characters by the admin) -----
-// Another creator's work opened at a God's Banditos address is sent to its Chapterhive address.
+// ----- God's Banditos moved to its own website -----
+// The old God's Banditos addresses on this site send people on: to the God's Banditos site when
+// GODS_BANDITOS_URL is set (e.g. https://godsbanditos.com), otherwise to the same work on Chapterhive.
+function banditosOr(chapterhivePath) {
+  return function (req, res) {
+    const gb = String(process.env.GODS_BANDITOS_URL || "").replace(/\/+$/, "");
+    const query = req.originalUrl.indexOf("?") >= 0 ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+    if (/^https:\/\/[^\s/]+/.test(gb)) return res.redirect(301, gb + req.path + query);
+    res.redirect(301, typeof chapterhivePath === "function" ? chapterhivePath(req) : chapterhivePath);
+  };
+}
+app.get(["/gallery", "/stories", "/products", "/creator"], banditosOr("/hub"));
+app.get("/work/:slug", banditosOr(function (req) { return "/hub/w/" + encodeURIComponent(req.params.slug); }));
+app.get("/stories/:slug", banditosOr(function (req) { return "/hub/s/" + encodeURIComponent(req.params.slug); }));
+app.get("/characters/:slug", banditosOr(function (req) { return "/hub/ch/" + encodeURIComponent(req.params.slug); }));
 
-app.get("/work/:slug", async function (req, res) {
-  const post = await pages.findPost(req.params.slug);
-  if (post && post.owner_role !== "admin") return res.redirect(301, "/hub/w/" + encodeURIComponent(post.slug));
-  pages.sendPage(req, res, "work.html", pages.postMeta(req, post, "banditos"));
-});
+// Chapterhive lives under /hub. The site's front door and the old shared pages point there.
+function toHub(path) {
+  return function (req, res) {
+    const query = req.originalUrl.indexOf("?") >= 0 ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+    res.redirect(301, path + query);
+  };
+}
+app.get(["/", "/index.html"], toHub("/hub"));
+app.get(["/admin", "/admin.html"], toHub("/hub/admin"));
+app.get(["/login", "/login.html"], toHub("/hub/login"));
+app.get(["/contact", "/contact.html"], toHub("/hub/contact"));
+app.get(["/forgot", "/forgot.html"], toHub("/hub/forgot"));
+app.get(["/reset", "/reset.html"], toHub("/hub/reset"));
+app.get(["/help", "/help.html"], toHub("/hub/help"));
+app.get(["/search", "/search.html"], toHub("/hub/search"));
 
-app.get("/stories/:slug", async function (req, res) {
-  const s = await pages.findSeries(req.params.slug);
-  if (s && s.owner_role !== "admin") return res.redirect(301, "/hub/s/" + encodeURIComponent(s.slug));
-  pages.sendPage(req, res, "story.html", s && s.status === "approved" ? {
-    title: s.title + " | God's Banditos",
-    description: s.logline || s.description || "A story by God's Banditos.",
-    image: storageForPages.thumbnailUrl(s.cover_url),
-    jsonLd: { "@context": "https://schema.org", "@type": "CreativeWorkSeries", name: s.title, description: s.logline || s.description || undefined,
-      author: { "@type": "Organization", name: "God's Banditos" } }
-  } : null);
-});
-
-app.get("/characters/:slug", async function (req, res) {
-  const c = await pages.findCharacter(req.params.slug);
-  if (c && c.owner_role !== "admin") return res.redirect(301, "/hub/ch/" + encodeURIComponent(c.slug));
-  pages.sendPage(req, res, "character.html", c && c.visible ? {
-    title: c.name + " | God's Banditos",
-    description: c.tagline || (c.role ? c.role + " in a God's Banditos story." : "A God's Banditos character."),
-    image: storageForPages.thumbnailUrl(c.portrait)
-  } : null);
-});
-
-// /u/mwamba shows a member's public page.
 app.get("/u/:username", function (req, res) {
   res.redirect(301, "/hub/u/" + encodeURIComponent(req.params.username));
 });
@@ -169,24 +169,6 @@ app.get("/profile", function (req, res) {
 // ----- Chapterhive (/hub): the creator platform -----
 
 // Chapterhive's staff dashboard: the same tools as /admin, but in Chapterhive's look, header and menu,
-// so posting an update or approving creators from Chapterhive never drops you into God's Banditos.
-let hubAdminHtml = null;
-app.get(["/hub/admin", "/hub/admin/"], function (req, res) {
-  if (!hubAdminHtml || process.env.NODE_ENV !== "production") {
-    const fs = require("fs");
-    const hubHead = fs.readFileSync(path.join(__dirname, "public", "hub", "studio.html"), "utf8");
-    const header = hubHead.slice(hubHead.indexOf("<header"), hubHead.indexOf("</nav>") + 6);
-    let html = fs.readFileSync(path.join(__dirname, "public", "admin.html"), "utf8");
-    const gbHeader = html.slice(html.indexOf("<header"), html.indexOf("</nav>") + 6);
-    html = html.replace(gbHeader, header)
-      .replace('<body data-page="admin">', '<body data-page="admin" data-brand="chapterhive">')
-      .replace(/<link rel="stylesheet" href="\/css\/styles\.css\?v=\d+">/, function (m) { return m + '\n  <link rel="stylesheet" href="/css/chapterhive.css?v=36">'; })
-      .replace(/\| God's Banditos/g, "| Chapterhive")
-      .replace(/<link rel="icon"[^>]*>/g, '<link rel="icon" href="/images/chapterhive-mark.svg" type="image/svg+xml">');
-    hubAdminHtml = html;
-  }
-  res.set("Cache-Control", "no-store").type("html").send(hubAdminHtml);
-});
 
 app.get(["/hub", "/hub/"], function (req, res) {
   pages.sendPage(req, res, "hub/index.html", null);
@@ -286,7 +268,7 @@ app.get("/uploads/:name", require("./src/storage").serveBackup);
 
 app.use(function (req, res) {
   res.setHeader("Cache-Control", "no-cache");
-  res.status(404).sendFile(path.join(publicDir, "404.html"));
+  res.status(404).sendFile(path.join(publicDir, "hub", "404.html"));
 });
 
 /* ---------- Errors ---------- */

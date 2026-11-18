@@ -13,7 +13,7 @@
   MW.api("/users/" + encodeURIComponent(username))
     .then(function (data) {
       var u = data.user;
-      document.title = u.displayName + " (@" + u.username + ") | God's Banditos";
+      document.title = u.displayName + " (@" + u.username + ") | Chapterhive";
       box.textContent = "";
       var head = el("div", { class: "member-head" });
       head.appendChild(MW.tappablePicture(MW.avatar(u, "big"), u.avatarUrl, u.displayName || u.username));
@@ -77,7 +77,7 @@
       });
       if (u.role === "admin") {
         var sticker = el("p");
-        sticker.appendChild(el("a", { class: "sticker sticker-pink", href: "/creator" }, "Artist · meet the creator"));
+        sticker.appendChild(el("span", { class: "sticker sticker-pink" }, "👑 Chapterhive founder"));
         text.appendChild(sticker);
       }
       head.appendChild(text);
@@ -113,7 +113,7 @@
           var li = el("li", { class: "comment" });
           var header = el("header");
           header.appendChild(el("span", {}, c.isReply ? "Replied on" : "Commented on"));
-          header.appendChild(el("a", { class: "who", href: "/work/" + encodeURIComponent(c.work.slug) + "#comment-" + c.id }, c.work.title));
+          header.appendChild(el("a", { class: "who", href: MW.workUrl(c.work) + "#comment-" + c.id }, c.work.title));
           header.appendChild(el("time", { datetime: c.createdAt }, MW.formatDate(c.createdAt)));
           if (c.editedAt) header.appendChild(el("span", { class: "edited" }, "(edited)"));
           li.appendChild(header);

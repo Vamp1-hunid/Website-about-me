@@ -40,7 +40,7 @@ const TYPES = {
 
 router.get("/search", flagsLib.requireFlag("search", { adminAlways: true }), searchLimiter, async function (req, res) {
   const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 80) : "";
-  const hub = req.query.site === "hub";
+  const hub = true; // every creator's works (God's Banditos has its own site now)
   const type = Object.prototype.hasOwnProperty.call(TYPES, req.query.type) ? req.query.type : "all";
   const empty = { q: q, type: type, works: [], stories: [], characters: [], products: [], creators: [], accounts: [], news: [] };
   if (q.length < 2) return res.json(empty);
@@ -48,7 +48,6 @@ router.get("/search", flagsLib.requireFlag("search", { adminAlways: true }), sea
   const wantWorks = type === "all" || type === "posts" || Array.isArray(TYPES[type]) && TYPES[type].length > 0;
   // Forgiving match (see ch_match in db/schema.sql): case, hyphens, spaces and small typos don't matter.
   const like = q.replace(/[\\%_]/g, " ").replace(/\s+/g, " ").trim();
-  // God's Banditos searches only its own works; Chapterhive searches every creator's.
   const workScope = hub ? "" : " AND " + BANDITOS_ONLY;
   const ownerScope = function (alias) { return hub ? "" : " AND " + alias + ".user_id IN (SELECT id FROM users WHERE role = 'admin')"; };
   const none = { rows: [] };
@@ -172,21 +171,26 @@ router.get("/socials", async function (req, res) {
 });
 
 
-/* ---------- "Fund the Heist": the support / donation button ---------- */
+/* ---------- "Feed the hive": the support / donation button ---------- */
 
 const SUPPORT_TYPES = ["card", "mobile-money", "paypal", "bank", "link"];
 
 const DEFAULT_SUPPORT = {
   enabled: false,
-  title: "Fund the heist",
-  message: "Chapterhive is free for creators and readers. If you enjoy it, you can chip in to keep the hive running.",
+  title: "Feed the hive",
+  message: "Enjoying Chapterhive? Chip in to help keep the hive growing: every bit helps us build more for creators and readers.",
   methods: []
 };
 
 async function readSupport() {
   const { rows } = await db.query("SELECT value FROM app_settings WHERE key = 'support'");
   try {
-    return Object.assign({}, DEFAULT_SUPPORT, rows[0] ? JSON.parse(rows[0].value) : {});
+    const saved = Object.assign({}, DEFAULT_SUPPORT, rows[0] ? JSON.parse(rows[0].value) : {});
+    // The old God's Banditos wording becomes Chapterhive's bee-themed one (a custom title is kept).
+    if (!saved.title || saved.title.trim().toLowerCase() === "fund the heist") saved.title = DEFAULT_SUPPORT.title;
+    // The old message promised Chapterhive is free; paid plans are coming, so it's replaced (a custom message is kept).
+    if (!saved.message || /is free for creators and readers/i.test(saved.message)) saved.message = DEFAULT_SUPPORT.message;
+    return saved;
   } catch (error) {
     return Object.assign({}, DEFAULT_SUPPORT);
   }
@@ -198,7 +202,7 @@ router.get("/support", async function (req, res) {
   if (!(await flagsLib.isOn("donations", req))) return res.json({ enabled: false });
   // Switched on but no payment methods yet: the button still shows, with a "coming soon" note.
   if (!support.enabled || !support.methods.length) {
-    return res.json({ enabled: true, comingSoon: true, title: support.title || "Fund the heist",
+    return res.json({ enabled: true, comingSoon: true, title: support.title || "Feed the hive",
       message: "Ways to support Chapterhive are being set up. Check back soon!", methods: [] });
   }
   res.json(support);

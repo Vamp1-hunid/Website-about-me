@@ -50,7 +50,7 @@ router.post("/", contactLimiter, async function (req, res) {
   const to = (process.env.CONTACT_EMAIL || "").trim();
   if (mailEnabled() && to) {
     try {
-      const text = "New message from the God's Banditos contact form\n\n" +
+      const text = "New message from the Chapterhive contact form\n\n" +
         "From: " + name + " <" + email + ">\nTopic: " + topic + "\n\n" + message + "\n\n" +
         "(Press Reply to answer " + name + " directly.)\n";
       const escape = function (s) {
@@ -58,7 +58,7 @@ router.post("/", contactLimiter, async function (req, res) {
           return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
         });
       };
-      const html = "<p><b>New message from the God's Banditos contact form</b></p>" +
+      const html = "<p><b>New message from the Chapterhive contact form</b></p>" +
         "<p>From: " + escape(name) + " &lt;" + escape(email) + "&gt;<br>Topic: " + escape(topic) + "</p>" +
         "<p style=\"white-space:pre-wrap\">" + escape(message) + "</p>" +
         "<p style=\"color:#777\">Press Reply to answer " + escape(name) + " directly.</p>";

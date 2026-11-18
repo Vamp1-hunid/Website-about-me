@@ -27,7 +27,7 @@
   function render(data) {
     var story = data.story;
     storyCreator = story.creator;
-    document.title = story.title + (MW.isHub ? " | Chapterhive" : " | God's Banditos");
+    document.title = story.title + " | Chapterhive";
     if (MW.isHub && story.creator) {
       var back = document.getElementById("back-link");
       if (back) { back.href = "/hub/c/" + encodeURIComponent(story.creator.handle); back.textContent = "← " + story.creator.name; }

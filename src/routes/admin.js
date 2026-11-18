@@ -597,6 +597,16 @@ router.put("/support", async function (req, res) {
 });
 
 // GET /api/admin/support -> the saved settings, even while the button is off
+/* ---------- Downloads: who gets a download button on videos, audio and pictures ---------- */
+
+router.get("/downloads", async function (req, res) {
+  res.json(await require("../downloads").readSetting());
+});
+
+router.put("/downloads", async function (req, res) {
+  res.json(await require("../downloads").saveSetting(req.body && req.body.groups));
+});
+
 router.get("/support", async function (req, res) {
   res.json({ support: await readSupport() });
 });

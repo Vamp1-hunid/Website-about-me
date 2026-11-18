@@ -11,10 +11,10 @@
 
   var MW = (window.MW = window.MW || {});
 
-  // Which site this page belongs to: God's Banditos ("banditos") or Chapterhive ("chapterhive").
-  MW.brand = (document.body && document.body.getAttribute("data-brand")) || "banditos";
-  MW.isHub = MW.brand === "chapterhive";
-  // The staff dashboard: Chapterhive pages use Chapterhive's copy (/hub/admin), God's Banditos uses /admin.
+  // Everything on this site is Chapterhive. (God's Banditos moved to its own website.)
+  MW.brand = "chapterhive";
+  MW.isHub = true;
+  MW.adminUrl = function (rest) { return "/hub/admin" + (rest || ""); };
   // "beta,creators" -> "beta testers and creators" (announcement audiences can be several groups).
   MW.audienceLabel = function (audience, withIcons) {
     var names = { creators: "creators", beta: (withIcons ? "🧪 " : "") + "beta testers", staff: (withIcons ? "🛡️ " : "") + "staff" };
@@ -46,24 +46,12 @@
     });
     return { clear: function () { clearTimeout(timer); try { localStorage.removeItem(k); } catch (e) { /* ignore */ } if (onChange) onChange(); } };
   };
-  MW.adminUrl = function (rest) { return (MW.isHub ? "/hub/admin" : "/admin") + (rest || ""); };
-
-  // Where a work, story or character lives. On Chapterhive everything opens in Chapterhive's look;
-  // on God's Banditos, other creators' things open on Chapterhive.
   MW.workUrl = function (post) {
     var slug = encodeURIComponent(post.slug);
-    if (post.category === "news") return "/hub/news/" + slug;
-    var banditos = !post.creator || post.creator.isBanditos;
-    return (MW.isHub || !banditos ? "/hub/w/" : "/work/") + slug;
+    return (post.category === "news" ? "/hub/news/" : "/hub/w/") + slug;
   };
-  MW.storyUrl = function (slug, creator) {
-    var banditos = !creator || creator.isBanditos;
-    return (MW.isHub || !banditos ? "/hub/s/" : "/stories/") + encodeURIComponent(slug);
-  };
-  MW.characterUrl = function (slug, creator) {
-    var banditos = !creator || creator.isBanditos;
-    return (MW.isHub || !banditos ? "/hub/ch/" : "/characters/") + encodeURIComponent(slug);
-  };
+  MW.storyUrl = function (slug) { return "/hub/s/" + encodeURIComponent(slug); };
+  MW.characterUrl = function (slug) { return "/hub/ch/" + encodeURIComponent(slug); };
 
   // Sends a request to the server. options: { method, json, form }
   // Resolves with the JSON reply, or rejects with an Error that has .status and .data.
@@ -269,7 +257,7 @@
     if (typeof value === "string" && value.charAt(0) === "/" && value.charAt(1) !== "/" && value.indexOf("\\") === -1) {
       return value;
     }
-    return fallback || "/";
+    return fallback || "/hub";
   };
 
   MW.currentPath = function () {
@@ -304,13 +292,6 @@
     var area = document.getElementById("auth-area");
     if (!area) return;
     area.textContent = "";
-
-    // God's Banditos is view-only: visitors see no Log in / Join buttons (the owner logs in at /login),
-    // and Chapterhive members just get a link back to Chapterhive.
-    if (!MW.isHub && (!user || user.role !== "admin")) {
-      if (user) area.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub" }, "@" + user.username + " · Chapterhive"));
-      return;
-    }
 
     if (!user && MW.isHub && MW.feature("reservations") && !MW.feature("signups")) {
       // Before launch: Log in for people who already reserved, and Sign up, which starts a username reservation.
@@ -364,8 +345,7 @@
       } catch (error) {
         // Even if it fails, reload so the page shows the real state.
       }
-      // Stay on the same site: Chapterhive pages go back to the Chapterhive home, God's Banditos pages to its home.
-      window.location.href = MW.isHub || /^\/(profile|u\/|help|contact|legal)/.test(window.location.pathname) ? "/hub" : "/";
+      window.location.href = "/hub";
     });
     area.appendChild(logout);
   }
@@ -627,15 +607,10 @@
     search.append(label, input, go);
     menu.appendChild(search);
 
-    var groups = MW.isHub ? [
+    var groups = [
       ["Chapterhive", [["/hub", "Home"], ["/hub/news", "News & updates", false, "updates"], ["/hub/creators", "Creators"], ["/hub/feed", "Following", true], ["/hub/buddies", "Buddies", true], ["/hub/creators#top", "Top creators", false, "rankings"], ["/hub/calendar", "Calendar", false, "calendar"]]],
       ["Create", [["/hub/collabs", "Collab board", true, "collabs"], ["/hub/collabs#suggest", "Suggestion box", true, "suggestion_box"], ["/hub/apply", "Become a creator", true, "creator_applications"], ["/legal/content-rules", "Content Rules"]]],
-      ["More", [["/hub/help", "Help & FAQ"], ["/hub/premium", "Premium", false, "premium"], ["/hub/sponsor", "Sponsor & business", false, "sponsor_page"], ["/", "God's Banditos"], ["/contact", "Contact"], ["/legal/terms", "Terms"]]]
-    ] : [
-      ["Explore", [["/", "Home"], ["/gallery", "All works"], ["/gallery?category=story-art", "Story art"],
-        ["/gallery?category=anime", "Anime works"], ["/gallery?category=writing", "Writing"], ["/gallery?category=updates", "Updates", false, "updates"]]],
-      ["Stories", [["/stories", "All stories"], ["/gallery?section=concept-art", "Concept art"]]],
-      ["Studio", [["/products", "More products by us"], ["/creator", "Meet the creator"], ["/contact", "Contact"], ["/help", "Help & FAQ"], ["/hub", "Chapterhive ↗"]]]
+      ["More", [["/hub/help", "Help & FAQ"], ["/hub/premium", "Premium", false, "premium"], ["/hub/sponsor", "Sponsor & business", false, "sponsor_page"], ["/hub/contact", "Contact"], ["/legal/terms", "Terms"]]]
     ];
     var grid = el("div", { class: "menu-grid" });
     groups.forEach(function (group) {
@@ -711,18 +686,6 @@
         : [["/hub/login?next=" + encodeURIComponent(MW.currentPath()), "Log in"],
            MW.isHub && MW.feature("reservations") && !MW.feature("signups") ? ["/hub/reserve", "🐝 Reserve your username"] : ["/hub/register", "Create a free account"]];
       if (MW.isHub && MW.feature("beta_applications") && (!user ? (MW.feature("reservations") && !MW.feature("signups")) : !(MW.account && MW.account.isBeta) && user.role !== "admin")) items.push(["/hub/beta", "🧪 Become a beta tester"]);
-      // God's Banditos: no accounts here. Visitors are pointed to Chapterhive instead.
-      if (!MW.isHub && (!user || user.role !== "admin")) {
-        account.querySelector(".node-label").textContent = "Chapterhive";
-        items = user ? [["/hub", "Back to Chapterhive"], ["/hub/feed", "Following feed"]]
-          : [["/hub/c/gods-banditos", "Follow on Chapterhive"], ["/hub/register", "Join Chapterhive"]];
-        items.forEach(function (item) {
-          var li = el("li");
-          li.appendChild(el("a", { href: item[0] }, item[1]));
-          ul.appendChild(li);
-        });
-        return;
-      }
       var isCreator = user && (user.role === "admin" || (MW.creator && MW.creator.status === "approved"));
       if (user) items.splice(1, 0, ["/hub/feed", "Following feed"]);
       if (user && MW.feature && MW.feature("chat")) items.splice(1, 0, ["/hub/chat", "Chat"]);
@@ -809,13 +772,13 @@
 
   // Keep the header search box filled in on the results page.
   function fillSearch() {
-    var q = window.location.pathname === "/search" ? new URLSearchParams(window.location.search).get("q") : "";
+    var q = window.location.pathname === "/hub/search" ? new URLSearchParams(window.location.search).get("q") : "";
     var box = document.getElementById("header-q");
     if (box && q) box.value = q;
   }
 
 
-  /* ---------- "Fund the heist": the support / donation button ----------
+  /* ---------- "Feed the hive": the support / donation button (a honey pot) ----------
      Shown only when the site owner switches it on in Dashboard -> Settings. */
 
   function supportMethod(m) {
@@ -844,7 +807,7 @@
         card.appendChild(el("p", { class: "heist-details mono" }, m.details));
       } else {
         card.appendChild(el("p", { class: "muted" }, "Send a message and the account details will come to you by email."));
-        card.appendChild(el("a", { class: "btn btn-small", href: "/contact?topic=support" }, "Ask for bank details"));
+        card.appendChild(el("a", { class: "btn btn-small", href: "/hub/contact?topic=support" }, "Ask for bank details"));
       }
     } else {
       if (m.details) card.appendChild(el("p", { class: "muted" }, m.details));
@@ -860,7 +823,7 @@
     if (!support.enabled) {
       MW.me().then(function (user) {
         if (!user || user.role !== "admin" || document.querySelector(".heist-setup")) return;
-        var b = el("a", { class: "heist-button heist-setup", href: MW.adminUrl("#settings"), title: "Only you can see this" }, "Fund the heist: set it up");
+        var b = el("a", { class: "heist-button heist-setup", href: MW.adminUrl("#settings"), title: "Only you can see this" }, "Feed the hive: set it up");
         document.body.appendChild(b);
       });
       return;
@@ -871,7 +834,7 @@
     var top = el("div", { class: "heist-top" });
     top.appendChild(el("span", { class: "heist-bag heist-bag-big", "aria-hidden": "true" }));
     var heading = el("div");
-    heading.appendChild(el("p", { class: "node-label" }, "Crew // heist fund"));
+    heading.appendChild(el("p", { class: "node-label" }, "Hive // honey pot"));
     heading.appendChild(el("h2", { id: "heist-title" }, support.title));
     top.appendChild(heading);
     dialog.appendChild(top);
@@ -880,7 +843,7 @@
     support.methods.forEach(function (m) { list.appendChild(supportMethod(m)); });
     dialog.appendChild(list);
     dialog.appendChild(el("p", { class: "muted heist-note" },
-      "Payments are handled by each service above; this site never sees your card or account details. Thank you for backing the crew."));
+      "Payments are handled by each service above; Chapterhive never sees your card or account details. Thank you for keeping the hive buzzing 🐝"));
     var close = el("form", { method: "dialog" });
     close.appendChild(el("button", { type: "submit", class: "btn btn-ghost" }, "Close"));
     dialog.appendChild(close);
@@ -921,7 +884,7 @@
     if (window.location.hash === "#fund") open();
   }
 
-  // God's Banditos always shows the heist button; Chapterhive shows it once the "hub_support" feature is on.
+  // The support ("Feed the hive") button shows once the "hub_support" feature is on.
   MW.me().then(function () {
     if (!MW.isHub || MW.feature("hub_support")) MW.api("/support").then(buildSupport).catch(function () {});
   });

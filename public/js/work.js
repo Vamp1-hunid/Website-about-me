@@ -23,16 +23,12 @@
     article.appendChild(el("p", { class: "node-label" }, "Error // file missing"));
     article.appendChild(el("h1", { class: "glitch" }, "Signal lost"));
     article.appendChild(el("p", { class: "lead" }, message));
-    article.appendChild(el("a", { class: "btn", href: "/gallery" }, "Back to all works"));
+    article.appendChild(el("a", { class: "btn", href: "/hub" }, "Back to Chapterhive"));
   }
 
   /* ---------- Like and save buttons ---------- */
 
-  // God's Banditos is view-only for everyone but the owner: likes, saves, votes and comments
-  // happen on the same work's Chapterhive page.
-  function viewOnly() {
-    return !MW.isHub && !(user && user.role === "admin");
-  }
+  function viewOnly() { return false; } // everyone can like, save and comment on Chapterhive
   function hubLink() {
     return "/hub/w/" + encodeURIComponent(post.slug);
   }
@@ -212,7 +208,7 @@
   }
 
   function renderPost() {
-    document.title = post.title + (MW.isHub ? " | Chapterhive" : " | God's Banditos");
+    document.title = post.title + " | Chapterhive";
     if (MW.isHub) {
       var back = document.getElementById("back-link");
       if (back && post.category === "news") { back.href = "/hub/news"; back.textContent = "← News & updates"; }
@@ -235,6 +231,10 @@
       link.appendChild(el("img", { src: media[0].url, alt: media[0].caption || post.title }));
       figure.appendChild(link);
       if (media[0].caption) figure.appendChild(el("figcaption", { class: "mono muted" }, media[0].caption));
+      if (post.canDownload) {
+        figure.appendChild(el("a", { class: "btn btn-small btn-ghost media-download", href: MW.downloadUrl(media[0].originalUrl || media[0].url),
+          download: "", rel: "noopener" }, "⬇ Download picture"));
+      }
       layout.appendChild(figure);
       if (MW.profile) {
         MW.profile(figure, {
@@ -262,7 +262,7 @@
       var head = el("div", { class: "work-head" });
       renderHeader(head);
       article.appendChild(head);
-      if (media.length) article.appendChild(MW.renderMedia(media, post.title));
+      if (media.length) article.appendChild(MW.renderMedia(media, post.title, { canDownload: post.canDownload }));
       renderBody(article, true);
       renderDocuments(article);
       if (post.form && MW.renderPoll && !viewOnly()) MW.renderPoll(article, post);

@@ -38,7 +38,7 @@ const DEFAULTS = [
   ["sponsor_page", "Sponsor page", "The page for companies and investors with your business contact details.", "admin", "Money & business"],
   ["premium", "Premium plan", "The Premium page, waitlist and custom creator pages. Keep it queued until payments are ready.", "admin", "Money & business"],
   // News
-  ["updates", "News & updates", "Chapterhive's News & updates and the God's Banditos Updates section. Suspend to hide all update posts.", "everyone", "News"],
+  ["updates", "News & updates", "Chapterhive's News & updates. Suspend to hide all update posts.", "everyone", "News"],
   // Help & discovery
   ["search", "Search", "The search box and search results pages.", "everyone", "Help & discovery"],
   ["help_assistant", "Help assistant", "The ? chat that answers questions from the FAQ (uses AI if an AI key is set).", "everyone", "Help & discovery"],

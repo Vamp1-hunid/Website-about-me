@@ -46,7 +46,6 @@
         ["Drafts", o.drafts + o.characterDrafts, "drafts"],
         ["Stories", o.stories, "stories"],
         ["Characters", o.characters, "characters"],
-        ["Products", o.products, "products"],
         ["Members", o.members],
         ["Comments (7 days)", o.commentsWeek, "comments"],
         ["Likes (7 days)", o.likesWeek],
@@ -225,110 +224,6 @@
   }
   ADMIN.onShow("drafts", loadDrafts);
 
-  /* =================== Products =================== */
-
-  var productForm = field("product-form");
-  var productImage = ADMIN.coverPicker(document.querySelector("[data-cover-picker='product']"));
-  var editingProduct = null;
-
-  function resetProduct() {
-    editingProduct = null;
-    productForm.reset();
-    field("product-published").checked = true;
-    MW.showProblems(productForm, []);
-    productImage.reset(null);
-    field("product-cancel").hidden = true;
-    field("product-form-title").textContent = "New product";
-    field("product-kicker").textContent = "Products // new";
-  }
-
-  function editProduct(p) {
-    editingProduct = p;
-    MW.showProblems(productForm, []);
-    field("product-name").value = p.name;
-    field("product-tagline").value = p.tagline || "";
-    field("product-status").value = p.status || "";
-    field("product-description").value = p.description || "";
-    field("product-link").value = p.link || "";
-    field("product-link-label").value = p.linkLabel || "";
-    field("product-order").value = p.sortOrder === null || p.sortOrder === undefined ? "" : p.sortOrder;
-    field("product-published").checked = p.published;
-    productImage.reset(p.imageUrl);
-    field("product-cancel").hidden = false;
-    field("product-form-title").textContent = "Edit: " + p.name;
-    field("product-kicker").textContent = "Products // edit";
-    field("product-feedback").textContent = "";
-    field("product-form-title").scrollIntoView({ block: "start" });
-  }
-
-  async function loadProducts() {
-    var list = field("product-list-admin");
-    try {
-      var data = await MW.api("/admin/products");
-      list.textContent = "";
-      if (!data.products.length) ADMIN.emptyRow(list, "No products yet. Add your other projects here, e.g. QuantaKai.");
-      data.products.forEach(function (p) {
-        list.appendChild(ADMIN.listItem({
-          imageUrl: p.imageUrl,
-          title: p.name,
-          meta: [p.status, p.tagline].filter(Boolean).join(" · "),
-          flag: p.published ? "" : "HIDDEN",
-          actions: [
-            ADMIN.button("Edit", function () { editProduct(p); }),
-            ADMIN.confirmButton("Delete", async function () {
-              await MW.api("/admin/products/" + p.id, { method: "DELETE" });
-              MW.toast("Deleted " + p.name + ".");
-              if (editingProduct && editingProduct.id === p.id) resetProduct();
-              loadProducts();
-            })
-          ]
-        }));
-      });
-    } catch (error) {
-      ADMIN.emptyRow(list, error.message);
-    }
-  }
-
-  field("product-cancel").addEventListener("click", resetProduct);
-  productForm.addEventListener("submit", async function (event) {
-    event.preventDefault();
-    var fb = field("product-feedback");
-    fb.className = "feedback";
-    fb.textContent = "";
-    var problems = [];
-    if (!field("product-name").value.trim()) problems.push({ field: "name", message: "Give the product a name." });
-    var link = field("product-link").value.trim();
-    if (link && !/^https?:\/\/\S+$/i.test(link)) problems.push({ field: "link", message: "Links must start with https://" });
-    if (productImage.busy()) problems.push({ field: "image", message: "Wait for the picture to finish uploading." });
-    MW.showProblems(productForm, problems);
-    if (problems.length) return;
-    var payload = {
-      name: field("product-name").value,
-      tagline: field("product-tagline").value,
-      status: field("product-status").value,
-      description: field("product-description").value,
-      link: link,
-      linkLabel: field("product-link-label").value,
-      sortOrder: field("product-order").value,
-      published: field("product-published").checked,
-      image: productImage.value()
-    };
-    try {
-      var data = editingProduct
-        ? await MW.api("/admin/products/" + editingProduct.id, { method: "PUT", json: payload })
-        : await MW.api("/admin/products", { method: "POST", json: payload });
-      resetProduct();
-      fb.className = "feedback feedback-success";
-      fb.textContent = "Saved " + data.product.name + ". ";
-      fb.appendChild(el("a", { href: "/products#product-" + data.product.slug }, "View the products page"));
-      loadProducts();
-    } catch (error) {
-      MW.showProblems(productForm, (error.data && error.data.problems) || []);
-      fb.className = "feedback feedback-error";
-      fb.textContent = error.message;
-    }
-  });
-  ADMIN.onShow("products", loadProducts);
 
   /* =================== Comments (moderation) =================== */
 
@@ -579,4 +474,30 @@
     }
   });
   ADMIN.onShow("settings", loadSupport);
+
+  /* =================== Downloads: who gets a download button =================== */
+
+  var dlForm = field("downloads-form");
+  if (dlForm) {
+    var dlBoxes = function () { return dlForm.querySelectorAll("input[type='checkbox']"); };
+    ADMIN.onShow("settings", function () {
+      MW.api("/admin/downloads").then(function (d) {
+        dlBoxes().forEach(function (b) { b.checked = d.groups.indexOf(b.value) !== -1; });
+      }).catch(function () {});
+    });
+    dlForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      var fb = field("downloads-feedback");
+      var groups = Array.prototype.filter.call(dlBoxes(), function (b) { return b.checked; }).map(function (b) { return b.value; });
+      try {
+        var d = await MW.api("/admin/downloads", { method: "PUT", json: { groups: groups } });
+        fb.className = "feedback feedback-success";
+        var names = { members: "all members", premium: "Premium members", team: "the team", beta: "beta testers" };
+        fb.textContent = d.groups.length ? "Saved. Downloads are on for " + d.groups.map(function (g) { return names[g]; }).join(", ") + "."
+          : "Saved. Downloads are off (only creators can download their own files).";
+      } catch (e) {
+        fb.className = "feedback feedback-error"; fb.textContent = e.message;
+      }
+    });
+  }
 })();

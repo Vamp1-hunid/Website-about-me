@@ -34,16 +34,13 @@ const CHARACTER_CARD_SQL = `
       ORDER BY (m.role = 'portrait') DESC, m.position LIMIT 1) AS portrait_url
   FROM characters c`;
 
-// GET /api/stories            God's Banditos' stories
-// GET /api/stories?site=hub   every creator's;  ?creator=<handle>  one creator's
+// GET /api/stories             every creator's stories;  ?creator=<handle>  one creator's
 router.get("/", async function (req, res) {
   const values = [];
-  let scope = "WHERE us.role = 'admin'";
+  let scope = "";
   if (typeof req.query.creator === "string") {
     values.push(req.query.creator.toLowerCase().slice(0, 30));
     scope = "WHERE cps.handle = $1";
-  } else if (req.query.site === "hub") {
-    scope = "";
   }
   const { rows } = await db.query(
     `SELECT s.*, cps.handle AS creator_handle, cps.name AS creator_name, us.role AS owner_role,

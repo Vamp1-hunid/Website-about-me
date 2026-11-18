@@ -10,7 +10,7 @@
   function planCard(p, premium) {
     var card = el("div", { class: "premium-plan" + (premium ? " is-premium" : "") });
     card.appendChild(el("h2", {}, p.label));
-    card.appendChild(el("p", { class: "mono muted" }, premium ? (p.priceNote || "") : "Free forever"));
+    card.appendChild(el("p", { class: "mono muted" }, premium ? (p.priceNote || "") : "Free plan"));
     var ul = el("ul");
     ul.appendChild(el("li", {}, "Up to " + p.maxMediaPerPost + " pages or files per post"));
     ul.appendChild(el("li", {}, "Pictures up to " + mb(p.limitsMb.image) + ", videos up to " + mb(p.limitsMb.video) + ", audio up to " + mb(p.limitsMb.audio)));

@@ -30,7 +30,7 @@ const FONTS = ["theme", "serif", "typewriter", "handwritten", "clean"];
 const VISIBLE = "(p.published AND p.review_status = 'approved' AND (p.publish_at IS NULL OR p.publish_at <= NOW()) AND EXISTS " +
   "(SELECT 1 FROM creator_profiles cpv WHERE cpv.user_id = p.user_id AND cpv.status = 'approved'))";
 
-// God's Banditos shows only the admin's own works; Chapterhive (/hub) shows every creator's.
+// (Kept for older callers: the owner's own works. Chapterhive lists every creator's works.)
 const BANDITOS_ONLY = "p.user_id IN (SELECT id FROM users WHERE role = 'admin')";
 const SORTS = ["new", "old", "popular", "series"];
 
@@ -300,7 +300,6 @@ router.get("/", async function (req, res) {
   const me = req.session.user;
   // ?drafts=1 (or ?mine=1): your own works, drafts and scheduled ones included (dashboard / studio).
   const showDrafts = Boolean(me) && (req.query.drafts === "1" || req.query.mine === "1");
-  const site = req.query.site === "hub" ? "hub" : "banditos";
   const creatorHandle = typeof req.query.creator === "string" ? req.query.creator.toLowerCase().slice(0, 30) : "";
   const search = cleanText(req.query.q).slice(0, 80);
   const tag = typeof req.query.tag === "string" ? cleanTags([req.query.tag])[0] || null : null;
@@ -322,8 +321,6 @@ router.get("/", async function (req, res) {
       values.push(creatorHandle);
       // Their own posts, plus collab posts they accepted.
       where.push("(cp.handle = $" + values.length + " OR p.id IN (SELECT pc.post_id FROM post_collaborators pc JOIN creator_profiles ccp ON ccp.user_id = pc.user_id WHERE pc.status = 'accepted' AND ccp.handle = $" + values.length + "))");
-    } else if (site === "banditos") {
-      where.push(BANDITOS_ONLY);
     }
   }
   // Dashboard filters: ?drafts=1&status=draft|scheduled|live
@@ -426,7 +423,7 @@ router.get("/", async function (req, res) {
 
 // GET /api/posts/meta/filters -> the series and tags that have published works (for the gallery filters)
 router.get("/meta/filters", async function (req, res) {
-  const scope = req.query.site === "hub" ? "" : " AND " + BANDITOS_ONLY;
+  const scope = "";
   const series = await db.query(
     `SELECT s.slug, s.title, COUNT(p.id)::int AS works
        FROM series s JOIN posts p ON p.series_id = s.id AND ${VISIBLE}${scope}
@@ -543,11 +540,11 @@ router.get("/:slug", async function (req, res) {
   post.showEdited = Boolean(isAdmin);
   post.media = await mediaFor(row.id);
   post.nav = await neighbours(row);
+  // Download button: only for the groups chosen in Dashboard → Settings → Downloads (and the work's creator).
+  post.canDownload = await require("../downloads").canDownload(userId, row.user_id);
   // Visitors without an account get a preview: the opening of the text and the first few images.
   // Video, audio, documents and forms stay locked until they sign up.
-  // On God's Banditos the owner's own works are shown in full to everyone (view only).
-  const banditosPage = req.query.site === "gb" && row.owner_role === "admin";
-  if (!userId && !banditosPage) guestPreview(post);
+  if (!userId) guestPreview(post);
   // Before launch, members waiting for launch can read and like, but attached files open at launch.
   else if (userId && !isAdmin && row.user_id !== userId && await require("../prelaunch").waitingMember(req)) {
     const docs = (post.media || []).filter(function (m) { return m.kind === "document"; }).length;

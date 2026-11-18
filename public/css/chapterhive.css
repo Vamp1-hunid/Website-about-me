@@ -1628,3 +1628,80 @@ body[data-brand="chapterhive"] .help-fab, body[data-brand="chapterhive"] .help-g
 .draft-note { font-size: 0.8rem; margin: 0.25rem 0 0; }
 .chat-compose .draft-note { display: none; }
 .chat-thread-text .chat-draft { color: var(--pink); font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ===== v33: "Feed the hive" support button: a honey pot instead of the loot bag =====
+   A round honey jar with a wooden lid band. Hovering makes little
+   honeycomb cells float up out of it (instead of coins). */
+body[data-brand="chapterhive"] .heist-button {
+  font-family: var(--font-ui, inherit);
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-size: 0.95rem;
+}
+body[data-brand="chapterhive"] .heist-bag {
+  width: 1.6rem;
+  height: 1.55rem;
+  clip-path: none;
+  background: transparent;
+}
+body[data-brand="chapterhive"] .heist-bag::before {
+  /* the jar */
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 22%; bottom: 0;
+  height: auto;
+  background: radial-gradient(circle at 35% 40%, #ffd65c 0 18%, #f2a400 50%, #b86b00 100%);
+  border: 2px solid #2a1a00;
+  border-radius: 45% 45% 40% 40% / 35% 35% 55% 55%;
+  transform: none;
+}
+body[data-brand="chapterhive"] .heist-bag::after {
+  /* the wooden lid band */
+  content: "";
+  position: absolute;
+  left: 14%; right: 14%; top: 4%;
+  width: auto;
+  height: 26%;
+  background: #7a4a12;
+  border: 2px solid #2a1a00;
+  border-radius: 4px;
+  transform: none;
+}
+body[data-brand="chapterhive"] .heist-button:hover .heist-bag::after,
+body[data-brand="chapterhive"] .heist-button:focus-visible .heist-bag::after {
+  background: #7a4a12;
+}
+body[data-brand="chapterhive"] .heist-bag-big {
+  width: 3.4rem;
+  height: 3.3rem;
+  background: transparent;
+}
+body[data-brand="chapterhive"] .heist-bag-big::after { width: auto; height: 26%; background: #7a4a12; }
+/* coins -> little honeycomb cells */
+body[data-brand="chapterhive"] .heist-coin {
+  width: 0.6rem;
+  height: 0.6rem;
+  border: 0;
+  background: #ffc21a;
+  clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
+  transform: scale(0);
+}
+body[data-brand="chapterhive"] .heist-button:hover .heist-coin,
+body[data-brand="chapterhive"] .heist-button:focus-visible .heist-coin {
+  animation: hive-cell 1s ease-out infinite;
+}
+@keyframes hive-cell {
+  0%   { transform: translate(0, 0) scale(0.4); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translate(var(--dx, 6px), -40px) rotate(60deg) scale(1); opacity: 0; }
+}
+/* v33: download button under videos, audio and pictures (for the groups chosen in Settings → Downloads) */
+.media-item .media-download, .work-image .media-download { margin-top: 0.5rem; }
+.media-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; width: 100%; gap: 0.5rem; margin-top: 0.5rem; }
+.media-tools .media-download { margin-top: 0; }
+.media-download-quality { display: inline-flex; align-items: center; gap: 0.4rem; }
+.media-quality { width: auto; min-height: 34px; padding: 0.25rem 0.6rem; font-size: 0.85rem; border-radius: 999px; }
+/* Fullscreen: the video fills the screen on black, controls included */
+figure.media-video:fullscreen { display: flex; flex-direction: column; justify-content: center; background: #000; margin: 0; padding: 0; }
+figure.media-video:fullscreen video { width: 100%; height: 100%; max-height: 100vh; object-fit: contain; }
+figure.media-video:fullscreen .media-tools, figure.media-video:fullscreen figcaption { display: none; }

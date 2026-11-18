@@ -25,7 +25,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=29">
-  <link rel="stylesheet" href="/css/chapterhive.css?v=36">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=37">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -78,7 +78,6 @@
         <button role="tab" type="button" data-tab="stories" aria-selected="false">Stories</button>
         <button role="tab" type="button" data-tab="characters" aria-selected="false">Characters</button>
         <button role="tab" type="button" data-tab="drafts" aria-selected="false">Drafts &amp; scheduled</button>
-        <button role="tab" type="button" data-tab="products" hidden aria-selected="false">Products</button>
         <button role="tab" type="button" data-tab="comments" hidden aria-selected="false">Comments</button>
         <button role="tab" type="button" data-tab="inbox" hidden aria-selected="false">Inbox <span class="tab-badge" id="inbox-badge" hidden></span></button>
         <button role="tab" type="button" data-tab="settings" hidden aria-selected="false">Settings</button>
@@ -158,7 +157,6 @@
                     <option value="poll">Poll or questionnaire</option>
                   </optgroup>
                   <optgroup label="News">
-                    <option value="updates">God's Banditos update</option>
                     <option value="news">News &amp; update (Chapterhive news)</option>
                   </optgroup>
                 </select>
@@ -468,79 +466,6 @@
         <ul id="draft-chars" class="admin-list"></ul>
       </section>
 
-      <!-- ===== Products ===== -->
-      <section class="dash-panel dash-two" role="tabpanel" data-panel="products" aria-label="More products" hidden>
-        <div class="panel">
-          <p class="node-label" id="product-kicker">Products // new</p>
-          <h2 id="product-form-title">New product</h2>
-          <form id="product-form" novalidate>
-            <div class="form-row">
-              <label for="product-name">Name</label>
-              <input type="text" id="product-name" name="name" maxlength="120" aria-describedby="product-name-error">
-              <p class="error" id="product-name-error"></p>
-            </div>
-            <div class="form-row">
-              <label for="product-tagline">Tagline</label>
-              <input type="text" id="product-tagline" name="tagline" maxlength="200" aria-describedby="product-tagline-error">
-              <p class="error" id="product-tagline-error"></p>
-            </div>
-            <div class="form-grid">
-              <div class="form-row">
-                <label for="product-status">Status <span class="muted">(e.g. In development)</span></label>
-                <input type="text" id="product-status" name="status" maxlength="40" list="status-ideas" aria-describedby="product-status-error">
-                <datalist id="status-ideas"><option value="In development"><option value="Beta"><option value="Live"><option value="Coming soon"><option value="Archived"></datalist>
-                <p class="error" id="product-status-error"></p>
-              </div>
-              <div class="form-row">
-                <label for="product-order">Order</label>
-                <input type="number" id="product-order" name="sortOrder" min="0" max="10000" aria-describedby="product-order-error">
-                <p class="error" id="product-order-error"></p>
-              </div>
-            </div>
-            <div class="form-row">
-              <label for="product-description">Description</label>
-              <div class="toolbar" data-toolbar-for="product-description"></div>
-              <textarea id="product-description" name="description" rows="8" aria-describedby="product-description-error"></textarea>
-              <p class="error" id="product-description-error"></p>
-            </div>
-            <div class="form-grid">
-              <div class="form-row">
-                <label for="product-link">Link <span class="muted">(optional, https://&hellip;)</span></label>
-                <input type="url" id="product-link" name="link" maxlength="500" aria-describedby="product-link-error">
-                <p class="error" id="product-link-error"></p>
-              </div>
-              <div class="form-row">
-                <label for="product-link-label">Button text</label>
-                <input type="text" id="product-link-label" name="linkLabel" maxlength="40" placeholder="Visit">
-                <p class="error" id="product-link-label-error"></p>
-              </div>
-            </div>
-            <div class="form-row" data-cover-picker="product">
-              <span class="label">Picture</span>
-              <div class="cover-picker">
-                <img class="cover-preview" alt="" hidden>
-                <label class="btn btn-ghost btn-small" for="product-image">Choose picture</label>
-                <input type="file" id="product-image" class="sr-only" accept="image/jpeg,image/png,image/webp,image/gif">
-                <button type="button" class="btn btn-ghost btn-small cover-remove" hidden>Remove</button>
-              </div>
-              <p class="error" id="product-image-anchor-error"></p>
-              <input type="hidden" name="image" id="product-image-anchor">
-            </div>
-            <div class="check-row"><input type="checkbox" id="product-published" checked><label for="product-published">Show on the products page</label></div>
-            <div class="hero-actions">
-              <button type="submit">Save product</button>
-              <button type="button" class="btn btn-ghost" id="product-cancel" hidden>Cancel editing</button>
-            </div>
-            <p class="feedback" id="product-feedback" aria-live="polite"></p>
-          </form>
-        </div>
-        <div class="panel">
-          <p class="node-label">Products // all</p>
-          <h2>More products by us</h2>
-          <ul id="product-list-admin" class="admin-list"></ul>
-          <p><a href="/products" class="mono">View the public page &rarr;</a></p>
-        </div>
-      </section>
 
       <!-- ===== Comments ===== -->
       <section class="panel dash-panel" role="tabpanel" data-panel="comments" aria-label="Comments" hidden>
@@ -583,14 +508,14 @@
           </form>
         </div>
         <div class="panel">
-          <p class="node-label">Settings // heist fund</p>
+          <p class="node-label">Settings // feed the hive</p>
           <h2>Support button</h2>
           <p class="muted">A "buy me a coffee"-style loot-bag button on every page. Add the ways people can send you money, then switch it on.</p>
           <form id="support-form" novalidate>
             <div class="check-row"><input type="checkbox" id="support-enabled"><label for="support-enabled">Show the button on the site</label></div>
             <div class="form-row">
               <label for="support-title">Button text</label>
-              <input type="text" id="support-title" maxlength="60" placeholder="Fund the heist">
+              <input type="text" id="support-title" maxlength="60" placeholder="Feed the hive">
             </div>
             <div class="form-row">
               <label for="support-message">Message in the panel</label>
@@ -644,7 +569,7 @@
             <button type="button" class="btn btn-ghost btn-small" data-rstatus="dismissed" aria-pressed="false">Dismissed</button>
           </div>
           <ul id="report-queue" class="mod-list"></ul>
-          <p class="muted">You can open Chapterhive at <a href="/hub">/hub</a>. Your own creator page is <a href="/hub/c/gods-banditos">@gods-banditos</a>.</p>
+          <p class="muted">You can open Chapterhive at <a href="/hub">/hub</a>.</p>
         </div>
       </section>
 
@@ -803,8 +728,8 @@
   </main>
 
   <footer class="site-footer">
-    <p class="footer-brand"><img src="/images/chapterhive-mark.svg" alt="" width="28" height="28"> &copy; 2026 Chapterhive &middot; a <a href="/">God's Banditos</a> production</p>
-    <p><a href="/legal/terms">Terms</a> &middot; <a href="/legal/privacy">Privacy</a> &middot; <a href="/legal/creator-agreement">Creator Agreement</a> &middot; <a href="/legal/content-rules">Content Rules</a> &middot; <a href="/contact">Contact</a></p>
+    <p class="footer-brand"><img src="/images/chapterhive-mark.svg" alt="" width="28" height="28"> &copy; 2026 Chapterhive</p>
+    <p><a href="/legal/terms">Terms</a> &middot; <a href="/legal/privacy">Privacy</a> &middot; <a href="/legal/creator-agreement">Creator Agreement</a> &middot; <a href="/legal/content-rules">Content Rules</a> &middot; <a href="/hub/contact">Contact</a></p>
   </footer>
 
   <script src="/js/api.js" defer></script>

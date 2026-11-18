@@ -48,7 +48,7 @@
     var intro = document.getElementById("reset-intro");
     var minLength = 8;
     // Remove the token from the address bar, so it isn't left in the browser history.
-    history.replaceState(null, "", "/reset");
+    history.replaceState(null, "", "/hub/reset");
 
     MW.api("/account/reset?token=" + encodeURIComponent(token))
       .then(function (data) {
@@ -61,7 +61,7 @@
       .catch(function (error) {
         intro.textContent = error.message;
         var again = document.createElement("p");
-        var link = MW.el("a", { class: "btn", href: "/forgot" }, "Ask for a new link");
+        var link = MW.el("a", { class: "btn", href: "/hub/forgot" }, "Ask for a new link");
         again.appendChild(link);
         intro.after(again);
       });
