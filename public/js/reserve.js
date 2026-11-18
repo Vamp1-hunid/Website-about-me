@@ -101,7 +101,8 @@
       var done = $("reserve-done");
       done.hidden = false;
       done.appendChild(el("p", { class: "reserve-success" }, "🐝 @" + d.username + " is yours."));
-      try { localStorage.setItem("ch-reserved", d.username); } catch (e) { /* private mode */ }
+      // Remember the name reserved on this device (so "You're #N" shows here before the person has an account).
+      try { localStorage.setItem("ch-reserved-here", d.username); } catch (e) { /* private mode */ }
       loadNames();
       if (d.position) done.appendChild(el("p", { class: "reserve-position" }, "You're #" + d.position.toLocaleString() + " on the reservation list."));
       done.appendChild(el("p", { class: "lead" }, (d.google ? "Your account is ready and you're signed in. When Chapterhive opens, just press Continue with Google. " : d.account ? "Your account is ready. When Chapterhive opens, just log in with @" + d.username + " and your password. " : "We'll email you a link to claim it the moment Chapterhive opens. ") + (d.count === 1 ? "You're the very first person waiting!" : "You're one of " + d.count.toLocaleString() + " people already waiting.")));
@@ -129,11 +130,13 @@
   // Public list: number + username only.
   var allNames = [];
   var SHOW = 120;
-  // Whose place to highlight: the signed-in account's own name; for visitors, the name reserved on this device.
+  // Whose place to highlight: the signed-in account's own name; for visitors, only a name reserved with
+  // the form on this device. (Logging in no longer leaves a name behind after logging out.)
   var signedInName = null;
+  try { localStorage.removeItem("ch-reserved"); } catch (e) { /* old key, set by logging in */ }
   function mine() {
     if (signedInName !== null) return signedInName;
-    try { return localStorage.getItem("ch-reserved") || ""; } catch (e) { return ""; }
+    try { return localStorage.getItem("ch-reserved-here") || ""; } catch (e) { return ""; }
   }
   function drawList() {
     var q = ($("reserve-find").value || "").toLowerCase().replace(/^@/, "").trim();
@@ -161,7 +164,6 @@
   MW.me().then(function (user) {
     if (user) {
       signedInName = user.username;
-      try { localStorage.setItem("ch-reserved", user.username); } catch (e) { /* ignore */ }
     }
     loadNames();
   }, loadNames);

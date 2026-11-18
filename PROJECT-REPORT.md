@@ -2111,3 +2111,16 @@ never in the database: they would make it slow, costly and fill the 1 GB free st
   plan (then they stay true) or change them.
 - **Payments:** Flutterwave or Paystack for mobile money in Zambia, plus the code that upgrades a member after paying.
 - **Ask the lawyer** about the Terms wording on changing the free plan (consumer law needs fair notice).
+
+### Version 35 (18 November 2026): swipe posts, Edit category, reservation list fix
+
+- **Swipe posts:** when a post has several pictures and clips, the creator chooses in Compose how they show:
+  "One under another (like a manga chapter)" or "Side by side: swipe left and right". The swipe layout is a carousel
+  with dots, a "2 / 5" counter, arrows on computers and keyboard arrows; a clip pauses when you swipe away from it.
+  Stored in `posts.layout` (`scroll` | `swipe`).
+- **Edit category** ("Edit (fan edit, promo edit or AMV)"), next to Meme, so creators can market their stories with
+  memes and cool edits. Edits can carry video (memes still can't), need at least one picture or clip, and appear under
+  Film & video and Art when browsing, and in search. Link an edit or meme to a story with the Story field.
+- **Reservation list:** "You're #N (@name)" showed the last account that logged in on that phone, even after logging
+  out. It now shows only for the signed-in account, or for a name reserved with the form on that device, and logging
+  out clears it.

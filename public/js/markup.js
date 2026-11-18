@@ -270,6 +270,7 @@
   MW.renderMedia = function (media, title, options) {
     var el = MW.el;
     var canDownload = Boolean(options && options.canDownload);
+    var figures = [];
     var box = el("div", { class: "media-reader" });
     media = media.filter(function (m) { return m.kind !== "document" && m.role !== "cover"; });
     var pages = media.filter(function (m) { return m.kind === "image"; }).length;
@@ -313,12 +314,77 @@
         }
       }
       if (tools) figure.appendChild(tools);
-      if (item.caption || (item.kind === "image" && pages > 1)) {
+      // ("Page 2" labels only in the scrolling layout; the swipe layout has its own "2 / 5" counter.)
+      if (item.caption || (item.kind === "image" && pages > 1 && !(options && options.layout === "swipe"))) {
         var cap = item.caption || "Page " + pageNo;
         figure.appendChild(el("figcaption", { class: "mono muted" }, cap));
       }
-      box.appendChild(figure);
+      figures.push(figure);
     });
+    if (options && options.layout === "swipe" && figures.length > 1) {
+      box.classList.add("is-swipe");
+      box.appendChild(MW.carousel(figures, title));
+    } else {
+      figures.forEach(function (f) { box.appendChild(f); });
+    }
     return box;
+  };
+
+  // A swipeable row of pictures and clips: swipe (or use the arrows / dots / keyboard) to move
+  // left and right, with a "2 / 5" counter. A clip pauses when you swipe away from it.
+  MW.carousel = function (figures, title) {
+    var el = MW.el;
+    var n = figures.length;
+    var wrap = el("div", { class: "media-carousel", role: "region", "aria-roledescription": "carousel", "aria-label": (title || "Post") + ", " + n + " pictures and clips" });
+    var track = el("div", { class: "carousel-track", tabindex: "0" });
+    figures.forEach(function (f, i) {
+      f.classList.add("carousel-slide");
+      f.setAttribute("role", "group");
+      f.setAttribute("aria-roledescription", "slide");
+      f.setAttribute("aria-label", (i + 1) + " of " + n);
+      track.appendChild(f);
+    });
+    var prev = el("button", { type: "button", class: "carousel-arrow carousel-prev", "aria-label": "Previous" }, "‹");
+    var next = el("button", { type: "button", class: "carousel-arrow carousel-next", "aria-label": "Next" }, "›");
+    var count = el("span", { class: "carousel-count mono", "aria-live": "polite" }, "1 / " + n);
+    var dots = el("div", { class: "carousel-dots" });
+    var dotButtons = figures.map(function (f, i) {
+      var d = el("button", { type: "button", class: "carousel-dot", "aria-label": "Go to " + (i + 1) });
+      d.addEventListener("click", function () { go(i); });
+      dots.appendChild(d);
+      return d;
+    });
+    var current = 0;
+    function go(i) {
+      i = Math.max(0, Math.min(n - 1, i));
+      track.scrollTo({ left: i * track.clientWidth, behavior: "smooth" });
+    }
+    function update() {
+      var i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+      if (i === current && count.textContent !== "") { /* still refresh below */ }
+      current = Math.max(0, Math.min(n - 1, i));
+      count.textContent = (current + 1) + " / " + n;
+      dotButtons.forEach(function (d, k) { d.classList.toggle("is-active", k === current); d.setAttribute("aria-current", k === current ? "true" : "false"); });
+      prev.disabled = current === 0;
+      next.disabled = current === n - 1;
+      figures.forEach(function (f, k) {
+        if (k === current) return;
+        f.querySelectorAll("video, audio").forEach(function (m) { if (!m.paused) m.pause(); });
+      });
+    }
+    var raf = null;
+    track.addEventListener("scroll", function () { if (raf) cancelAnimationFrame(raf); raf = requestAnimationFrame(update); }, { passive: true });
+    prev.addEventListener("click", function () { go(current - 1); });
+    next.addEventListener("click", function () { go(current + 1); });
+    track.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowRight") { e.preventDefault(); go(current + 1); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); go(current - 1); }
+    });
+    wrap.append(track, prev, next);
+    var bar = el("div", { class: "carousel-bar" });
+    bar.append(dots, count);
+    wrap.appendChild(bar);
+    setTimeout(update, 0);
+    return wrap;
   };
 })();

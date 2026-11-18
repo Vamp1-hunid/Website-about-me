@@ -92,7 +92,7 @@
       done.appendChild(el("p", { class: "reserve-success" }, "🧪 Application sent!"));
       done.appendChild(el("p", { class: "lead" }, (d.keptReservation ? "You'll keep your name @" + d.username + ". " : "@" + d.username + " is yours" + (d.position ? " (#" + d.position + " on the list)" : "") + ". ") +
         (d.account || d.keptReservation ? "As soon as you're approved you can log in and start testing." : "If you're approved, we'll send a link to finish setting up your account.")));
-      try { localStorage.setItem("ch-reserved", d.username); } catch (e) { /* private mode */ }
+      try { localStorage.setItem("ch-reserved-here", d.username); } catch (e) { /* private mode */ }
     }).catch(function (e) {
       if (e.data && e.data.tooYoung) {
         form.textContent = "";

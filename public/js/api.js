@@ -172,7 +172,7 @@
 
   MW.categoryName = function (category) {
     return { "story-art": "Story art", anime: "Anime works", writing: "Writing", updates: "Update", news: "News",
-      art: "Art", comedy: "Comedy", film: "Live action film", series: "Series", meme: "Meme", thoughts: "Thoughts", poll: "Poll",
+      art: "Art", comedy: "Comedy", film: "Live action film", series: "Series", meme: "Meme", edit: "Edit", thoughts: "Thoughts", poll: "Poll",
       novel: "Novel", storybook: "Storybook", educational: "Educational", poetry: "Poetry", song: "Song & music", trailer: "Trailer", tutorial: "Tutorial" }[category] || category;
   };
 
@@ -341,6 +341,7 @@
     logout.addEventListener("click", async function () {
       logout.disabled = true;
       try {
+        try { localStorage.removeItem("ch-reserved-here"); localStorage.removeItem("ch-reserved"); } catch (e) { /* ignore */ }
         await MW.api("/account/logout", { method: "POST" });
       } catch (error) {
         // Even if it fails, reload so the page shows the real state.

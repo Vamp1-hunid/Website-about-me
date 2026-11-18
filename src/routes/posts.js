@@ -20,8 +20,8 @@ router.param("id", function (req, res, next, value) {
   next();
 });
 
-const CATEGORIES = ["story-art", "anime", "writing", "updates", "news", "art", "comedy", "film", "series", "meme", "thoughts", "poll", "novel", "storybook", "educational", "poetry", "song", "trailer", "tutorial"];
-const NEEDS_VISUAL = ["story-art", "anime", "art", "meme"];
+const CATEGORIES = ["story-art", "anime", "writing", "updates", "news", "art", "comedy", "film", "series", "meme", "thoughts", "poll", "novel", "storybook", "educational", "poetry", "song", "trailer", "tutorial", "edit"];
+const NEEDS_VISUAL = ["story-art", "anime", "art", "meme", "edit"];
 const SECTIONS = ["main", "concept-art"];
 const FONTS = ["theme", "serif", "typewriter", "handwritten", "clean"];
 
@@ -38,10 +38,10 @@ const SORTS = ["new", "old", "popular", "series"];
 const SHELVES = {
   books: ["novel", "storybook", "educational"],
   comics: ["story-art"],
-  art: ["art", "meme", "tutorial"],
+  art: ["art", "meme", "edit", "tutorial"],
   tutorials: ["tutorial"],
-  video: ["anime", "film", "series", "trailer"],
-  trailers: ["trailer"],
+  video: ["anime", "film", "series", "trailer", "edit"],
+  trailers: ["trailer", "edit"],
   series: ["series", "anime"],
   music: ["song", "poetry"],
   writing: ["writing", "thoughts", "poetry", "novel"],
@@ -119,6 +119,7 @@ function toPost(row, full) {
     logline: row.logline || "",
     section: row.section || "main",
     font: row.font || "theme",
+    layout: row.layout || "scroll",
     publishAt: row.publish_at,
     status: statusOf(row),
     reviewStatus: row.review_status || "approved",
@@ -616,6 +617,7 @@ async function validatePost(body, req) {
     logline: cleanText(body.logline),
     section: SECTIONS.includes(body.section) ? body.section : "main",
     font: FONTS.includes(body.font) ? body.font : "theme",
+    layout: body.layout === "swipe" ? "swipe" : "scroll",
     form: null,
     publishAt: parsePublishAt(body.publishAt),
     tags: cleanTags(body.tags),
@@ -762,8 +764,8 @@ async function savePost(req, res, existingRow) {
       );
       postId = inserted.rows[0].id;
     }
-    await client.query("UPDATE posts SET genres = $1, content_rating = $3, strong_language = $4, visibility = $5 WHERE id = $2",
-      [values.genres, postId, values.contentRating, values.strongLanguage, values.visibility]);
+    await client.query("UPDATE posts SET genres = $1, content_rating = $3, strong_language = $4, visibility = $5, layout = $6 WHERE id = $2",
+      [values.genres, postId, values.contentRating, values.strongLanguage, values.visibility, values.layout]);
     collabInvites = await syncCollaborators(client, postId, req.session.user.id, values.collaborators);
     for (let i = 0; i < media.items.length; i++) {
       const m = media.items[i];

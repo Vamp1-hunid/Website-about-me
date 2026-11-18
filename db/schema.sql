@@ -365,7 +365,7 @@ ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_category_check;
 ALTER TABLE posts ADD CONSTRAINT posts_category_check CHECK (category IN (
   'story-art', 'anime', 'writing', 'updates', 'news',
   'art', 'comedy', 'film', 'series', 'meme', 'thoughts', 'poll',
-  'novel', 'storybook', 'educational', 'poetry', 'song', 'trailer', 'tutorial'));
+  'novel', 'storybook', 'educational', 'poetry', 'song', 'trailer', 'tutorial', 'edit'));
 
 -- Polls and questionnaires attached to a post (questions, options, when results show).
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS form JSONB;
@@ -749,3 +749,9 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS push_subscriptions_user_idx ON push_subscriptions (user_id);
+
+-- v35: how a post with several pictures and clips shows them: 'scroll' (down, like a manga chapter)
+-- or 'swipe' (left and right, like a carousel). Plus the 'edit' category (fan edits / promo edits).
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS layout VARCHAR(10) NOT NULL DEFAULT 'scroll';
+ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_layout_check;
+ALTER TABLE posts ADD CONSTRAINT posts_layout_check CHECK (layout IN ('scroll', 'swipe'));
