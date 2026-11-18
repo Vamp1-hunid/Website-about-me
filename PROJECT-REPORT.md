@@ -2124,3 +2124,7 @@ never in the database: they would make it slow, costly and fill the 1 GB free st
 - **Reservation list:** "You're #N (@name)" showed the last account that logged in on that phone, even after logging
   out. It now shows only for the signed-in account, or for a name reserved with the form on that device, and logging
   out clears it.
+- **Share sheet** (`MW.share` in `public/js/api.js`): a "↗ Share" button on works, feed cards, stories and creator
+  pages opens one sheet: 🐝 Send to a buddy (pick buddies or recent chats, add a message, sent as a chat card for
+  works), WhatsApp, Telegram, Facebook, X, Email, 📲 More apps… (the phone's own share menu, where supported) and
+  🔗 Copy link. Visitors get everything except sending to a buddy. Replaces the old "Share in chat" box.

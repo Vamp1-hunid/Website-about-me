@@ -90,6 +90,11 @@
         actions.appendChild(el("a", { class: "btn btn-ghost btn-small", href: "/hub/chat?with=" + encodeURIComponent(c.username) }, "💬 Message"));
       }
     }
+    var shareCreator = el("button", { type: "button", class: "btn btn-ghost btn-small" }, "↗ Share");
+    shareCreator.addEventListener("click", function () {
+      MW.share({ title: c.name + " (@" + c.handle + ")", text: "Check out " + c.name + " on Chapterhive", url: "/hub/c/" + encodeURIComponent(c.handle) });
+    });
+    actions.appendChild(shareCreator);
     top.appendChild(actions);
     body.appendChild(top);
     if (c.status !== "approved") body.appendChild(el("p", { class: "draft-flag mono" }, "Profile " + c.status.toUpperCase() + ": only you can see it"));

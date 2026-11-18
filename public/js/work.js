@@ -33,49 +33,6 @@
     return "/hub/w/" + encodeURIComponent(post.slug);
   }
 
-  // "Share in chat": pick a recent conversation or type a username, add a note, send.
-  function openShare(parent) {
-    var old = parent.querySelector(".share-box");
-    if (old) { old.remove(); return; }
-    var box = el("form", { class: "share-box panel-inset", novalidate: "" });
-    box.appendChild(el("p", { class: "node-label" }, "Share in chat"));
-    var to = el("input", { type: "text", placeholder: "@username", "aria-label": "Send to (username)", autocapitalize: "none", spellcheck: "false" });
-    var recent = el("div", { class: "share-recent" });
-    var note = el("textarea", { rows: "2", maxlength: "500", placeholder: "Add a note (optional)", "aria-label": "Note" });
-    var send = el("button", { type: "submit", class: "btn-small" }, "Send");
-    var fb = el("p", { class: "feedback", "aria-live": "polite" });
-    box.append(recent, to, note, send, fb);
-    parent.appendChild(box);
-    to.focus();
-    MW.api("/chat/threads").then(function (d) {
-      d.threads.slice(0, 6).forEach(function (t) {
-        var chip = el("button", { type: "button", class: "chip" }, "@" + t.with.username);
-        chip.addEventListener("click", function () { to.value = t.with.username; });
-        recent.appendChild(chip);
-      });
-    }).catch(function (e) {
-      if (e.data && e.data.code === "needs-birth-date") fb.textContent = e.data.error;
-    });
-    box.addEventListener("submit", async function (event) {
-      event.preventDefault();
-      var username = to.value.trim().replace(/^@/, "");
-      if (!username) { fb.textContent = "Who should get it?"; return; }
-      send.disabled = true;
-      try {
-        var t = await MW.api("/chat/threads", { method: "POST", json: { username: username } });
-        await MW.api("/chat/threads/" + t.id + "/messages", { method: "POST", json: { body: note.value.trim(), postSlug: post.slug } });
-        box.textContent = "";
-        var done = el("p", { class: "feedback feedback-success" }, "Shared with @" + username + ". ");
-        done.appendChild(el("a", { href: "/hub/chat?t=" + t.id }, "Open chat"));
-        box.appendChild(done);
-      } catch (error) {
-        fb.className = "feedback feedback-error";
-        fb.textContent = error.message;
-        send.disabled = false;
-      }
-    });
-  }
-
   function actionButton(label, pressed, count) {
     var button = el("button", { class: "btn btn-ghost btn-small", type: "button", "aria-pressed": String(pressed) });
     button.textContent = count === undefined ? label : label + " · " + count;
@@ -165,11 +122,16 @@
     var likeBtn = actionButton(post.liked ? "♥ Liked" : "♡ Like", post.liked, post.likes);
     var saveBtn = actionButton(post.favourited ? "★ Saved" : "☆ Save", post.favourited);
     actions.append(likeBtn, saveBtn);
-    if (user && post.status === "live" && MW.feature("chat")) {
-      var share = el("button", { class: "btn btn-ghost btn-small", type: "button" }, "💬 Share in chat");
-      share.addEventListener("click", function () { openShare(info); });
+    if (post.status === "live") {
+      // Share: to a buddy in chat, WhatsApp and other apps, or copy the link (anyone can share).
+      var share = el("button", { class: "btn btn-ghost btn-small", type: "button" }, "↗ Share");
+      var openSheet = function () {
+        MW.share({ title: post.title, text: post.title + (post.creator ? " by " + post.creator.name : "") + " on Chapterhive",
+          url: MW.workUrl(post), postSlug: post.slug });
+      };
+      share.addEventListener("click", openSheet);
       actions.appendChild(share);
-      if (window.location.hash === "#share") setTimeout(function () { openShare(info); share.scrollIntoView({ block: "center" }); }, 50);
+      if (window.location.hash === "#share") setTimeout(openSheet, 300);
     }
     if (post.isMine) {
       var editHref = !MW.isHub && user && user.role === "admin" ? "/admin?edit=" + post.id : "/hub/studio?edit=" + post.id;
