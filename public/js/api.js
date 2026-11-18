@@ -716,6 +716,8 @@
         items.unshift([MW.adminUrl("#settings"), "Site settings"]);
         items.unshift([MW.adminUrl(""), "Dashboard"]);
       }
+      // 👥 Members: the owner always; anyone else only if the owner gives them the "Members list" power.
+      if (user && ((MW.account && MW.account.isOwner) || perms.indexOf("view_members") >= 0)) items.unshift(["/hub/member-list", "👥 All members"]);
       // Your own account links (profile, edit profile, settings) always come first, above the admin and staff tools.
       if (user) {
         var ACCOUNT = ["/hub/u/" + encodeURIComponent(user.username), "/hub/profile", "/hub/settings"];

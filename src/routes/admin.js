@@ -32,6 +32,14 @@ const STAFF_ROUTES = [
 router.use(function (req, res, next) {
   if (/^\/(series|characters|media|import-document)(\/|$)/.test(req.path)) return requireCreator(req, res, next);
   if (/^\/staff(\/|$)/.test(req.path)) return staff.requireOwner(req, res, next);
+  // 👥 All members: the owner, or whoever the owner gave the "Members list" power (admins included only if given it).
+  if (req.path === "/members") {
+    if (!req.session.user) return res.status(401).json({ error: "Please log in first." });
+    return staff.canSeeMembers(req.session.user.id).then(function (ok) {
+      if (ok) return next();
+      res.status(403).json({ error: "Only the owner can see the full members list." });
+    }).catch(next);
+  }
   if (req.session.user && req.session.user.role !== "admin") {
     const match = STAFF_ROUTES.find(function (r) { return r[0].test(req.path); });
     if (match) return staff.requireStaff.apply(null, match[1])(req, res, next);
@@ -832,6 +840,61 @@ router.post("/reviews/:id", async function (req, res) {
   res.json({ ok: true, status: decision === "approve" ? "approved" : "declined" });
 });
 
+/* ---------- 👥 All members (owner, or anyone given the "Members list" power) ---------- */
+
+// GET /api/admin/members?q=&filter=all|team|creators|beta|new|reserved&sort=relevance|newest|active|followers&page=
+// "Relevance": with a search, closest name matches first; then the team, creators, beta testers, and the most
+// followed and active members, so the people who matter most to the site are at the top.
+router.get("/members", async function (req, res) {
+  const q = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase().replace(/^@/, "").slice(0, 40) : "";
+  const like = q.replace(/[%_\\]/g, " ").replace(/\s+/g, " ").trim();
+  const filter = ["team", "creators", "beta", "new", "suspended"].includes(req.query.filter) ? req.query.filter : "all";
+  const sort = ["newest", "active", "followers"].includes(req.query.sort) ? req.query.sort : "relevance";
+  const page = Math.max(1, Math.min(500, Number(req.query.page) || 1));
+  const size = 30;
+  const where = ["($1 = '' OR ch_match(u.username, $1) OR ch_match(u.display_name, $1) OR ch_match(cp.handle, $1))"];
+  if (filter === "team") where.push("(u.role = 'admin' OR cardinality(u.staff_perms) > 0 OR u.is_owner)");
+  if (filter === "creators") where.push("cp.status = 'approved'");
+  if (filter === "beta") where.push("u.is_beta");
+  if (filter === "new") where.push("u.created_at > NOW() - INTERVAL '7 days'");
+  if (filter === "suspended") where.push("u.status <> 'active'");
+  const ORDER = {
+    relevance: `(CASE WHEN $1 = '' THEN 0 WHEN lower(u.username) = $1 THEN 0 WHEN lower(u.username) LIKE $1 || '%' THEN 1
+                      WHEN lower(coalesce(u.display_name, '')) LIKE $1 || '%' THEN 2 ELSE 3 END),
+                u.is_owner DESC, (u.role = 'admin' OR cardinality(u.staff_perms) > 0) DESC, (u.creator_status = 'approved') DESC NULLS LAST,
+                u.is_beta DESC, (followers + posts * 2) DESC, u.last_seen_at DESC NULLS LAST, u.created_at DESC`,
+    newest: "u.created_at DESC",
+    active: "u.last_seen_at DESC NULLS LAST, u.created_at DESC",
+    followers: "followers DESC, posts DESC, u.created_at DESC"
+  };
+  const { rows } = await db.query(
+    `SELECT * FROM (
+       SELECT u.id, u.username, u.display_name, u.avatar_url, u.role, u.is_owner, u.is_beta, u.staff_perms, u.status,
+              u.created_at, u.last_seen_at, u.streak_count, cp.handle, cp.status AS creator_status,
+              (SELECT COUNT(*) FROM follows f WHERE f.creator_id = u.id)::int AS followers,
+              (SELECT COUNT(*) FROM posts p WHERE p.user_id = u.id AND p.published)::int AS posts,
+              COUNT(*) OVER ()::int AS total
+         FROM users u LEFT JOIN creator_profiles cp ON cp.user_id = u.id
+        WHERE ${where.join(" AND ")}) u
+      ORDER BY ${ORDER[sort]}
+      LIMIT ${size} OFFSET ${(page - 1) * size}`, [like]);
+  const counts = (await db.query(
+    `SELECT COUNT(*)::int AS everyone,
+            COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')::int AS new_this_week,
+            COUNT(*) FILTER (WHERE last_seen_at > NOW() - INTERVAL '1 day')::int AS active_today
+       FROM users`)).rows[0];
+  res.json({
+    total: rows.length ? rows[0].total : 0, page: page, pages: rows.length ? Math.ceil(rows[0].total / size) : 0,
+    counts: { everyone: counts.everyone, newThisWeek: counts.new_this_week, activeToday: counts.active_today },
+    people: rows.map(function (u) {
+      return { username: u.username, displayName: u.display_name, avatarUrl: storage.avatarUrl(u.avatar_url) || null,
+        isOwner: u.is_owner, isAdmin: u.role === "admin", isStaff: (u.staff_perms || []).length > 0, isBeta: u.is_beta,
+        creatorHandle: u.creator_status === "approved" ? u.handle : null, status: u.status,
+        joined: u.created_at, lastSeenAt: u.last_seen_at, streak: u.streak_count, followers: u.followers, posts: u.posts };
+    })
+  });
+});
+
 /* ---------- Manage users ---------- */
 
 // GET /api/admin/users?q=&status=active|suspended|banned|beta|creators&page=
@@ -949,6 +1012,36 @@ router.get("/staff", async function (req, res) {
     people: rows.map(function (u) {
       return { id: u.id, username: u.username, displayName: u.display_name, isOwner: u.is_owner, isAdmin: u.role === "admin",
         isBeta: u.is_beta, powers: u.staff_perms || [], status: u.status, lastSeenAt: u.last_seen_at };
+    })
+  });
+});
+
+// GET /api/admin/staff/people?q=&filter=all|team|beta|creators&page=1  (owner only)
+// Everyone, with their current powers, so the owner can give powers straight from the list.
+router.get("/staff/people", async function (req, res) {
+  const q = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase().replace(/^@/, "").slice(0, 40) : "";
+  const like = q.replace(/[%_\\]/g, " ").replace(/\s+/g, " ").trim();
+  const filter = ["team", "beta", "creators"].includes(req.query.filter) ? req.query.filter : "all";
+  const page = Math.max(1, Math.min(200, Number(req.query.page) || 1));
+  const size = 30;
+  const where = ["u.status <> 'banned'", "($1 = '' OR ch_match(u.username, $1) OR ch_match(u.display_name, $1))"];
+  if (filter === "team") where.push("(u.role = 'admin' OR cardinality(u.staff_perms) > 0 OR u.is_owner)");
+  if (filter === "beta") where.push("u.is_beta");
+  if (filter === "creators") where.push("cp.user_id IS NOT NULL");
+  const { rows } = await db.query(
+    `SELECT u.id, u.username, u.display_name, u.avatar_url, u.role, u.is_owner, u.is_beta, u.staff_perms, u.status, u.last_seen_at,
+            cp.handle AS creator_handle, COUNT(*) OVER ()::int AS total
+       FROM users u LEFT JOIN creator_profiles cp ON cp.user_id = u.id AND cp.status = 'approved'
+      WHERE ${where.join(" AND ")}
+      ORDER BY u.is_owner DESC, (u.role = 'admin') DESC, (cardinality(u.staff_perms) > 0) DESC, u.is_beta DESC,
+               u.last_seen_at DESC NULLS LAST, u.username
+      LIMIT ${size} OFFSET ${(page - 1) * size}`, [like]);
+  res.json({
+    total: rows.length ? rows[0].total : 0, page: page, pages: rows.length ? Math.ceil(rows[0].total / size) : 0,
+    people: rows.map(function (u) {
+      return { username: u.username, displayName: u.display_name, avatarUrl: storage.avatarUrl(u.avatar_url) || null,
+        isOwner: u.is_owner, isAdmin: u.role === "admin", isBeta: u.is_beta, isCreator: Boolean(u.creator_handle),
+        powers: u.staff_perms || [], status: u.status, lastSeenAt: u.last_seen_at };
     })
   });
 });

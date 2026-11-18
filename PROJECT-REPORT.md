@@ -2129,3 +2129,20 @@ never in the database: they would make it slow, costly and fill the 1 GB free st
   works), WhatsApp, Telegram, Facebook, X, Email, 📲 More apps… (the phone's own share menu, where supported) and
   🔗 Copy link. Members only: visitors who aren't logged in see no Share buttons (like downloads, videos and
   comments). Replaces the old "Share in chat" box.
+
+### Version 36 (18 November 2026): easier Team & powers, 👥 All members
+
+- **Team & powers** (Dashboard, owner only) is now a list of everyone, with search and filters (Everyone, The team,
+  Beta testers, Creators). Each person has a row of power chips: tap one to give or take that power, saved straight
+  away. "Give a set of powers…" adds a ready-made set (Moderator, Reviewer, Community helper, or every staff power);
+  "Take all powers away" clears them; full admins can have their admin rights removed. API:
+  `GET /api/admin/staff/people?q=&filter=&page=`.
+- **👥 All members** (`/hub/member-list`, in the ⋮ menu): every account with totals (members, new this week, active
+  today), search by name, @username or creator handle, filters (Team, Creators, Beta testers, New this week,
+  Suspended / banned) and sorting (Relevance, Recently active, Newest, Most followers). "Relevance" puts the closest
+  name matches first, then the team, creators, beta testers, and the most followed and active members. Each row shows
+  join date, last seen, followers, posts and streak, with a **🛡️ Powers** button (owner only) that opens Team & powers
+  already searched to that person. API: `GET /api/admin/members`.
+- **New power "👥 Members list"** (`view_members`): only the owner sees All members unless the owner gives this power,
+  full admins included. The 🔨 power that warns, suspends and bans is now labelled "Moderate" so the two aren't
+  confused. The public "👥 Find members" page is unchanged.

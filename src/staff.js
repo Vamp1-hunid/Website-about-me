@@ -12,7 +12,8 @@ const PERMS = [
   ["manage_reservations", "Manage reservations", "See the reserved usernames list (with emails), download it, send claim links and release names."],
   ["handle_reports", "Handle reports", "Deal with reported posts, comments and chat messages."],
   ["moderate_users", "Moderate members", "Warn, suspend or ban members (never admins or other staff)."],
-  ["post_updates", "Post updates", "Write and remove announcements (News & updates)."]
+  ["post_updates", "Post updates", "Write and remove announcements (News & updates)."],
+  ["view_members", "Members list", "Open 👥 Members from the menu: everyone on Chapterhive, sorted by relevance. Only the owner has it unless given."]
 ];
 const KEYS = PERMS.map(function (p) { return p[0]; });
 
@@ -58,4 +59,10 @@ async function staffIds(perm) {
   return rows.map(function (r) { return r.id; });
 }
 
-module.exports = { PERMS, KEYS, permsOf, can, requireStaff, requireOwner, staffIds };
+// The members list is the owner's by default: full admins need the power given to them like anyone else.
+async function canSeeMembers(userId) {
+  const p = await permsOf(userId);
+  return p.owner || p.perms.indexOf("view_members") >= 0;
+}
+
+module.exports = { canSeeMembers, PERMS, KEYS, permsOf, can, requireStaff, requireOwner, staffIds };
