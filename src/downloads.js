@@ -2,13 +2,13 @@
 // Who can download videos, audio and pictures from works (Dashboard → Settings → Downloads).
 // Everyone else can stream and view as usual, but gets no download button, and the video player's
 // own "Download" menu item is hidden for them.
-// Groups the owner can switch on, any mix: premium (Premium plan members), team (admins and staff),
-// beta (beta testers). The creator of a work can always download their own files.
+// Groups the owner can switch on, any mix: members (every logged-in member), premium (Premium plan
+// members), team (admins and staff), beta (beta testers). Visitors who aren't logged in never can. The creator of a work can always download their own files.
 
 const db = require("./db");
 const { planOf } = require("./plans");
 
-const GROUPS = ["premium", "team", "beta"];
+const GROUPS = ["members", "premium", "team", "beta"];
 
 async function readSetting() {
   const { rows } = await db.query("SELECT value FROM app_settings WHERE key = 'downloads'");
@@ -34,6 +34,7 @@ async function canDownload(userId, ownerId) {
   if (ownerId && userId === ownerId) return true;
   const { groups } = await readSetting();
   if (!groups.length) return false;
+  if (groups.includes("members")) return true; // any logged-in member
   const u = (await db.query("SELECT role, is_beta, plan, plan_until, staff_perms FROM users WHERE id = $1", [userId])).rows[0];
   if (!u) return false;
   if (groups.includes("team") && (u.role === "admin" || (u.staff_perms && u.staff_perms.length))) return true;

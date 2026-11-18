@@ -492,7 +492,7 @@
       try {
         var d = await MW.api("/admin/downloads", { method: "PUT", json: { groups: groups } });
         fb.className = "feedback feedback-success";
-        var names = { premium: "Premium members", team: "the team", beta: "beta testers" };
+        var names = { members: "all members", premium: "Premium members", team: "the team", beta: "beta testers" };
         fb.textContent = d.groups.length ? "Saved. Downloads are on for " + d.groups.map(function (g) { return names[g]; }).join(", ") + "."
           : "Saved. Downloads are off (only creators can download their own files).";
       } catch (e) {
