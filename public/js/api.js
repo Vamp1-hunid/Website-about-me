@@ -778,7 +778,7 @@
   }
 
 
-  /* ---------- "Fund the heist": the support / donation button ----------
+  /* ---------- "Feed the hive": the support / donation button (a honey pot) ----------
      Shown only when the site owner switches it on in Dashboard -> Settings. */
 
   function supportMethod(m) {
@@ -823,7 +823,7 @@
     if (!support.enabled) {
       MW.me().then(function (user) {
         if (!user || user.role !== "admin" || document.querySelector(".heist-setup")) return;
-        var b = el("a", { class: "heist-button heist-setup", href: MW.adminUrl("#settings"), title: "Only you can see this" }, "Fund the heist: set it up");
+        var b = el("a", { class: "heist-button heist-setup", href: MW.adminUrl("#settings"), title: "Only you can see this" }, "Feed the hive: set it up");
         document.body.appendChild(b);
       });
       return;
@@ -834,7 +834,7 @@
     var top = el("div", { class: "heist-top" });
     top.appendChild(el("span", { class: "heist-bag heist-bag-big", "aria-hidden": "true" }));
     var heading = el("div");
-    heading.appendChild(el("p", { class: "node-label" }, "Crew // heist fund"));
+    heading.appendChild(el("p", { class: "node-label" }, "Hive // honey pot"));
     heading.appendChild(el("h2", { id: "heist-title" }, support.title));
     top.appendChild(heading);
     dialog.appendChild(top);
@@ -843,7 +843,7 @@
     support.methods.forEach(function (m) { list.appendChild(supportMethod(m)); });
     dialog.appendChild(list);
     dialog.appendChild(el("p", { class: "muted heist-note" },
-      "Payments are handled by each service above; this site never sees your card or account details. Thank you for backing the crew."));
+      "Payments are handled by each service above; Chapterhive never sees your card or account details. Thank you for keeping the hive buzzing 🐝"));
     var close = el("form", { method: "dialog" });
     close.appendChild(el("button", { type: "submit", class: "btn btn-ghost" }, "Close"));
     dialog.appendChild(close);
@@ -884,7 +884,7 @@
     if (window.location.hash === "#fund") open();
   }
 
-  // The support ("Fund the heist") button shows once the "hub_support" feature is on.
+  // The support ("Feed the hive") button shows once the "hub_support" feature is on.
   MW.me().then(function () {
     if (!MW.isHub || MW.feature("hub_support")) MW.api("/support").then(buildSupport).catch(function () {});
   });
