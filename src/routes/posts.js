@@ -540,6 +540,8 @@ router.get("/:slug", async function (req, res) {
   post.showEdited = Boolean(isAdmin);
   post.media = await mediaFor(row.id);
   post.nav = await neighbours(row);
+  // Download button: only for the groups chosen in Dashboard → Settings → Downloads (and the work's creator).
+  post.canDownload = await require("../downloads").canDownload(userId, row.user_id);
   // Visitors without an account get a preview: the opening of the text and the first few images.
   // Video, audio, documents and forms stay locked until they sign up.
   if (!userId) guestPreview(post);

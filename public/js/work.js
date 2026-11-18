@@ -231,6 +231,10 @@
       link.appendChild(el("img", { src: media[0].url, alt: media[0].caption || post.title }));
       figure.appendChild(link);
       if (media[0].caption) figure.appendChild(el("figcaption", { class: "mono muted" }, media[0].caption));
+      if (post.canDownload) {
+        figure.appendChild(el("a", { class: "btn btn-small btn-ghost media-download", href: MW.downloadUrl(media[0].originalUrl || media[0].url),
+          download: "", rel: "noopener" }, "⬇ Download picture"));
+      }
       layout.appendChild(figure);
       if (MW.profile) {
         MW.profile(figure, {
@@ -258,7 +262,7 @@
       var head = el("div", { class: "work-head" });
       renderHeader(head);
       article.appendChild(head);
-      if (media.length) article.appendChild(MW.renderMedia(media, post.title));
+      if (media.length) article.appendChild(MW.renderMedia(media, post.title, { canDownload: post.canDownload }));
       renderBody(article, true);
       renderDocuments(article);
       if (post.form && MW.renderPoll && !viewOnly()) MW.renderPoll(article, post);

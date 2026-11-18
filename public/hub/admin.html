@@ -609,6 +609,21 @@
           </form>
         </div>
         <div class="panel">
+          <p class="node-label">Settings // downloads</p>
+          <h2>Who can download</h2>
+          <p class="muted">Everyone can stream videos and view pictures. Tick who also gets a <b>⬇ Download</b> button under videos, audio and pictures (creators can always download their own). For everyone else the player's own download option is hidden.</p>
+          <form id="downloads-form" novalidate>
+            <fieldset class="form-row audience-picks"><legend>Allow downloads for</legend>
+              <label class="check-row"><input type="checkbox" value="premium"> 💎 Premium members</label>
+              <label class="check-row"><input type="checkbox" value="team"> 🛡️ The team (admins and staff)</label>
+              <label class="check-row"><input type="checkbox" value="beta"> 🧪 Beta testers</label>
+            </fieldset>
+            <button type="submit">Save downloads</button>
+            <p class="feedback" id="downloads-feedback" aria-live="polite"></p>
+          </form>
+        </div>
+
+        <div class="panel">
           <p class="node-label">Settings // feed the hive</p>
           <h2>Support button</h2>
           <p class="muted">A "buy me a coffee"-style loot-bag button on every page. Add the ways people can send you money, then switch it on.</p>

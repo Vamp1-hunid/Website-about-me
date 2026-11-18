@@ -474,4 +474,30 @@
     }
   });
   ADMIN.onShow("settings", loadSupport);
+
+  /* =================== Downloads: who gets a download button =================== */
+
+  var dlForm = field("downloads-form");
+  if (dlForm) {
+    var dlBoxes = function () { return dlForm.querySelectorAll("input[type='checkbox']"); };
+    ADMIN.onShow("settings", function () {
+      MW.api("/admin/downloads").then(function (d) {
+        dlBoxes().forEach(function (b) { b.checked = d.groups.indexOf(b.value) !== -1; });
+      }).catch(function () {});
+    });
+    dlForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      var fb = field("downloads-feedback");
+      var groups = Array.prototype.filter.call(dlBoxes(), function (b) { return b.checked; }).map(function (b) { return b.value; });
+      try {
+        var d = await MW.api("/admin/downloads", { method: "PUT", json: { groups: groups } });
+        fb.className = "feedback feedback-success";
+        var names = { premium: "Premium members", team: "the team", beta: "beta testers" };
+        fb.textContent = d.groups.length ? "Saved. Downloads are on for " + d.groups.map(function (g) { return names[g]; }).join(", ") + "."
+          : "Saved. Downloads are off (only creators can download their own files).";
+      } catch (e) {
+        fb.className = "feedback feedback-error"; fb.textContent = e.message;
+      }
+    });
+  }
 })();

@@ -211,9 +211,65 @@
 
   /* ---------- Media: pictures (as a reader), video and audio ---------- */
 
-  // Builds the media section of a work. Several pictures read top to bottom, like a manga chapter.
-  MW.renderMedia = function (media, title) {
+  // A link that saves the file instead of opening it (Cloudinary files get its "attachment" flag).
+  MW.downloadUrl = function (url) {
+    if (/^https:\/\/res\.cloudinary\.com\/[^/]+\/(image|video|raw)\/upload\//.test(url || "")) {
+      return url.replace("/upload/", "/upload/fl_attachment/");
+    }
+    return url;
+  };
+
+  MW.isCloudinary = function (url) { return /^https:\/\/res\.cloudinary\.com\//.test(url || ""); };
+
+  // ⛶ Fullscreen for a video (also works on iPhones, which only allow the video itself to go fullscreen).
+  MW.fullscreenButton = function (video) {
+    var b = MW.el("button", { type: "button", class: "btn btn-small btn-ghost media-fullscreen", "aria-label": "Watch fullscreen" }, "⛶ Fullscreen");
+    b.addEventListener("click", function () {
+      var box = video.closest("figure") || video;
+      try {
+        if (document.fullscreenElement) return document.exitFullscreen();
+        if (box.requestFullscreen) {
+          box.requestFullscreen().then(function () {
+            // Phones: turn sideways for a widescreen picture (ignored where not allowed).
+            if (screen.orientation && screen.orientation.lock) screen.orientation.lock("landscape").catch(function () {});
+          }).catch(function () { if (video.webkitEnterFullscreen) video.webkitEnterFullscreen(); });
+        } else if (video.webkitEnterFullscreen) {
+          video.webkitEnterFullscreen();
+        }
+        if (video.paused) video.play().catch(function () {});
+      } catch (e) { /* the player's own fullscreen still works */ }
+    });
+    return b;
+  };
+
+  // Video download with a quality choice. Cloudinary makes the smaller versions on request
+  // (the first download of a size can take a moment while it's prepared).
+  MW.VIDEO_QUALITIES = [["original", "Original quality"], ["1080", "1080p (Full HD)"], ["720", "720p (HD)"], ["480", "480p (saves data)"], ["360", "360p (smallest)"]];
+  MW.videoQualityUrl = function (url, quality) {
+    if (!MW.isCloudinary(url) || quality === "original") return MW.downloadUrl(url);
+    return url.replace("/upload/", "/upload/fl_attachment,c_limit,h_" + quality + ",q_auto,vc_auto/").replace(/\.(mov|webm|mkv|avi|m4v)(\?|$)/i, ".mp4$2");
+  };
+  MW.videoDownload = function (url) {
     var el = MW.el;
+    var wrap = el("div", { class: "media-download-quality" });
+    var id = "dlq-" + Math.random().toString(36).slice(2, 8);
+    wrap.appendChild(el("label", { class: "sr-only", for: id }, "Download quality"));
+    var select = el("select", { id: id, class: "media-quality" });
+    MW.VIDEO_QUALITIES.forEach(function (q) { select.appendChild(el("option", { value: q[0] }, q[1])); });
+    var link = el("a", { class: "btn btn-small btn-ghost media-download", download: "", rel: "noopener" }, "⬇ Download video");
+    function update() { link.href = MW.videoQualityUrl(url, select.value); }
+    select.addEventListener("change", update);
+    update();
+    wrap.append(select, link);
+    return wrap;
+  };
+
+  // Builds the media section of a work. Several pictures read top to bottom, like a manga chapter.
+  // options.canDownload: show a Download button under each video, audio and picture (Dashboard →
+  // Settings → Downloads decides who). Without it, the player's own download menu is hidden too.
+  MW.renderMedia = function (media, title, options) {
+    var el = MW.el;
+    var canDownload = Boolean(options && options.canDownload);
     var box = el("div", { class: "media-reader" });
     media = media.filter(function (m) { return m.kind !== "document" && m.role !== "cover"; });
     var pages = media.filter(function (m) { return m.kind === "image"; }).length;
@@ -229,14 +285,34 @@
         figure.appendChild(link);
       } else if (item.kind === "video") {
         var video = el("video", { controls: "", preload: "metadata", playsinline: "" });
+        if (!canDownload) {
+          video.setAttribute("controlslist", "nodownload");
+          video.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+        }
         if (item.thumbUrl) video.setAttribute("poster", item.thumbUrl);
         video.src = item.url;
         figure.appendChild(video);
       } else {
         var audio = el("audio", { controls: "", preload: "metadata" });
+        if (!canDownload) audio.setAttribute("controlslist", "nodownload");
         audio.src = item.url;
         figure.appendChild(audio);
       }
+      var tools = null;
+      if (item.kind === "video") {
+        tools = el("div", { class: "media-tools" });
+        tools.appendChild(MW.fullscreenButton(figure.querySelector("video")));
+      }
+      if (canDownload) {
+        tools = tools || el("div", { class: "media-tools" });
+        if (item.kind === "video" && MW.isCloudinary(item.url)) tools.appendChild(MW.videoDownload(item.originalUrl || item.url));
+        else {
+          var kindName = item.kind === "video" ? "video" : item.kind === "audio" ? "audio" : "picture";
+          tools.appendChild(el("a", { class: "btn btn-small btn-ghost media-download", href: MW.downloadUrl(item.originalUrl || item.url), download: "",
+            rel: "noopener", "aria-label": "Download this " + kindName }, "⬇ Download " + kindName));
+        }
+      }
+      if (tools) figure.appendChild(tools);
       if (item.caption || (item.kind === "image" && pages > 1)) {
         var cap = item.caption || "Page " + pageNo;
         figure.appendChild(el("figcaption", { class: "mono muted" }, cap));
