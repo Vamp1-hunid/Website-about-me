@@ -27,7 +27,7 @@ const TYPES = {
   posts: null,
   episodes: ["series", "anime"],
   films: ["film"],
-  art: ["art", "story-art", "comedy", "meme"],
+  art: ["art", "story-art", "comedy", "meme", "edit"],
   writing: ["writing", "thoughts", "novel", "poetry"],
   books: ["novel", "storybook", "educational"],
   music: ["song"],

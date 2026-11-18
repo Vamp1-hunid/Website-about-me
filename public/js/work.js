@@ -262,7 +262,7 @@
       var head = el("div", { class: "work-head" });
       renderHeader(head);
       article.appendChild(head);
-      if (media.length) article.appendChild(MW.renderMedia(media, post.title, { canDownload: post.canDownload }));
+      if (media.length) article.appendChild(MW.renderMedia(media, post.title, { canDownload: post.canDownload, layout: post.layout }));
       renderBody(article, true);
       renderDocuments(article);
       if (post.form && MW.renderPoll && !viewOnly()) MW.renderPoll(article, post);

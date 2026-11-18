@@ -94,7 +94,8 @@
     var items = media.items().filter(function (m) { return !m.uploading && m.url; });
     var shown = items.filter(function (m) { return m.role !== "cover" && m.kind !== "document"; })
       .map(function (m) { return { kind: m.kind, url: m.url, originalUrl: m.url, thumbUrl: m.thumbUrl, caption: m.caption, role: m.role }; });
-    if (shown.length) preview.appendChild(MW.renderMedia(shown, field("title").value || "Untitled"));
+    var layoutPick = document.querySelector("#layout-picks input:checked");
+    if (shown.length) preview.appendChild(MW.renderMedia(shown, field("title").value || "Untitled", { layout: layoutPick ? layoutPick.value : "scroll" }));
 
     if (body.value.trim()) {
       var prose = el("div", { class: "work-body prose font-" + field("font").value });
@@ -206,6 +207,7 @@
       if (document.getElementById("strongLanguage")) document.getElementById("strongLanguage").checked = Boolean(post.strongLanguage);
       if (field("collaborators")) field("collaborators").value = (post.invitedUsernames || []).map(function (u) { return "@" + u; }).join(", ");
       field("font").value = post.font || "theme";
+      document.querySelectorAll("#layout-picks input").forEach(function (r) { r.checked = r.value === (post.layout || "scroll"); });
       body.value = post.body;
       media.load(post.media);
       if (builder) { builder.load(post.form || null); builderWrap.open = Boolean(post.form); }
@@ -315,6 +317,7 @@
       strongLanguage: document.getElementById("strongLanguage") ? document.getElementById("strongLanguage").checked : false,
       collaborators: field("collaborators") ? field("collaborators").value.split(/[\s,]+/).filter(Boolean) : [],
       font: field("font").value,
+      layout: (document.querySelector("#layout-picks input:checked") || {}).value || "scroll",
       body: body.value,
       published: vis.published,
       publishAt: vis.publishAt,

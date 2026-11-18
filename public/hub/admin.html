@@ -25,7 +25,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=29">
-  <link rel="stylesheet" href="/css/chapterhive.css?v=37">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=38">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -142,6 +142,7 @@
                     <option value="trailer">Trailer or teaser</option>
                     <option value="tutorial">Tutorial or how-to</option>
                     <option value="meme">Meme</option>
+                    <option value="edit">Edit (fan edit, promo edit or AMV)</option>
                   </optgroup>
                   <optgroup label="Books">
                     <option value="novel">Novel or novella</option>
@@ -286,6 +287,11 @@
                 <p class="muted">Pictures up to 10 MB, video up to 100 MB, audio up to 50 MB, documents up to 10 MB. Several pictures read top to bottom like a manga chapter. Mark one picture ★ as the cover.</p>
               </div>
               <ol class="media-list" id="media-list" aria-live="polite"></ol>
+              <fieldset class="form-row audience-picks layout-picks" id="layout-picks">
+                <legend>With several pictures or clips, show them…</legend>
+                <label class="check-row"><input type="radio" name="layout" value="scroll" checked> ⬇ One under another (like a manga chapter)</label>
+                <label class="check-row"><input type="radio" name="layout" value="swipe"> ↔ Side by side: swipe left and right</label>
+              </fieldset>
               <p class="error" id="media-anchor-error"></p>
               <input type="hidden" name="media" id="media-anchor">
             </fieldset>
