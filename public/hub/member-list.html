@@ -25,7 +25,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=29">
-  <link rel="stylesheet" href="/css/chapterhive.css?v=40">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=43">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -77,7 +77,9 @@
           <button type="button" class="chip" data-filter="creators" aria-pressed="false">✍️ Creators</button>
           <button type="button" class="chip" data-filter="beta" aria-pressed="false">🧪 Beta testers</button>
           <button type="button" class="chip" data-filter="new" aria-pressed="false">🌱 New this week</button>
-          <button type="button" class="chip" data-filter="suspended" aria-pressed="false">⛔ Suspended / banned</button>
+          <button type="button" class="chip" data-filter="suspended" aria-pressed="false">⏸️ Suspended</button>
+          <button type="button" class="chip" data-filter="banned" aria-pressed="false">⛔ Banned</button>
+          <button type="button" class="chip" data-filter="blocked" aria-pressed="false">🚫 Blocked by members</button>
         </div>
         <label class="ml-sort">Sort by
           <select id="ml-sort">
@@ -102,6 +104,7 @@
   <script src="/js/api.js" defer></script>
   <script src="/js/script.js" defer></script>
   <script src="/js/markup.js" defer></script>
+  <script src="/js/music.js" defer></script>
   <script src="/js/hub.js" defer></script>
   <script src="/js/member-list.js" defer></script>
 </body>

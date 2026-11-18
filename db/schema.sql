@@ -755,3 +755,74 @@ CREATE INDEX IF NOT EXISTS push_subscriptions_user_idx ON push_subscriptions (us
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS layout VARCHAR(10) NOT NULL DEFAULT 'scroll';
 ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_layout_check;
 ALTER TABLE posts ADD CONSTRAINT posts_layout_check CHECK (layout IN ('scroll', 'swipe'));
+
+-- ===== v37: music on posts (sounds) and creators' 24-hour statuses =====
+-- A sound is a piece of music or audio people can put on a post or status. user_id NULL = the free library
+-- (royalty-free tracks the owner adds, with where they came from in license_note); otherwise a creator's own upload,
+-- which they confirmed they own or have the rights to (rights_confirmed).
+CREATE TABLE IF NOT EXISTS sounds (
+  id               SERIAL PRIMARY KEY,
+  user_id          INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  title            VARCHAR(80) NOT NULL,
+  artist           VARCHAR(80) NOT NULL DEFAULT '',
+  url              TEXT NOT NULL,
+  public_id        TEXT,
+  duration         REAL,
+  license_note     VARCHAR(300) NOT NULL DEFAULT '',
+  rights_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
+  seed_key         VARCHAR(40) UNIQUE,
+  uses             INTEGER NOT NULL DEFAULT 0,
+  removed          BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS sounds_user_idx ON sounds (user_id) WHERE NOT removed;
+
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS sound_id INTEGER REFERENCES sounds(id) ON DELETE SET NULL;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS sound_start REAL NOT NULL DEFAULT 0;
+
+-- Starter tracks for the free library: original pieces made for Chapterhive (free to use on the site).
+INSERT INTO sounds (title, artist, url, duration, license_note, rights_confirmed, seed_key) VALUES
+  ('Honey Drip', 'Chapterhive Sounds', '/sounds/honey-drip.mp3', 32, 'Original track made for Chapterhive. Free to use on Chapterhive.', TRUE, 'honey-drip'),
+  ('Hive Mind', 'Chapterhive Sounds', '/sounds/hive-mind.mp3', 32, 'Original track made for Chapterhive. Free to use on Chapterhive.', TRUE, 'hive-mind'),
+  ('Wingbeat', 'Chapterhive Sounds', '/sounds/wingbeat.mp3', 32, 'Original track made for Chapterhive. Free to use on Chapterhive.', TRUE, 'wingbeat'),
+  ('Night Shift', 'Chapterhive Sounds', '/sounds/night-shift.mp3', 32, 'Original track made for Chapterhive. Free to use on Chapterhive.', TRUE, 'night-shift')
+ON CONFLICT (seed_key) DO NOTHING;
+
+-- Statuses: a creator's picture, clip or text card that disappears after 24 hours (like WhatsApp Status /
+-- Instagram Stories). audience: 'members' (everyone logged in) or 'followers'.
+CREATE TABLE IF NOT EXISTS statuses (
+  id          SERIAL PRIMARY KEY,
+  user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind        VARCHAR(10) NOT NULL DEFAULT 'image',
+  media_url   TEXT,
+  public_id   TEXT,
+  text        VARCHAR(300) NOT NULL DEFAULT '',
+  bg          VARCHAR(20) NOT NULL DEFAULT 'honey',
+  caption     VARCHAR(300) NOT NULL DEFAULT '',
+  link_slug   VARCHAR(140),
+  sound_id    INTEGER REFERENCES sounds(id) ON DELETE SET NULL,
+  sound_start REAL NOT NULL DEFAULT 0,
+  audience    VARCHAR(12) NOT NULL DEFAULT 'members',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at  TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '24 hours'
+);
+ALTER TABLE statuses DROP CONSTRAINT IF EXISTS statuses_kind_check;
+ALTER TABLE statuses ADD CONSTRAINT statuses_kind_check CHECK (kind IN ('image', 'video', 'text'));
+ALTER TABLE statuses DROP CONSTRAINT IF EXISTS statuses_audience_check;
+ALTER TABLE statuses ADD CONSTRAINT statuses_audience_check CHECK (audience IN ('members', 'followers'));
+CREATE INDEX IF NOT EXISTS statuses_live_idx ON statuses (user_id, expires_at);
+
+CREATE TABLE IF NOT EXISTS status_views (
+  status_id INTEGER NOT NULL REFERENCES statuses(id) ON DELETE CASCADE,
+  user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  viewed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (status_id, user_id)
+);
+
+-- v37: automatic "what's new" announcements. Each entry in src/releases.js is posted once; its key is remembered
+-- here so deleting the announcement in the dashboard doesn't make it come back on the next deploy.
+CREATE TABLE IF NOT EXISTS release_log (
+  key             VARCHAR(60) PRIMARY KEY,
+  announcement_id INTEGER,
+  posted_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

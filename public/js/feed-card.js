@@ -122,6 +122,8 @@
     names.appendChild(el("span", { class: "muted" }, metaLine));
     who.appendChild(names);
     head.appendChild(who);
+    // 🎵 The post's music, under the name like on Instagram (tap to play).
+    if (post.sound && MW.musicChip) head.appendChild(MW.musicChip(post.sound, { small: true }));
     head.appendChild(moreMenu(post, user, card));
     card.appendChild(head);
 

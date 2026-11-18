@@ -2064,6 +2064,12 @@ login). This repo is Chapterhive only, so it can be run (or sold) on its own.
 
 ## Suggestions for later
 
+- **Licensed music library:** to offer real chart songs, use a licensed catalogue with an API (for example Epidemic
+  Sound or Soundstripe for businesses; both charge a monthly fee and have rules about how tracks may be used). Big
+  labels' catalogues (as on Instagram and TikTok) need direct deals with labels and publishers, which is only realistic
+  once Chapterhive is large. Until then: royalty-free library plus creators' own audio, and take down posts reported for
+  music the creator doesn't have rights to.
+
 Ideas that came up while building, roughly in the order they'll matter. Nothing here is done yet.
 
 ### Video storage and streaming
@@ -2146,3 +2152,39 @@ never in the database: they would make it slow, costly and fill the 1 GB free st
 - **New power "👥 Members list"** (`view_members`): only the owner sees All members unless the owner gives this power,
   full admins included. The 🔨 power that warns, suspends and bans is now labelled "Moderate" so the two aren't
   confused. The public "👥 Find members" page is unchanged.
+- **Suspended, banned and blocked members** are visible to the owner and anyone given the Members list power: filters
+  ⏸️ Suspended, ⛔ Banned and 🚫 Blocked by members, totals at the top, and on each row the reason, the end date of a
+  suspension and how many members have blocked them.
+
+### Version 37 (18 November 2026): 🎵 music, ⭕ statuses, automatic "what's new" announcements
+
+- **🎵 Music on posts** (`sounds` table, `src/routes/sounds.js`, `public/js/music.js`): Compose has a "🎵 Add music"
+  button that opens a sheet with three tabs: 🐝 **Free library** (royalty-free tracks for everyone), 📁 **My sounds** and
+  ⬆ **Upload** (MP3, M4A, WAV or OGG; the creator ticks that they made it or have the rights). The creator picks where
+  the track starts with a slider and can preview it; about 30 seconds play, then it loops. Posts show a
+  "▶ 🎵 Title · Artist" button (under the name on feed cards, above the pictures on the post page); only one track plays
+  at a time and a video starting pauses it. Admins can add tracks to the free library (with where each came from and
+  its licence) and remove them. Stored as `posts.sound_id` / `posts.sound_start`; a creator's own sounds can only be
+  used by them (or an admin).
+- **Starter library:** four original tracks made for Chapterhive (`public/sounds/`: Honey Drip (lo-fi), Hive Mind
+  (ambient), Wingbeat (upbeat), Night Shift (dark synth)), free to use on the site. Add more from royalty-free sites
+  such as Pixabay Music: download the track, then Upload with "Add to the free library" ticked and paste its link.
+- **Why no chart songs:** Instagram, TikTok and WhatsApp pay record labels and publishers for their music libraries.
+  Without those licences, popular songs can't be offered (posts using them can be taken down), so the library is
+  royalty-free tracks plus creators' own audio. See "Suggestions for later" for a paid licensed library.
+- **⭕ Statuses** (`statuses` and `status_views` tables, `src/routes/statuses.js`, `public/js/statuses.js`): approved
+  creators (and admins) post a picture, a clip of up to 60 seconds, or a text card (6 backgrounds), with an optional
+  caption and music, for everyone with an account or only their followers. They disappear after 24 hours; an hourly
+  clean-up deletes them and their files. Home's circle row shows creators with a live status first with a honey ring
+  (grey once seen), and creators get "Your status" (＋ to post). The Following page has the same row. The viewer is
+  full screen: progress bars, tap right / left for next / back, hold to pause, swipe down or ✕ to close, keyboard arrows
+  and Esc on computers, music plays, and it moves on to the next creator. Others can reply or send ❤️ (it arrives as a
+  chat message); your own statuses show 👁 who viewed them, 🗑 Delete and ＋ Add. Visitors who aren't logged in don't see
+  statuses; someone a creator blocked can't see theirs.
+- **Automatic "what's new" announcements** (`src/releases.js`, `release_log` table): every user-facing update gets an
+  entry written in the same friendly style as the owner's announcements (short excited title, a line or two with
+  emojis, what to tap, "Try it NOW!!!"). The first time the site starts after a deploy, new entries are posted to
+  News & updates and the bell, each only once (deleting or editing one in the dashboard is safe). Phones get one
+  notification per deploy: a single update gets its own, several become "🐝 N new things on Chapterhive!". First batch:
+  multi-pick filters, ⛶ Fullscreen, drafts that save themselves, Share, swipe posts and the Edit tag, music, statuses.
+  Set `AUTO_ANNOUNCE=off` on Render to stop them.
