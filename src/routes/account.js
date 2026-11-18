@@ -401,7 +401,9 @@ router.get("/me", async function (req, res) {
   if (req.session.user) {
     extra.waitingForLaunch = await require("../prelaunch").waitingMember(req);
     const p = await require("../staff").permsOf(req.session.user.id);
-    extra.staffPerms = p.admin ? require("../staff").KEYS : p.perms;
+    extra.staffPerms = p.admin
+      ? require("../staff").KEYS.filter(function (k) { return k !== "view_members" || p.perms.indexOf(k) >= 0; })
+      : p.perms;
     extra.isOwner = p.owner;
   }
   const flagUser = req.session.user ? Object.assign({}, req.session.user, { is_beta: extra.isBeta }) : null;

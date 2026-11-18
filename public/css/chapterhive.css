@@ -1729,3 +1729,61 @@ figure.media-video:fullscreen .media-tools, figure.media-video:fullscreen figcap
 .carousel-count { font-size: 0.8rem; color: var(--ink-dim); }
 @media (hover: none) { .carousel-arrow { display: none; } }
 .layout-picks { margin-top: 0.8rem; }
+
+/* ===== v35: Share sheet (buddies, WhatsApp and other apps, copy link) ===== */
+.share-sheet { max-width: 460px; width: calc(100% - 2rem); }
+.share-sheet h2 { font-size: 1.2rem; margin: 0.2rem 0 1rem; }
+.share-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; }
+.share-app { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; padding: 0.7rem 0.3rem; border-radius: 14px;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); text-decoration: none; font: inherit; font-size: 0.8rem; cursor: pointer; text-align: center; }
+.share-app:hover, .share-app:focus-visible { border-color: var(--pink); }
+.share-icon { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-size: 1.35rem; background: var(--panel); }
+.share-whatsapp .share-icon { background: #25d366; }
+.share-telegram .share-icon { background: #2aabee; }
+.share-facebook .share-icon { background: #1877f2; }
+.share-x .share-icon { background: #000; color: #fff; font-weight: 700; }
+.share-buddy .share-icon { background: var(--pink); }
+.share-buddies { margin-top: 1rem; display: grid; gap: 0.6rem; }
+.share-people { display: flex; flex-wrap: wrap; gap: 0.5rem; max-height: 180px; overflow-y: auto; }
+.share-person { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.7rem 0.25rem 0.25rem; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); font: inherit; font-size: 0.85rem; cursor: pointer; }
+.share-person .avatar { width: 28px; height: 28px; }
+.share-person.is-picked { border-color: var(--pink); background: color-mix(in srgb, var(--pink) 18%, var(--panel-2)); }
+@media (max-width: 380px) { .share-grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* ===== v36: Team & powers: everyone in a list, tap a power to give it ===== */
+.power-legend { list-style: none; padding: 0; margin: 0.6rem 0 1rem; display: grid; gap: 0.2rem; font-size: 0.88rem; }
+.team-toolbar { display: grid; gap: 0.6rem; margin-bottom: 0.8rem; }
+.team-toolbar input[type="search"] { border-radius: 999px; }
+.team-people { display: grid; gap: 0.6rem; }
+.team-row { padding: 0.75rem 0.9rem; border: 1px solid var(--line); border-radius: 14px; background: var(--panel-2); transition: opacity 0.15s; }
+.team-row.has-powers { border-color: color-mix(in srgb, var(--pink) 55%, var(--line)); }
+.team-row.is-saving { opacity: 0.6; pointer-events: none; }
+.team-row-head { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.team-row-head .avatar { width: 38px; height: 38px; }
+.team-row-name { display: grid; line-height: 1.2; color: var(--ink); text-decoration: none; min-width: 0; }
+.team-row-name .muted { font-size: 0.82rem; }
+.team-row-tags { display: flex; gap: 0.3rem; margin-left: auto; flex-wrap: wrap; }
+.team-note { margin: 0.5rem 0 0; font-size: 0.88rem; }
+.power-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+.power-chip { padding: 0.3rem 0.7rem; border-radius: 999px; border: 1px dashed var(--line); background: transparent; color: var(--ink-dim);
+  font: inherit; font-size: 0.82rem; cursor: pointer; }
+.power-chip:hover { border-color: var(--pink); color: var(--ink); }
+.power-chip.is-on { border-style: solid; border-color: var(--pink); background: color-mix(in srgb, var(--pink) 22%, transparent); color: var(--ink); font-weight: 600; }
+.team-row-tools { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.6rem; }
+.power-set { width: auto; min-height: 34px; padding: 0.25rem 0.7rem; font-size: 0.85rem; border-radius: 999px; }
+
+/* 👥 All members (/hub/member-list) */
+.ml-sort { display: inline-flex; align-items: center; gap: 0.5rem; font: 600 0.85rem/1 var(--font-ui); }
+.ml-sort select { width: auto; }
+.member-row-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.45rem; }
+.member-facts { margin: 0; font-size: 0.78rem; }
+.member-row-acts { display: flex; gap: 0.4rem; }
+.mini-tag-warn { background: color-mix(in srgb, #d33 22%, transparent); }
+.member-row { display: block; }
+.member-row .team-row-tags { margin-left: 0; }
+@media (min-width: 641px) { .member-row .team-row-tags { margin-left: auto; } }
+.team-toolbar .chip-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.6rem 0; }
+.team-toolbar .chip-row .chip { font: 600 0.82rem/1 var(--font-ui); padding: 0.5rem 0.85rem; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); cursor: pointer; }
+.team-toolbar .chip-row .chip:hover { border-color: var(--pink); }
+.team-toolbar .chip-row .chip[aria-pressed="true"] { background: var(--pink); border-color: var(--pink); color: var(--on-accent); }

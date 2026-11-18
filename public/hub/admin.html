@@ -25,7 +25,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=29">
-  <link rel="stylesheet" href="/css/chapterhive.css?v=38">
+  <link rel="stylesheet" href="/css/chapterhive.css?v=40">
   <!-- Not deferred on purpose: applies the saved theme before the page is drawn. -->
   <script src="/js/theme-boot.js"></script>
 </head>
@@ -544,18 +544,29 @@
         <div class="panel">
           <p class="node-label">Owner // team &amp; powers</p>
           <h2>Who has power on Chapterhive</h2>
-          <p class="muted">Only your account (the owner) can change this. Full admins can do everything; staff can only do what you tick for them. Staff can never touch admins, other staff or site settings.</p>
-          <div id="team-list"></div>
-        </div>
-        <div class="panel">
-          <h2>Give someone powers</h2>
-          <p class="muted">Type their username, then tick what they may do.</p>
-          <form id="team-add" novalidate>
-            <div class="form-row reserve-at"><span aria-hidden="true">@</span><input type="text" id="team-username" maxlength="30" autocapitalize="none" spellcheck="false" aria-label="Username"></div>
-            <div id="team-add-powers" class="team-powers"></div>
-            <div class="hero-actions"><button type="submit" class="btn btn-small">Give these powers</button></div>
-            <p class="error" id="team-error"></p>
-          </form>
+          <p class="muted">Find anyone below and tap a power to give it or take it away. It saves straight away. Staff can only do what you give them, and can never touch admins, other staff or site settings. Only your account can change this.</p>
+          <ul class="power-legend muted">
+            <li>✅ <b>Posts</b>: approve posts waiting for review</li>
+            <li>🎨 <b>Creators</b>: accept or turn down creator applications</li>
+            <li>🧪 <b>Beta testers</b>: approve beta tester applications</li>
+            <li>🐝 <b>Reservations</b>: see and manage reserved usernames (with emails)</li>
+            <li>🚩 <b>Reports</b>: deal with reported posts, comments and messages</li>
+            <li>🔨 <b>Moderate</b>: warn, suspend or ban members</li>
+            <li>📣 <b>Updates</b>: write and remove announcements</li>
+            <li>👥 <b>Members list</b>: open 👥 All members from the menu (only you have it unless you give it)</li>
+          </ul>
+          <div class="team-toolbar">
+            <input type="search" id="team-search" placeholder="Search by name or @username" aria-label="Search people" autocomplete="off" autocapitalize="none" spellcheck="false">
+            <div class="chip-row" id="team-filters" role="group" aria-label="Show">
+              <button type="button" class="chip" data-filter="all" aria-pressed="true">Everyone</button>
+              <button type="button" class="chip" data-filter="team" aria-pressed="false">🛡️ The team</button>
+              <button type="button" class="chip" data-filter="beta" aria-pressed="false">🧪 Beta testers</button>
+              <button type="button" class="chip" data-filter="creators" aria-pressed="false">✍️ Creators</button>
+            </div>
+            <p class="mono muted" id="team-count" aria-live="polite"></p>
+          </div>
+          <div id="team-people" class="team-people"></div>
+          <p><button type="button" class="btn btn-ghost" id="team-more" hidden>Show more people</button></p>
         </div>
       </section>
 
