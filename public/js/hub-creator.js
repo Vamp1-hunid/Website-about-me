@@ -94,7 +94,7 @@
     shareCreator.addEventListener("click", function () {
       MW.share({ title: c.name + " (@" + c.handle + ")", text: "Check out " + c.name + " on Chapterhive", url: "/hub/c/" + encodeURIComponent(c.handle) });
     });
-    actions.appendChild(shareCreator);
+    MW.me().then(function (u) { if (u) actions.appendChild(shareCreator); }); // sharing is for members
     top.appendChild(actions);
     body.appendChild(top);
     if (c.status !== "approved") body.appendChild(el("p", { class: "draft-flag mono" }, "Profile " + c.status.toUpperCase() + ": only you can see it"));

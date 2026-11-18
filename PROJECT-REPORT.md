@@ -2127,4 +2127,5 @@ never in the database: they would make it slow, costly and fill the 1 GB free st
 - **Share sheet** (`MW.share` in `public/js/api.js`): a "↗ Share" button on works, feed cards, stories and creator
   pages opens one sheet: 🐝 Send to a buddy (pick buddies or recent chats, add a message, sent as a chat card for
   works), WhatsApp, Telegram, Facebook, X, Email, 📲 More apps… (the phone's own share menu, where supported) and
-  🔗 Copy link. Visitors get everything except sending to a buddy. Replaces the old "Share in chat" box.
+  🔗 Copy link. Members only: visitors who aren't logged in see no Share buttons (like downloads, videos and
+  comments). Replaces the old "Share in chat" box.

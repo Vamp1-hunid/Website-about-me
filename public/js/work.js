@@ -122,8 +122,8 @@
     var likeBtn = actionButton(post.liked ? "♥ Liked" : "♡ Like", post.liked, post.likes);
     var saveBtn = actionButton(post.favourited ? "★ Saved" : "☆ Save", post.favourited);
     actions.append(likeBtn, saveBtn);
-    if (post.status === "live") {
-      // Share: to a buddy in chat, WhatsApp and other apps, or copy the link (anyone can share).
+    if (user && post.status === "live") {
+      // Share (members only): to a buddy in chat, WhatsApp and other apps, or copy the link.
       var share = el("button", { class: "btn btn-ghost btn-small", type: "button" }, "↗ Share");
       var openSheet = function () {
         MW.share({ title: post.title, text: post.title + (post.creator ? " by " + post.creator.name : "") + " on Chapterhive",

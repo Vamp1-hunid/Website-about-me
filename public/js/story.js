@@ -58,7 +58,7 @@
       MW.share({ title: story.title, text: story.title + (story.creator ? " by " + story.creator.name : "") + " on Chapterhive",
         url: MW.storyUrl(story.slug) });
     });
-    storyActions.appendChild(shareStory);
+    MW.me().then(function (u) { if (u) storyActions.appendChild(shareStory); }); // sharing is for members
     text.appendChild(storyActions);
     layout.appendChild(text);
     hero.appendChild(layout);

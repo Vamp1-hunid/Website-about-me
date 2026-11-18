@@ -158,7 +158,7 @@
       MW.share({ title: post.title, text: post.title + (post.creator ? " by " + post.creator.name : "") + " on Chapterhive",
         url: url, postSlug: post.slug });
     });
-    acts.appendChild(share);
+    if (user) acts.appendChild(share); // sharing is for members
     var save = toggleButton(post, "favourite", user, ["★", "☆"], "Remove from saved", "Save");
     save.classList.add("feed-act-right");
     acts.appendChild(save);

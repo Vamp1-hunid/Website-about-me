@@ -894,6 +894,14 @@
      MW.share({ title, text, url, postSlug }) opens one sheet with every way to share.
      postSlug (works only) makes the chat message a tappable card of the work. */
   MW.share = function (opts) {
+    // Sharing is for members: visitors who aren't logged in are asked to log in or join first.
+    if (!MW.account || !MW.account.user) {
+      MW.me().then(function (user) {
+        if (user) return MW.share(opts);
+        MW.toast("Log in or create an account to share.", true);
+      });
+      return;
+    }
     var url = opts.url && opts.url.indexOf("http") === 0 ? opts.url : window.location.origin + (opts.url || window.location.pathname);
     var title = opts.title || document.title;
     var text = opts.text || title;
