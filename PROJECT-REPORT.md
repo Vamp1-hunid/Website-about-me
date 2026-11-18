@@ -1679,6 +1679,7 @@ banners, the menu, the admin lists, the public list and the username preview.
 - **Email** isn't configured yet. Until a Brevo or Resend key is added, claim and beta links appear
   on screen for the admin to send.
 - **Legal pages** are still drafts. Have them reviewed by a Zambian lawyer before launch.
+- See **Suggestions for later** at the end of this report for video storage, database and payment ideas.
 
 ### Version 19 (16 November 2026): members, follows, help for all, faster beta approval
 
@@ -2039,3 +2040,74 @@ login). This repo is Chapterhive only, so it can be run (or sold) on its own.
 - **Wording:** terms, privacy, content rules, creator agreement, emails, FAQ, help assistant and welcome screens now
   speak only of Chapterhive. (The legal pages still need a lawyer's review.)
 - The API lists every creator's works by default (no more God's Banditos-only scope).
+
+### Version 34 (18 November 2026): "Feed the hive", no "free forever" promises, downloads, fullscreen
+
+- **Support button:** "Fund the heist" with a loot bag became **"Feed the hive"** with a honey-pot icon (honeycomb
+  cells float up on hover). The panel's wording is bee-themed too. A saved "Fund the heist" title shows as "Feed the
+  hive"; a custom title is kept.
+- **No promises that Chapterhive stays free** (paid plans are planned): the support message now reads "Enjoying
+  Chapterhive? Chip in to help keep the hive growing…", the Premium page says "Free plan" (not "Free forever"), the
+  sign-up and reservation pages no longer say creator accounts are "for free", and the Terms say there is a free plan,
+  some features may be paid now or later, prices are shown before paying and changes to the free plan get notice.
+- **Downloads for chosen groups** (Dashboard → Settings → Who can download, `src/downloads.js`): any mix of ordinary
+  members (everyone with an account), Premium members, the team (admins and staff) and beta testers. Off for everyone
+  until ticked; creators can always download their own work; visitors never can. Allowed people get a **⬇ Download**
+  button under videos, audio and pictures; everyone else has the player's own download menu hidden
+  (`controlslist="nodownload"`, no right-click save on videos). The post API says whether the viewer may download
+  (`canDownload`).
+- **Download quality:** videos can be downloaded as Original, 1080p, 720p, 480p or 360p. Cloudinary makes the smaller
+  versions on request (`fl_attachment,c_limit,h_<size>,q_auto`); the first download of a size takes a moment, and each
+  one uses Cloudinary credits.
+- **⛶ Fullscreen** button under every video for everyone (iPhones included); on Android it also tries to turn the
+  phone sideways.
+
+## Suggestions for later
+
+Ideas that came up while building, roughly in the order they'll matter. Nothing here is done yet.
+
+### Video storage and streaming
+
+- **Now: stay on Cloudinary.** Its free plan (25 credits a month: 1 credit = 1 GB stored, 1 GB of pictures viewed or
+  1,000 transformations) is enough while launching. The next Cloudinary plan (Plus) costs $99 a month, and video
+  bandwidth is only on paid plans.
+- **When to move video:** once the Cloudinary dashboard regularly shows about 20 of the 25 monthly credits used, or
+  many creators are uploading video.
+- **Where to: Bunny Stream** (bunny.net). Its pricing page lists storage from $0.01/GB, delivery from $0.005/GB, free
+  encoding (no transcoding fees), a $1 monthly minimum and a 14-day free trial. Prices for viewers in Africa may be a
+  little higher than the "from" prices. It also streams adaptively (quality follows each viewer's connection), which
+  helps people on slow mobile data. Pictures can stay on Cloudinary. Moving needs changes to how videos are uploaded
+  and played.
+- **Alternative for files: Cloudflare R2**, which doesn't charge when people view or download files (the biggest cost
+  with video). It doesn't convert or stream video by itself.
+- **Keep files small:** compressed 720p with automatic quality is a fraction of the size of the original upload.
+- **Protecting videos:** hiding download buttons stops honest viewers, not determined ones. Real protection needs
+  DRM (what Netflix-style services use) through a paid streaming service; only worth it for paid, exclusive content.
+- **Don't copy piracy sites' "free" hosting tricks** (offshore hosting, shady ad networks, throwaway accounts): they
+  rely on hiding from takedowns, make the site impossible to sell or take payments for, and put the owner at legal risk.
+
+### Using the database (PostgreSQL on Neon) for more
+
+PostgreSQL already holds everything except the files themselves (videos and pictures belong in Cloudinary or Bunny,
+never in the database: they would make it slow, costly and fill the 1 GB free storage). Useful additions:
+
+- **Download history and limits:** a small table of who downloaded what and when, to see popular videos, spot someone
+  downloading hundreds of files, and set limits such as "10 downloads a day for ordinary members".
+- **Watch progress and views:** remember where each member stopped so videos resume there, and give creators view
+  counts.
+- **Billing records** once Premium is paid: payments, plan start and end dates, receipts.
+
+### Video pages
+
+- **Put the player at the top** of video posts (series, films, trailers), like YouTube; on phones it's currently below
+  the title, buttons and creator box.
+- **The floating buttons** (Feed the hive and ? help) sit over the player's bottom corners on phones; hide or move them
+  while a video is on screen.
+- **A Chapterhive-styled player:** honey progress bar, 10-second skip buttons and a "Next episode" button.
+
+### Charging money
+
+- **"Create a free account" buttons** are accurate while accounts are free. When paid plans start, either keep a free
+  plan (then they stay true) or change them.
+- **Payments:** Flutterwave or Paystack for mobile money in Zambia, plus the code that upgrades a member after paying.
+- **Ask the lawyer** about the Terms wording on changing the free plan (consumer law needs fair notice).
